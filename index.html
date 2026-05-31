@@ -930,6 +930,55 @@
         }
 
         #global-loader { z-index: 800000 !important; }
+
+@media (max-width:767px){
+    /* ปุ่มกลับหน้าหลักในหน้ารายวิชา: ให้เป็นปุ่มเล็กด้านขวา ระดับเดียวกับชื่อวิชา */
+    #main-header{
+        position:relative !important;
+        padding-right:9.25rem !important;
+        min-height:5.8rem !important;
+    }
+
+    #header-actions:has(#course-back-btn){
+        width:auto !important;
+        position:absolute !important;
+        top:1.05rem !important;
+        right:1rem !important;
+        display:flex !important;
+        justify-content:flex-end !important;
+        align-items:center !important;
+        gap:0 !important;
+        z-index:5 !important;
+    }
+
+    #course-back-btn{
+        flex:0 0 auto !important;
+        width:auto !important;
+        min-width:0 !important;
+        height:2.55rem !important;
+        min-height:2.55rem !important;
+        padding:0 .85rem !important;
+        border-radius:.9rem !important;
+        font-size:.86rem !important;
+        line-height:1 !important;
+        white-space:nowrap !important;
+        display:inline-flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:.35rem !important;
+    }
+
+    #course-back-btn i{
+        margin:0 !important;
+        font-size:.82rem !important;
+    }
+
+    #header-actions:has(#course-back-btn) button,
+    #header-actions:has(#course-back-btn) a{
+        flex:0 0 auto !important;
+    }
+}
+
 </style>
 
 
@@ -2830,26 +2879,28 @@ display:none !important;
 
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
-            authDomain: "shoolhub-5677e.firebaseapp.com",
-            projectId: "shoolhub-5677e",
-            storageBucket: "shoolhub-5677e.firebasestorage.app",
-            messagingSenderId: "630487358153",
-            appId: "1:630487358153:web:1866add5d4a29b74abcb18",
-            measurementId: "G-2Q6R46DC38"
+            apiKey: "AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",
+            authDomain: "shool-2312a.firebaseapp.com",
+            projectId: "shool-2312a",
+            storageBucket: "shool-2312a.firebasestorage.app",
+            messagingSenderId: "803574136389",
+            appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+            measurementId: "G-ME7E38XNX6"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        // ใช้ Local Persistence ของ Firebase Auth เพื่อให้ Session ค้างในเครื่องนี้จนกว่าจะกดออกจากระบบเอง
+        setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Firebase auth persistence failed:', e));
         const db = getFirestore(app);
 
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
         // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
-        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzJZNwyvTWRVr4mmk_g_KARlfDe77VBLbsJdS1grR1WlvZ48dmwHLp0ZaKaH1QGjXU/exec';
+        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
         const makeToken = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         function buildSchoolHubLink(params = {}) {
             const url = new URL(window.location.href);
@@ -2963,6 +3014,74 @@ display:none !important;
         const PLANS_CACHE_KEY = 'schoolhub_subscription_plans_cache';
         const PENDING_PLAN_KEY = 'schoolhub_pending_plan_request_id';
         const SCHOOLHUB_DEFAULT_PROMPTPAY = '0841973468';
+        const SCHOOLHUB_SESSION_KEY = 'schoolhub_web_session_v1';
+
+        function saveSchoolHubSession(user, role) {
+            try {
+                if (!user) return;
+                const payload = {
+                    uid: user.uid || '',
+                    email: user.email || '',
+                    username: user.username || '',
+                    displayName: user.displayName || user.name || user.email || user.username || '',
+                    role: role || (isAdmin ? 'admin' : 'user'),
+                    isAdmin: role === 'admin' || !!isAdmin,
+                    savedAt: Date.now()
+                };
+                localStorage.setItem(SCHOOLHUB_SESSION_KEY, JSON.stringify(payload));
+                localStorage.setItem('schoolhub_session_active', 'true');
+            } catch(e) { console.warn('save session failed:', e); }
+        }
+
+        function readSchoolHubSession() {
+            try {
+                const raw = localStorage.getItem(SCHOOLHUB_SESSION_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch(e) { return null; }
+        }
+
+        function clearSchoolHubSession() {
+            try {
+                localStorage.removeItem(SCHOOLHUB_SESSION_KEY);
+                localStorage.removeItem('schoolhub_session_active');
+                localStorage.removeItem('schoolhub_admin_bypass');
+                localStorage.removeItem('schoolhub_admin_active');
+            } catch(e) {}
+        }
+
+        async function restoreUserSessionFromLocal(saved) {
+            if (!saved || saved.role !== 'user' || !saved.uid) return false;
+            try {
+                toggleLoader(true);
+                currentUser = {
+                    uid: saved.uid,
+                    email: saved.email || '',
+                    displayName: saved.displayName || saved.email || 'ผู้ใช้งาน'
+                };
+                isAdmin = false;
+                document.getElementById('landing-view').classList.add('hidden');
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                const dName = currentUser.displayName || 'ผู้ใช้งาน';
+                document.getElementById('user-display-name').textContent = dName;
+                document.getElementById('user-display-email').textContent = getUserKey(currentUser);
+                document.getElementById('user-avatar-initial').textContent = dName.charAt(0).toUpperCase();
+                setAdminNavigationMode(false);
+                await loadStateFromDB();
+                try {
+                    const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), currentUser.uid)), 6000, 'restoreUserDir');
+                    if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
+                } catch(e) { console.warn('restore user dir failed:', e); }
+                await refreshCurrentUserPlanLock();
+                if(window.__schoolhubPlanLocked) await window.openUserPlanSelector();
+                else window.goToHome();
+                return true;
+            } catch(e) {
+                console.warn('restore local session failed:', e);
+                clearSchoolHubSession();
+                return false;
+            } finally { toggleLoader(false); }
+        }
 
         function readLocalJSON(key, fallback) {
             try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
@@ -2985,9 +3104,15 @@ display:none !important;
         let currentUser = null;
         let isAdmin = false;
         let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+        window.state = state;
         window.isSocialAuthenticating = false;
 
         let currentActiveCourseId = null;
+        Object.defineProperty(window, 'currentActiveCourseId', {
+            configurable: true,
+            get: function(){ return currentActiveCourseId; },
+            set: function(v){ currentActiveCourseId = v; }
+        });
         let publicAnnouncements = [];
         let subscriptionPlans = [];
         let adminPlanRequests = [];
@@ -4077,8 +4202,10 @@ async function submitPlanRequest(planId){
                     state.courses = data.courses || []; state.students = data.students || [];
                     state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
                     state.courseGrades = data.courseGrades || {};
+                    window.state = state;
                 } else {
                     state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                    window.state = state;
                     await saveStateToDB();
                 }
             } catch (error) {
@@ -4293,12 +4420,18 @@ async function submitPlanRequest(planId){
 
         onAuthStateChanged(auth, async (user) => {
             if (await safeAsync(() => withTimeout(loadPublicShareFromURL(), 7000, 'loadPublicShare'), false)) { toggleLoader(false); return; }
-            if (localStorage.getItem('schoolhub_admin_bypass') === 'true') { enterAdminMode(); return; }
+            const savedSession = readSchoolHubSession();
+            if (localStorage.getItem('schoolhub_admin_bypass') === 'true' || savedSession?.role === 'admin') { await enterAdminMode(); return; }
+            if (!user && savedSession?.role === 'user') {
+                const restored = await restoreUserSessionFromLocal(savedSession);
+                if (restored) return;
+            }
             if (user) {
                 if (window.isSocialAuthenticating) return;
                 try {
                     toggleLoader(true);
                     currentUser = user; isAdmin = false;
+                    saveSchoolHubSession(user, 'user');
                     document.getElementById('landing-view').classList.add('hidden');
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
@@ -4336,7 +4469,8 @@ async function submitPlanRequest(planId){
         });
 
         window.doLogout = () => {
-            localStorage.removeItem('schoolhub_admin_bypass');
+            clearSchoolHubSession();
+            try { localStorage.setItem('schoolhub_logout_intent', String(Date.now())); } catch(e) {}
             if(auth.currentUser) signOut(auth);
             else { currentUser = null; isAdmin = false; window.location.reload(); }
         };
@@ -4373,10 +4507,12 @@ async function submitPlanRequest(planId){
             currentUser = { uid: 'admin-bypass', email: adminEmail, displayName: adminName, username: adminUsername };
             isAdmin = true;
             try {
+                localStorage.setItem('schoolhub_admin_bypass','true');
                 localStorage.setItem('schoolhub_admin_active','true');
                 localStorage.setItem('schoolhub_admin_name', adminName);
                 localStorage.setItem('schoolhub_admin_email', adminEmail);
                 localStorage.setItem('schoolhub_admin_username', adminUsername);
+                saveSchoolHubSession(currentUser, 'admin');
             } catch(e) {}
             document.getElementById('landing-view').classList.add('hidden'); document.getElementById('auth-view').classList.add('hidden'); document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('user-display-name').textContent = adminName; document.getElementById('user-display-email').textContent = adminEmail || adminUsername || 'Admin';
@@ -4445,6 +4581,7 @@ async function submitPlanRequest(planId){
                 const avatarEl = document.getElementById('user-avatar-initial');
                 if (nameEl) nameEl.textContent = newName;
                 if (avatarEl) avatarEl.textContent = newName.charAt(0).toUpperCase();
+                saveSchoolHubSession(currentUser, currentUser?.uid === 'admin-bypass' ? 'admin' : 'user');
                 closeModal('user-profile-modal');
                 showCustomAlert('บันทึกสำเร็จ', 'เปลี่ยนชื่อโปรไฟล์เรียบร้อยแล้ว');
             } catch (err) {
@@ -4569,8 +4706,8 @@ ${resetUrl.toString()}
             if (mobileCourseName) mobileCourseName.textContent = `เมนูประจำรายวิชา: ${course.code} ${course.name}`;
 
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="goToHome()" class="bg-white border text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
-                    <i class="fas fa-arrow-left"></i> กลับหน้าหลัก
+                <button id="course-back-btn" onclick="goToHome()" class="bg-white border text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
+                    <i class="fas fa-arrow-left"></i> <span>กลับหน้าหลัก</span>
                 </button>
             `;
 
@@ -4876,6 +5013,7 @@ ${resetUrl.toString()}
 
         // Grade Criteria Logic
         const defaultGradeCriteria = { 4: 80, 3.5: 75, 3: 70, 2.5: 65, 2: 60, 1.5: 55, 1: 50 };
+        window.defaultGradeCriteria = defaultGradeCriteria;
 
         window.openGradeCriteriaModalForCurrentCourse = () => {
             if(!currentActiveCourseId) return;
@@ -11018,6 +11156,315 @@ window.requestOwnPasswordReset = async function(){
         pfAlert('ส่งอีเมลไม่สำเร็จ', e?.message || String(e), true);
     }
 };
+</script>
+
+
+
+<!-- SchoolHub Mobile Overview Cards + Room Required Patch -->
+<style>
+@media (max-width: 767px) {
+  #course-tab-overview .table-container { border-radius: 1.35rem !important; overflow: hidden !important; }
+  #course-tab-overview .p-6.border-b { padding: 1rem !important; gap: .75rem !important; }
+  #course-tab-overview .p-6.border-b > div:first-child { width: 100% !important; }
+  #overview-room-filter { width: 100% !important; margin-top: .75rem !important; }
+  #overview-room-filter label { display: block !important; margin-bottom: .35rem !important; }
+  #overview-room-filter select { width: 100% !important; min-height: 42px !important; border-radius: 1rem !important; }
+  #course-summary-table { display: none !important; }
+  #course-summary-mobile-cards { display: grid !important; grid-template-columns: 1fr !important; gap: .85rem !important; padding: 1rem !important; background: #f8fafc !important; }
+  .summary-mobile-card { background: rgba(255,255,255,.96); border: 1px solid #e2e8f0; border-radius: 1.25rem; padding: .95rem; box-shadow: 0 8px 24px rgba(15,23,42,.055); }
+  .summary-mobile-card-name { font-size: .98rem; font-weight: 900; color: #0f172a; line-height: 1.35; }
+  .summary-mobile-card-code { margin-top: .45rem; }
+  .summary-mobile-card-code summary { cursor: pointer; list-style: none; color: #4f46e5; font-size: .75rem; font-weight: 800; }
+  .summary-mobile-card-code summary::-webkit-details-marker { display: none; }
+  .summary-mobile-card-code div { margin-top: .4rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: .85rem; padding: .55rem .7rem; font-size: .78rem; }
+  .summary-mobile-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .45rem; margin-top: .8rem; }
+  .summary-mobile-stat { border-radius: .9rem; padding: .58rem .35rem; text-align: center; font-size: .72rem; font-weight: 800; background: #f8fafc; }
+  .summary-mobile-stat b { display: block; font-size: 1rem; line-height: 1; margin-bottom: .18rem; }
+  .summary-mobile-plans { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .45rem; margin-top: .75rem; }
+  .summary-mobile-plan { border: 1px solid #e0e7ff; background: #eef2ff; color: #3730a3; border-radius: .9rem; padding: .55rem .6rem; min-width: 0; }
+  .summary-mobile-plan-top { display:flex; justify-content:space-between; gap:.5rem; align-items:center; font-size:.72rem; font-weight:900; }
+  .summary-mobile-plan-title { font-size:.68rem; color:#64748b; margin-top:.22rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .summary-mobile-total { margin-top: .8rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; border-radius: 1rem; background: #0f172a; color: white; padding: .75rem .85rem; font-weight: 900; }
+  .summary-mobile-empty-select { padding: 2rem 1rem !important; text-align:center; color:#64748b; }
+}
+@media (min-width: 768px) {
+  #course-summary-mobile-cards { display: none !important; }
+}
+</style>
+<script>
+(function(){
+  if (window.__schoolhubOverviewCardRequiredPatch) return;
+  window.__schoolhubOverviewCardRequiredPatch = true;
+
+  function esc(v){
+    try { return window.escapeHTML ? window.escapeHTML(v) : String(v ?? '').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+    catch(e){ return String(v ?? ''); }
+  }
+  function cls(st){
+    return (window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room || st.classroom || st.grade)) || '-').toString().trim() || '-';
+  }
+  function courseRooms(courseId){
+    var course = (window.state && state.courses || []).find(function(c){ return c.id === courseId; }) || {};
+    return Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+  }
+  function allStudentsForCourse(courseId){
+    if (!courseId || !window.state) return [];
+    var course = (state.courses || []).find(function(c){ return c.id === courseId; }) || {};
+    var rooms = courseRooms(courseId);
+    var extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
+    if (!rooms.length && !extraIds.length) return [];
+    return (state.students || []).filter(function(st){ return rooms.includes(cls(st)) || extraIds.includes(st.id); })
+      .sort(function(a,b){ return String(cls(a)).localeCompare(String(cls(b)), 'th', {numeric:true}) || String(a.code||'').localeCompare(String(b.code||''), 'th', {numeric:true}) || String(a.name||'').localeCompare(String(b.name||''), 'th'); });
+  }
+  function getRoomsFromStudents(students){
+    return Array.from(new Set((students || []).map(cls).filter(Boolean))).sort(function(a,b){ return a.localeCompare(b,'th',{numeric:true}); });
+  }
+
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+
+  window.renderOverviewRoomFilter = function(){
+    var box = document.getElementById('overview-room-filter');
+    var cid = window.currentActiveCourseId;
+    if (!box || !cid) return;
+    var all = allStudentsForCourse(cid);
+    var rooms = getRoomsFromStudents(all);
+    if (rooms.length <= 1) {
+      box.classList.add('hidden');
+      box.innerHTML = '';
+      if (rooms.length === 1) window.__overviewRoomFilter[cid] = rooms[0];
+      return;
+    }
+    var selected = window.__overviewRoomFilter[cid] || '';
+    if (selected && !rooms.includes(selected)) selected = window.__overviewRoomFilter[cid] = '';
+    box.classList.remove('hidden');
+    box.innerHTML = '<label class="text-xs font-black text-slate-500 mr-2"><i class="fas fa-door-open text-primary mr-1"></i>เลือกชั้นปี/ห้องในภาพรวม</label>'+
+      '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none" onchange="window.__overviewRoomFilter[\''+cid+'\']=this.value; renderCourseOverview();">'+
+      '<option value="" '+(selected===''?'selected':'')+'>-- เลือกชั้นปี/ห้องก่อน --</option>'+
+      rooms.map(function(r){ return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>'; }).join('')+
+      '</select>';
+  };
+
+  function ensureMobileContainer(){
+    var table = document.getElementById('course-summary-table');
+    if (!table) return null;
+    var box = document.getElementById('course-summary-mobile-cards');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'course-summary-mobile-cards';
+      table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+
+  function scoreAndGrade(total, totalMax, criteria){
+    var grade = '-', color = 'text-slate-300';
+    if (totalMax > 0 && window.calculateGrade) {
+      grade = window.calculateGrade(total, criteria);
+      if(['4','3.5'].includes(grade)) color = 'text-emerald-300';
+      else if(['3','2.5'].includes(grade)) color = 'text-blue-300';
+      else if(['2','1.5'].includes(grade)) color = 'text-amber-300';
+      else if(['1','0'].includes(grade)) color = 'text-rose-300';
+    }
+    return {grade:grade, color:color};
+  }
+
+  window.renderCourseOverview = function(){
+    var table = document.getElementById('course-summary-table');
+    if (!table) return;
+    table.innerHTML = '';
+    var mobileBox = ensureMobileContainer();
+    if (mobileBox) mobileBox.innerHTML = '';
+
+    var cid = window.currentActiveCourseId;
+    window.renderOverviewRoomFilter();
+    var all = allStudentsForCourse(cid);
+    var rooms = getRoomsFromStudents(all);
+    var selectedRoom = window.__overviewRoomFilter[cid] || '';
+    var requiresSelect = rooms.length > 1;
+    var students = requiresSelect ? (selectedRoom ? all.filter(function(st){ return cls(st) === selectedRoom; }) : []) : all;
+
+    var empty = document.getElementById('empty-summary');
+    if (!cid || !students.length) {
+      if (empty) {
+        empty.classList.remove('hidden');
+        empty.innerHTML = requiresSelect && !selectedRoom
+          ? '<i class="fas fa-door-open text-4xl text-indigo-200 mb-3"></i><p class="text-slate-600 font-black">กรุณาเลือกชั้นปี/ห้องก่อน</p><p class="text-xs text-slate-400 mt-1">เมื่อยังไม่เลือก ระบบจะยังไม่แสดงข้อมูลภาพรวม</p>'
+          : '<i class="fas fa-table text-4xl text-slate-200 mb-3"></i><p class="text-slate-500 font-medium">ยังไม่มีข้อมูลคะแนนหรืองานในวิชานี้</p>';
+      }
+      if (mobileBox) mobileBox.innerHTML = '';
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    var history = (state.attendance && state.attendance[cid]) || {};
+    var attDates = Object.keys(history);
+    var plans = ((state.coursePlans && state.coursePlans[cid]) || []).sort(function(a,b){ return Number(a.week)-Number(b.week); });
+    var courseScores = (state.scores || []).filter(function(s){ return s.courseId === cid; });
+    var gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : (window.defaultGradeCriteria || []);
+    var totalMax = 0;
+    plans.forEach(function(p){ if (Number(p.maxScore) !== 0) totalMax += Number(p.maxScore || 0); });
+
+    var thead = '<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th><th class="text-center bg-slate-100 text-slate-600">ชั้น/ห้อง</th>';
+    thead += '<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>';
+    plans.forEach(function(p){
+      var isChecklist = Number(p.maxScore) === 0;
+      var subtitle = isChecklist ? 'เช็คงาน' : 'เต็ม '+p.maxScore;
+      thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>';
+    });
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+totalMax+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+
+    var tbody = '<tbody>';
+    var mobileHtml = '';
+    students.forEach(function(st, index){
+      var pr=0, la=0, ab=0;
+      attDates.forEach(function(d){ var rec = (history[d] && history[d].records) || {}; var x = rec[st.id]; if(x==='present') pr++; else if(x==='late') la++; else if(x==='absent') ab++; });
+      var total = 0;
+      var planCells = '';
+      var planCards = '';
+      plans.forEach(function(p){
+        var task = courseScores.find(function(ts){ return ts.week == p.week && ts.title === p.title; });
+        var raw = task && task.records ? task.records[st.id] : null;
+        var isChecklist = Number(p.maxScore) === 0;
+        if (isChecklist) {
+          var label = raw === 1 ? '<span class="text-emerald-500"><i class="fas fa-check"></i></span>' : (raw === 0 ? '<span class="text-rose-400"><i class="fas fa-times"></i></span>' : '<span class="text-slate-300">-</span>');
+          planCells += '<td class="text-center summary-score-col"><span class="summary-score-cell-content">'+label+'</span></td>';
+          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+label+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'เช็คงาน')+'</div></div>';
+        } else {
+          if(raw !== null && raw !== '') total += Number(raw);
+          var display = !task ? '-' : (raw === '' ? '-' : raw);
+          var cellClass = !task ? 'text-slate-300' : (raw === '' ? 'text-rose-500' : 'text-slate-700');
+          planCells += '<td class="text-center font-mono summary-score-col"><span class="summary-score-cell-content '+cellClass+'">'+esc(display)+'</span></td>';
+          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+esc(display)+'/'+esc(p.maxScore || 0)+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
+        }
+      });
+      var gg = scoreAndGrade(total, totalMax, gradeCriteria);
+      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">'+(index+1)+'</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
+
+      mobileHtml += '<div class="summary-mobile-card"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(st.name)+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="text-xs font-black text-primary bg-indigo-50 rounded-full px-3 py-1">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+    });
+    tbody += '</tbody>';
+    table.innerHTML = thead + tbody;
+    if (mobileBox) mobileBox.innerHTML = mobileHtml;
+  };
+})();
+</script>
+
+
+
+<!-- Final Fix: Mobile Course Overview Cards Renderer (table hidden on phone, cards shown) -->
+<style>
+@media (max-width: 767px){
+  #course-tab-overview .overflow-x-auto{ overflow: visible !important; }
+  #course-summary-table{ display:none !important; }
+  #course-summary-mobile-cards{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:.85rem !important;
+    padding:1rem !important;
+    background:#f8fafc !important;
+  }
+  #course-summary-mobile-cards:empty{ display:none !important; }
+  .summary-mobile-card{
+    background:rgba(255,255,255,.98) !important;
+    border:1px solid #e2e8f0 !important;
+    border-radius:1.25rem !important;
+    padding:.95rem !important;
+    box-shadow:0 8px 24px rgba(15,23,42,.055) !important;
+  }
+  .summary-mobile-card-name{ font-size:.98rem !important; font-weight:900 !important; color:#0f172a !important; line-height:1.35 !important; }
+  .summary-mobile-card-room{ font-size:.76rem !important; font-weight:800 !important; color:#64748b !important; margin-top:.2rem !important; }
+  .summary-mobile-card-no{ font-size:.72rem !important; font-weight:900 !important; color:#4f46e5 !important; background:#eef2ff !important; border-radius:999px !important; padding:.25rem .65rem !important; white-space:nowrap !important; }
+  .summary-mobile-card-code{ margin-top:.5rem !important; }
+  .summary-mobile-card-code summary{ cursor:pointer !important; list-style:none !important; color:#4f46e5 !important; font-size:.76rem !important; font-weight:900 !important; }
+  .summary-mobile-card-code summary::-webkit-details-marker{ display:none !important; }
+  .summary-mobile-card-code div{ margin-top:.4rem !important; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace !important; color:#64748b !important; background:#f8fafc !important; border:1px dashed #cbd5e1 !important; border-radius:.85rem !important; padding:.55rem .7rem !important; font-size:.78rem !important; }
+  .summary-mobile-stats{ display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.8rem !important; }
+  .summary-mobile-stat{ border-radius:.9rem !important; padding:.58rem .35rem !important; text-align:center !important; font-size:.72rem !important; font-weight:900 !important; background:#f8fafc !important; }
+  .summary-mobile-stat b{ display:block !important; font-size:1rem !important; line-height:1 !important; margin-bottom:.18rem !important; }
+  .summary-mobile-plans{ display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.75rem !important; }
+  .summary-mobile-plan{ border:1px solid #e0e7ff !important; background:#eef2ff !important; color:#3730a3 !important; border-radius:.9rem !important; padding:.55rem .6rem !important; min-width:0 !important; }
+  .summary-mobile-plan-top{ display:flex !important; justify-content:space-between !important; gap:.5rem !important; align-items:center !important; font-size:.72rem !important; font-weight:900 !important; }
+  .summary-mobile-plan-title{ font-size:.68rem !important; color:#64748b !important; margin-top:.22rem !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+  .summary-mobile-total{ margin-top:.8rem !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:.75rem !important; border-radius:1rem !important; background:#0f172a !important; color:white !important; padding:.75rem .85rem !important; font-weight:900 !important; }
+}
+@media (min-width:768px){ #course-summary-mobile-cards{ display:none !important; } }
+</style>
+<script>
+(function(){
+  if(window.__schoolhubFinalMobileOverviewCardsFix) return;
+  window.__schoolhubFinalMobileOverviewCardsFix = true;
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function text(el){ return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim(); }
+  function ensureBox(){
+    var table=document.getElementById('course-summary-table');
+    if(!table) return null;
+    var box=document.getElementById('course-summary-mobile-cards');
+    if(!box){
+      box=document.createElement('div');
+      box.id='course-summary-mobile-cards';
+      var wrap=table.closest('.overflow-x-auto') || table.parentNode;
+      if(wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
+      else table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+  function splitAttendance(v){
+    var m=String(v||'0/0/0').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
+    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
+  }
+  function buildMobileOverviewCards(){
+    if(!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+    var table=document.getElementById('course-summary-table');
+    var box=ensureBox();
+    if(!table || !box) return;
+    var rows=[].slice.call(table.querySelectorAll('tbody tr'));
+    if(!rows.length){ box.innerHTML=''; return; }
+    var headers=[].slice.call(table.querySelectorAll('thead th')).map(text);
+    var planHeaders=headers.slice(5, Math.max(5, headers.length-2));
+    box.innerHTML=rows.map(function(row, idx){
+      var cells=[].slice.call(row.children);
+      var no=text(cells[0]) || String(idx+1);
+      var code=text(cells[1]) || '-';
+      var name=text(cells[2]) || '-';
+      var room=text(cells[3]) || '-';
+      var att=splitAttendance(text(cells[4]));
+      var total=text(cells[cells.length-2]) || '0';
+      var grade=text(cells[cells.length-1]) || '-';
+      var planHtml='';
+      for(var i=5;i<cells.length-2;i++){
+        var label=(planHeaders[i-5] || ('งาน '+(i-4))).replace(/คลิกเพื่อดูรายละเอียด[: ]*/g,'').trim();
+        var value=text(cells[i]) || '-';
+        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(label.split(' ')[0]||label)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(label)+'</div></div>';
+      }
+      if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+      return '<div class="summary-mobile-card">'+
+        '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(no)+'</div></div>'+
+        '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'+
+        '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'+
+        '<div class="summary-mobile-plans">'+planHtml+'</div>'+
+        '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'+
+      '</div>';
+    }).join('');
+  }
+  window.buildMobileOverviewCards = buildMobileOverviewCards;
+  function wrapRender(){
+    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileCardWrapped){
+      var old=window.renderCourseOverview;
+      var fn=function(){ var r=old.apply(this, arguments); setTimeout(buildMobileOverviewCards, 30); setTimeout(buildMobileOverviewCards, 180); return r; };
+      fn.__mobileCardWrapped=true;
+      window.renderCourseOverview=fn;
+    }
+  }
+  wrapRender();
+  document.addEventListener('DOMContentLoaded', function(){ wrapRender(); setTimeout(buildMobileOverviewCards,300); });
+  window.addEventListener('resize', function(){ setTimeout(buildMobileOverviewCards,80); });
+  var oldSwitch=window.switchCourseTab;
+  if(typeof oldSwitch === 'function' && !oldSwitch.__mobileOverviewFinalWrapped){
+    var sw=function(tabId){ var r=oldSwitch.apply(this, arguments); if(tabId==='overview') setTimeout(buildMobileOverviewCards,160); return r; };
+    sw.__mobileOverviewFinalWrapped=true;
+    window.switchCourseTab=sw;
+  }
+})();
 </script>
 
 </body>
