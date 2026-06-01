@@ -545,10 +545,14 @@
             }
 
             #attendance-placeholder,
-            #score-placeholder,
             #empty-course-grid {
                 padding: 2rem 1rem !important;
                 min-height: 220px !important;
+            }
+
+            /* score-placeholder: ไม่กำหนด min-height เพราะจะทำให้เกิดพื้นที่ว่างหลังเลือกสัปดาห์ */
+            #score-placeholder {
+                padding: 1.5rem 1rem !important;
             }
 
             #score-area .p-5.bg-slate-50,
@@ -655,6 +659,66 @@
             #multi-student-modal button {
                 min-height: 42px !important;
                 justify-content: center !important;
+            }
+
+            /* Mobile only: prevent iOS/Safari viewport jump and bottom white spacer after week select */
+            html,
+            body,
+            #main-app,
+            main,
+            main > div.flex-1.overflow-y-auto,
+            #view-course-detail,
+            #course-tab-scores,
+            #course-tab-attendance,
+            #score-area,
+            #attendance-area {
+                overflow-anchor: none !important;
+                scroll-margin-top: 0 !important;
+            }
+
+            #main-app {
+                height: 100dvh !important;
+                min-height: 0 !important;
+                max-height: 100dvh !important;
+            }
+
+            main {
+                height: 100dvh !important;
+                min-height: 0 !important;
+                max-height: 100dvh !important;
+                overflow: hidden !important;
+            }
+
+            main > div.flex-1.overflow-y-auto {
+                flex: 1 1 auto !important;
+                min-height: 0 !important;
+                height: auto !important;
+                max-height: none !important;
+                overscroll-behavior-y: contain !important;
+                padding-bottom: env(safe-area-inset-bottom) !important;
+            }
+
+            #view-course-detail:not(.hidden) {
+                height: auto !important;
+                min-height: 0 !important;
+                display: block !important;
+            }
+
+            #course-tab-scores,
+            #course-tab-attendance,
+            #score-area,
+            #attendance-area {
+                min-height: 0 !important;
+                height: auto !important;
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+            #score-placeholder.hidden,
+            #attendance-placeholder.hidden,
+            #score-area.hidden,
+            #attendance-area.hidden {
+                display: none !important;
             }
         }
 
@@ -927,6 +991,10 @@
         @media (max-width: 767px) {
             body #main-app main > div.flex-1.overflow-y-auto { height: calc(100dvh - 64px) !important; overflow-y: auto !important; }
             #view-dashboard { padding-bottom: 5rem !important; }
+            /* ยุบ padding-bottom ของ view-section เมื่ออยู่ใน scores tab บนมือถือ */
+            #view-course-detail.view-section:has(#course-tab-scores:not(.hidden)) {
+                padding-bottom: 0 !important;
+            }
         }
 
         #global-loader { z-index: 800000 !important; }
@@ -1690,6 +1758,214 @@ document.addEventListener('click',function(){
  },50);
 });
 </script>
+<script id="schoolhub-calendar-popup-body-move-fix">
+(function(){
+    function moveCalendarPopupToBody(){
+        var popup = document.getElementById('attendance-calendar-popup');
+        if(popup && popup.parentElement !== document.body){
+            document.body.appendChild(popup);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        setTimeout(moveCalendarPopupToBody, 200);
+    });
+    document.addEventListener('click', function(e){
+        var btn = e.target && (e.target.id === 'attendance-calendar-open-btn' || e.target.closest && e.target.closest('#attendance-calendar-open-btn'));
+        if(btn) setTimeout(moveCalendarPopupToBody, 0);
+    }, true);
+    setInterval(function(){
+        var popup = document.getElementById('attendance-calendar-popup');
+        if(popup && !popup.classList.contains('hidden') && popup.parentElement !== document.body){
+            document.body.appendChild(popup);
+        }
+    }, 300);
+})();
+</script>
+
+
+<style id="schoolhub-mobile-3pages-card-only-fix">
+@media (max-width: 767px) {
+    table:has(#attendance-list) thead,
+    table:has(#score-list) thead,
+    table:has(#plan-list) thead {
+        display: none !important;
+    }
+
+    table:has(#attendance-list),
+    table:has(#score-list),
+    table:has(#plan-list),
+    #attendance-list,
+    #score-list,
+    #plan-list {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        background: transparent !important;
+    }
+
+    #attendance-list .schoolhub-mobile-row,
+    #score-list .schoolhub-mobile-row,
+    #plan-list .schoolhub-mobile-row {
+        display: block !important;
+        border: 0 !important;
+        background: transparent !important;
+        margin: 0 0 0.85rem 0 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-cell,
+    #score-list .schoolhub-mobile-cell,
+    #plan-list .schoolhub-mobile-cell {
+        display: block !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        white-space: normal !important;
+    }
+
+    #attendance-list .schoolhub-mobile-card,
+    #score-list .schoolhub-mobile-card,
+    #plan-list .schoolhub-mobile-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 1.45rem !important;
+        padding: 1rem !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+        overflow: hidden !important;
+    }
+
+    #attendance-list .schoolhub-mobile-card-head,
+    #score-list .schoolhub-mobile-card-head,
+    #plan-list .schoolhub-mobile-card-head {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 0.75rem !important;
+        margin-bottom: 0.85rem !important;
+    }
+
+    #attendance-list .schoolhub-mobile-card-title,
+    #score-list .schoolhub-mobile-card-title,
+    #plan-list .schoolhub-mobile-card-title {
+        color: #0f172a !important;
+        font-size: 1rem !important;
+        line-height: 1.35 !important;
+        font-weight: 900 !important;
+        word-break: break-word !important;
+    }
+
+    #attendance-list .schoolhub-mobile-card-sub,
+    #score-list .schoolhub-mobile-card-sub,
+    #plan-list .schoolhub-mobile-card-sub {
+        margin-top: 0.3rem !important;
+        color: #64748b !important;
+        font-size: 0.82rem !important;
+        line-height: 1.3 !important;
+        font-weight: 800 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-actions {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 0.55rem !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn {
+        cursor: pointer !important;
+        display: flex !important;
+        min-height: 4.55rem !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35rem !important;
+        padding: 0.65rem 0.35rem !important;
+        border-radius: 1.2rem !important;
+        border: 1px solid #eef2f7 !important;
+        background: #f8fafc !important;
+        font-weight: 900 !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.9) !important;
+        /* วงกลมและ text จัดเรียงแนวตั้ง อยู่กึ่งกลางแนวนอนด้วย align-items: center */
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn > input[type="radio"] {
+        display: block !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
+        order: 1 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn > span {
+        display: block !important;
+        text-align: center !important;
+        width: 100% !important;
+        order: 2 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present span { color: #059669 !important; }
+    #attendance-list .schoolhub-mobile-att-btn.late span { color: #d97706 !important; }
+    #attendance-list .schoolhub-mobile-att-btn.absent span { color: #e11d48 !important; }
+    #attendance-list .schoolhub-mobile-att-btn.is-active.present { background: #ecfdf5 !important; border-color: #a7f3d0 !important; }
+    #attendance-list .schoolhub-mobile-att-btn.is-active.late { background: #fffbeb !important; border-color: #fde68a !important; }
+    #attendance-list .schoolhub-mobile-att-btn.is-active.absent { background: #fff1f2 !important; border-color: #fecdd3 !important; }
+
+    #score-list .schoolhub-mobile-score-box {
+        background: #eef2ff !important;
+        border: 1px solid #e0e7ff !important;
+        border-radius: 1.2rem !important;
+        padding: 0.85rem !important;
+        text-align: center !important;
+    }
+
+    #score-list .score-input {
+        width: min(100%, 10rem) !important;
+        min-height: 3rem !important;
+        border-radius: 1rem !important;
+        font-size: 1rem !important;
+    }
+
+    #plan-list .schoolhub-mobile-plan-score {
+        flex: 0 0 auto !important;
+        min-width: 3.25rem !important;
+        height: 3.25rem !important;
+        border-radius: 1.1rem !important;
+        background: #eef2ff !important;
+        border: 1px solid #e0e7ff !important;
+        color: #4f46e5 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 900 !important;
+    }
+
+    #plan-list .schoolhub-mobile-card-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.55rem !important;
+    }
+
+    #plan-list .schoolhub-mobile-action-btn {
+        min-height: 2.75rem !important;
+        border-radius: 1rem !important;
+        font-weight: 900 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.4rem !important;
+    }
+
+    #plan-list .schoolhub-mobile-action-btn.edit {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+        border: 1px solid #dbeafe !important;
+    }
+
+    #plan-list .schoolhub-mobile-action-btn.delete {
+        background: #fff1f2 !important;
+        color: #e11d48 !important;
+        border: 1px solid #ffe4e6 !important;
+    }
+}
+</style>
+
 
 <style id="attendance-calendar-body-top-final-fix">
 /* Final fix: ปฏิทินเช็คชื่อต้องเป็น popup ระดับ body ครอบทั้งหน้าจอ รวม sidebar/header */
@@ -1768,6 +2044,149 @@ document.addEventListener('click',function(){
     }
 }
 </style>
+
+
+<style id="schoolhub-mobile-att-radio-score-blank-final-only">
+/* Fix ที่ยังจำเป็น: ยุบพื้นที่ว่างหน้าบันทึกคะแนน + calendar popup */
+/* หมายเหตุ: att-btn radio fix ย้ายไปแก้ตรงจุดใน schoolhub-mobile-3pages-card-only-fix แล้ว */
+@media (max-width: 767px) {
+    /* หน้าบันทึกคะแนน: ยุบ padding-bottom ของทุก wrapper */
+    #view-course-detail:not(.hidden):has(#course-tab-scores:not(.hidden)) {
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    #view-course-detail:not(.hidden):has(#course-tab-scores:not(.hidden)) #course-tab-scores,
+    #view-course-detail:not(.hidden):has(#course-tab-scores:not(.hidden)) #score-area,
+    #view-course-detail:not(.hidden):has(#course-tab-scores:not(.hidden)) #score-placeholder {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    /* ยุบ .view-section padding-bottom เมื่ออยู่ใน scores */
+    #view-course-detail.view-section:not(.hidden):has(#course-tab-scores:not(.hidden)) {
+        padding-bottom: 0 !important;
+    }
+
+    /* sibling view-sections ที่ตามมาก็ต้องซ่อน */
+    #view-course-detail:not(.hidden):has(#course-tab-scores:not(.hidden)) ~ .view-section {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+
+    /* score-placeholder: ถ้า hidden ต้องไม่จองพื้นที่เลย */
+    #score-placeholder.hidden {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* scroll container: ลด padding-bottom ให้น้อยที่สุด */
+    main > div.flex-1.overflow-y-auto:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) {
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* Calendar popup: อยู่หน้าสุดทุกกรณี */
+#attendance-calendar-popup {
+    position: fixed !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 999999 !important;
+    margin: 0 !important;
+    transform: none !important;
+}
+#attendance-calendar-popup > div {
+    position: relative !important;
+    z-index: 1000000 !important;
+}
+</style>
+
+
+<style id="schoolhub-mobile-week-bottom-white-row-fix">
+/* Mobile only: fix white spacer/row after selecting score week without touching desktop/tablet or logic */
+@media (max-width: 767px) {
+    /* When score tab is active, remove every outer reserved bottom space that can push the header/content */
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #main-app,
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #main-app main {
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) main > div.flex-1.overflow-y-auto {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: calc(100dvh - var(--schoolhub-header-h, 64px)) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding-bottom: calc(0.25rem + env(safe-area-inset-bottom)) !important;
+        margin-bottom: 0 !important;
+    }
+
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #view-course-detail,
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #course-tab-scores,
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #score-area {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* The placeholder must not keep a white dashed row after a week/title has been selected and the score table is shown */
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden) #score-area:not(.hidden)) #score-placeholder,
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden) #score-area:not(.hidden)) #score-placeholder.hidden {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Prevent the save-button footer from behaving like a floating white strip on mobile */
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #score-area > .p-5.bg-slate-50.border-t,
+    body:has(#view-course-detail:not(.hidden) #course-tab-attendance:not(.hidden)) #attendance-area > .p-5.bg-slate-50.border-t {
+        position: static !important;
+        bottom: auto !important;
+        top: auto !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+        transform: none !important;
+    }
+
+    /* Keep the course header area stable; do not let internal score/attendance content pull it upward */
+    body:has(#view-course-detail:not(.hidden) #course-tab-scores:not(.hidden)) #main-header,
+    body:has(#view-course-detail:not(.hidden) #course-tab-attendance:not(.hidden)) #main-header {
+        flex-shrink: 0 !important;
+        margin-bottom: 0 !important;
+        transform: none !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -2487,6 +2906,7 @@ document.addEventListener('click',function(){
                                         <table class="w-full text-left border-collapse">
                                             <thead>
                                                 <tr>
+                                                    <th class="w-16 text-center">ลำดับ</th>
                                                     <th class="w-1/4">รหัส</th>
                                                     <th class="w-1/3">ชื่อ - นามสกุล</th>
                                                     <th class="text-center">สถานะ</th>
@@ -2533,7 +2953,7 @@ document.addEventListener('click',function(){
                                 <div>
                                     <label class="block text-sm font-semibold text-slate-600 mb-2">คะแนนเต็ม <span class="text-xs text-slate-400 font-normal">(ใส่ 0 = เช็คงาน)</span></label>
                                     <div class="relative">
-                                        <input type="number" id="score-max" value="10" min="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none shadow-sm font-bold text-primary" oninput="updateMaxScores()">
+                                        <input type="number" inputmode="decimal" pattern="[0-9]*" id="score-max" value="10" min="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none shadow-sm font-bold text-primary" oninput="updateMaxScores()">
                                         <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400 text-sm">คะแนน</div>
                                     </div>
                                 </div>
@@ -2552,6 +2972,7 @@ document.addEventListener('click',function(){
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr>
+                                            <th class="w-16 text-center">ลำดับ</th>
                                             <th class="w-1/4">รหัส</th>
                                             <th class="w-1/3">ชื่อ - นามสกุล</th>
                                             <th class="text-center bg-indigo-50/50">คะแนนที่ได้</th>
@@ -2569,7 +2990,7 @@ document.addEventListener('click',function(){
                                 </button>
                             </div>
                         </div>
-                        <div id="score-placeholder" class="bg-white rounded-2xl border border-slate-200 border-dashed p-16 flex flex-col items-center justify-center text-center text-slate-400">
+                        <div id="score-placeholder" class="hidden bg-white rounded-2xl border border-slate-200 border-dashed p-8 flex flex-col items-center justify-center text-center text-slate-400">
                              <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4"><i class="fas fa-star-half-alt text-4xl text-slate-300"></i></div>
                              <h4 class="text-xl font-bold text-slate-600 mb-2">เลือกสัปดาห์และชื่องานด้านบน</h4>
                              <p>เพื่อเริ่มต้นกรอกคะแนนให้นักเรียน</p>
@@ -2700,7 +3121,7 @@ document.addEventListener('click',function(){
                             <!-- เวลาสลับ (ใช้เมื่อเลือกมากกว่า 3) -->
                             <div class="flex items-center gap-3 mt-2" id="landing-stat-interval-row">
                                 <label class="text-sm font-semibold text-slate-600 whitespace-nowrap">⏱ เวลาสลับ (วินาที):</label>
-                                <input id="landing-stat-interval" type="number" min="1" max="60" value="3"
+                                <input id="landing-stat-interval" type="number" inputmode="decimal" pattern="[0-9]*" min="1" max="60" value="3"
                                     class="w-24 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary focus:outline-none">
                                 <span class="text-xs text-slate-400">(ใช้เมื่อเลือกมากกว่า 3 รายการ)</span>
                             </div>
@@ -2748,7 +3169,7 @@ document.addEventListener('click',function(){
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1">เวลาสลับ (วินาที)</label>
-                                    <input id="announcement-rotation" type="number" min="2" value="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                                    <input id="announcement-rotation" type="number" inputmode="decimal" pattern="[0-9]*" min="2" value="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
                                 </div>
                                 <div class="md:col-span-5 flex flex-col sm:flex-row gap-3 justify-end">
                                     <label class="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="announcement-active" type="checkbox" checked class="w-4 h-4 text-primary rounded"> เปิดใช้งาน</label>
@@ -2874,7 +3295,7 @@ document.addEventListener('click',function(){
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         <div><label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">สัปดาห์</label><select id="plan-week" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-primary"></select></div>
                         <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">ชื่องาน</label><input type="text" id="plan-title" required class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-primary"></div>
-                        <div><label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">คะแนน <span class="text-[10px] text-slate-400 font-normal">(ใส่ 0 = เช็คงาน)</span></label><input type="number" id="plan-max" required value="10" min="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-primary font-bold text-primary"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 uppercase mb-1 ml-1">คะแนน <span class="text-[10px] text-slate-400 font-normal">(ใส่ 0 = เช็คงาน)</span></label><input type="number" inputmode="decimal" pattern="[0-9]*" id="plan-max" required value="10" min="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-primary font-bold text-primary"></div>
                         <div class="flex gap-2">
                             <button type="submit" id="plan-submit-btn" class="w-full bg-primary hover:bg-indigo-700 text-white p-3 rounded-xl shadow-md transition font-bold"><i class="fas fa-plus"></i></button>
                             <button type="button" id="plan-cancel-edit-btn" onclick="cancelEditPlan()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 rounded-xl hidden transition font-bold"><i class="fas fa-times"></i></button>
@@ -2952,14 +3373,14 @@ document.addEventListener('click',function(){
             <form onsubmit="event.preventDefault(); handleGradeCriteriaSubmit();" class="p-6 space-y-4">
                 <p class="text-sm text-slate-500 mb-4">กำหนดคะแนนขั้นต่ำสำหรับแต่ละเกรด</p>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 4</label><input type="number" id="grade-crit-4" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3.5</label><input type="number" id="grade-crit-35" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3</label><input type="number" id="grade-crit-3" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2.5</label><input type="number" id="grade-crit-25" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2</label><input type="number" id="grade-crit-2" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1.5</label><input type="number" id="grade-crit-15" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1</label><input type="number" id="grade-crit-1" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 0</label><input type="number" id="grade-crit-0" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-slate-400" value="0" disabled></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 4</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-4" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-35" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-3" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-25" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-2" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-15" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-1" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 0</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-0" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-slate-400" value="0" disabled></div>
                 </div>
                 <div class="pt-4 flex gap-3"><button type="button" onclick="closeModal('grade-criteria-modal')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold shadow-lg shadow-indigo-200">บันทึก</button></div>
             </form>
@@ -2970,7 +3391,7 @@ document.addEventListener('click',function(){
     <div id="share-student-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center fade-in p-4">
         <div class="bg-white rounded-[2rem] w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0"><div><h3 class="text-xl font-bold text-slate-800"><i class="fas fa-share-nodes text-primary mr-2"></i>แชร์ข้อมูลให้นักเรียน</h3><p class="text-sm text-slate-500 mt-1">ลิงก์จะเริ่มนับเวลาหมดอายุจากครั้งแรกที่นักเรียนกดดู</p></div><button onclick="closeModal('share-student-modal')" class="w-10 h-10 bg-white border rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100"><i class="fas fa-times"></i></button></div>
-            <div class="p-6 bg-slate-50/70 border-b flex flex-col md:flex-row gap-3 md:items-end"><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมดอายุหลังเปิดดูครั้งแรก (นาที)</label><input id="share-expire-minutes" type="number" min="1" value="60" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"></div><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมายเหตุถึงนักเรียน</label><input id="share-note" type="text" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น ตรวจสอบคะแนนของตนเอง"></div></div>
+            <div class="p-6 bg-slate-50/70 border-b flex flex-col md:flex-row gap-3 md:items-end"><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมดอายุหลังเปิดดูครั้งแรก (นาที)</label><input id="share-expire-minutes" type="number" inputmode="decimal" pattern="[0-9]*" min="1" value="60" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"></div><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมายเหตุถึงนักเรียน</label><input id="share-note" type="text" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น ตรวจสอบคะแนนของตนเอง"></div></div>
             <div class="p-6 overflow-y-auto flex-1"><div id="share-student-list" class="space-y-3"></div></div>
         </div>
     </div>
@@ -3090,14 +3511,14 @@ document.addEventListener('click',function(){
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
-  authDomain: "shoolhub-5677e.firebaseapp.com",
-  projectId: "shoolhub-5677e",
-  storageBucket: "shoolhub-5677e.firebasestorage.app",
-  messagingSenderId: "630487358153",
-  appId: "1:630487358153:web:1866add5d4a29b74abcb18",
-  measurementId: "G-2Q6R46DC38"
-};
+            apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+            authDomain: "shoolhub-5677e.firebaseapp.com",
+            projectId: "shoolhub-5677e",
+            storageBucket: "shoolhub-5677e.firebasestorage.app",
+            messagingSenderId: "630487358153",
+            appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+            measurementId: "G-2Q6R46DC38"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -5408,8 +5829,27 @@ ${resetUrl.toString()}
             if(plans.length === 0) document.getElementById('empty-plan').classList.remove('hidden');
             else {
                 document.getElementById('empty-plan').classList.add('hidden');
+                const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
                 plans.sort((a,b) => a.week - b.week).forEach(p => {
-                    tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right"><button onclick="editPlan('${id}', '${p.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1"><i class="fas fa-edit"></i></button><button onclick="deletePlan('${id}', '${p.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100"><i class="fas fa-trash"></i></button></td></tr>`;
+                    if (isMobileCardView) {
+                        tbody.innerHTML += `<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
+                            <div class="schoolhub-mobile-card">
+                                <div class="schoolhub-mobile-card-head">
+                                    <div class="min-w-0">
+                                        <div class="schoolhub-mobile-card-title">${escapeHTML(p.title||'')}</div>
+                                        <div class="schoolhub-mobile-card-sub"><i class="fas fa-calendar-week text-primary mr-1"></i>สัปดาห์ ${escapeHTML(p.week||'')}</div>
+                                    </div>
+                                    <div class="schoolhub-mobile-plan-score">${escapeHTML(p.maxScore||'0')}</div>
+                                </div>
+                                <div class="schoolhub-mobile-card-actions">
+                                    <button onclick="editPlan('${id}', '${p.id}')" class="schoolhub-mobile-action-btn edit"><i class="fas fa-edit"></i> แก้ไข</button>
+                                    <button onclick="deletePlan('${id}', '${p.id}')" class="schoolhub-mobile-action-btn delete"><i class="fas fa-trash"></i> ลบ</button>
+                                </div>
+                            </div>
+                        </td></tr>`;
+                    } else {
+                        tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right"><button onclick="editPlan('${id}', '${p.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1"><i class="fas fa-edit"></i></button><button onclick="deletePlan('${id}', '${p.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100"><i class="fas fa-trash"></i></button></td></tr>`;
+                    }
                 });
             }
         };
@@ -5453,18 +5893,7 @@ ${resetUrl.toString()}
 
         window.openAttendanceCalendarPopup = () => {
             const popup = document.getElementById('attendance-calendar-popup');
-            if (popup) {
-                // สำคัญ: ย้าย popup ออกจาก container ของหน้าเช็คชื่อไปไว้ใต้ body โดยตรง
-                // เพื่อให้ครอบ sidebar/header ทั้งหมดเหมือน popup อื่น และไม่ถูก element ใดบัง
-                if (popup.parentElement !== document.body) document.body.appendChild(popup);
-                popup.classList.remove('hidden');
-                popup.style.position = 'fixed';
-                popup.style.inset = '0';
-                popup.style.zIndex = '2147483647';
-                popup.style.display = 'flex';
-                popup.style.alignItems = 'center';
-                popup.style.justifyContent = 'center';
-            }
+            if (popup) popup.classList.remove('hidden');
             window.initCalendar();
         };
 
@@ -5476,11 +5905,6 @@ ${resetUrl.toString()}
         document.addEventListener('click', function(e){
             const popup = document.getElementById('attendance-calendar-popup');
             if (popup && e.target === popup) window.closeAttendanceCalendarPopup();
-        });
-
-        document.addEventListener('DOMContentLoaded', function(){
-            const popup = document.getElementById('attendance-calendar-popup');
-            if (popup && popup.parentElement !== document.body) document.body.appendChild(popup);
         });
 
         window.initCalendar = () => {
@@ -5502,7 +5926,12 @@ ${resetUrl.toString()}
                 calGrid.innerHTML += `<div class="${classes}" onclick="selectAttendanceDate('${dateStr}')" id="cal-day-${dateStr}">${html}</div>`;
             }
             const cd = document.getElementById('att-date').value;
-            if (cd && cd.startsWith(`${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}`)) selectAttendanceDate(cd);
+            if (cd && cd.startsWith(`${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}`)) {
+                // แค่ highlight วันที่เดิม ไม่ปิด popup และไม่ trigger renderAttendanceList ซ้ำ
+                document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('active-day'));
+                const dayEl = document.getElementById(`cal-day-${cd}`);
+                if(dayEl) dayEl.classList.add('active-day');
+            }
         };
 
         window.selectAttendanceDate = (dateStr) => {
@@ -5524,7 +5953,7 @@ ${resetUrl.toString()}
             const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; const tbody = document.getElementById('attendance-list');
             window.ensureCourseRoomActionFilter('attendance-area', cid);
             const courseStudents = window.getCourseStudents(cid); if(!cid || !date) return; tbody.innerHTML = '';
-            if(courseStudents.length===0) { tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; return; }
+            if(courseStudents.length===0) { tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; return; }
             if(!state.attendance[cid]) state.attendance[cid] = {};
             const existing = state.attendance[cid][date] || { records: {}, updatedAt: null };
             const hasData = !!state.attendance[cid][date];
@@ -5536,11 +5965,33 @@ ${resetUrl.toString()}
             }
 
             document.getElementById('att-last-saved').innerHTML = existing.updatedAt ? `<i class="fas fa-history text-emerald-500"></i> ล่าสุด: ${new Date(existing.updatedAt).toLocaleString('th-TH')}` : `<i class="fas fa-asterisk text-amber-500"></i> ยังไม่ได้บันทึก`;
-            courseStudents.forEach(s => {
-                const st = existing.records[s.id] || 'present';
-                tbody.innerHTML += `
+            const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            courseStudents.forEach((s, index) => {
+                const studentOrder = index + 1;
+                const hasSavedStatus = existing.records && Object.prototype.hasOwnProperty.call(existing.records, s.id);
+                const st = hasSavedStatus ? existing.records[s.id] : (isMobileCardView ? '' : 'present');
+                if (isMobileCardView) {
+                    tbody.innerHTML += `
+                    <tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
+                        <div class="schoolhub-mobile-card">
+                            <div class="schoolhub-mobile-card-head">
+                                <div class="min-w-0">
+                                    <div class="schoolhub-seq-text">#${studentOrder}</div>
+                                    <div class="schoolhub-mobile-card-title">${escapeHTML(s.name||'')}</div>
+                                    <div class="schoolhub-mobile-card-sub">${escapeHTML(s.code||'')}</div>
+                                </div>
+                            </div>
+                            <div class="schoolhub-mobile-att-actions">
+                                <label class="schoolhub-mobile-att-btn present ${st==='present'?'is-active':''}"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500"> <span>มา</span></label>
+                                <label class="schoolhub-mobile-att-btn late ${st==='late'?'is-active':''}"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500"> <span>สาย</span></label>
+                                <label class="schoolhub-mobile-att-btn absent ${st==='absent'?'is-active':''}"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500"> <span>ขาด</span></label>
+                            </div>
+                        </div>
+                    </td></tr>`;
+                } else {
+                    tbody.innerHTML += `
                     <tr>
-                        <td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td>
+                        <td class="text-center"><span class="schoolhub-seq-text">#${studentOrder}</span></td><td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td>
                         <td>
                             <div class="flex justify-center gap-4 bg-slate-50 p-2 rounded-xl">
                                 <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500"> <span class="font-bold text-emerald-700">มา</span></label>
@@ -5549,13 +6000,21 @@ ${resetUrl.toString()}
                             </div>
                         </td>
                     </tr>`;
+                }
             });
         };
         window.saveAttendance = async () => {
             const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; if(!cid || !date) return;
             const records = {}; window.getCourseStudents(cid).forEach(s => { const checked = document.querySelector(`input[name="att_${s.id}"]:checked`); if(checked) records[s.id] = checked.value; });
             if(!state.attendance[cid]) state.attendance[cid] = {}; state.attendance[cid][date] = { records, updatedAt: Date.now() };
-            await saveStateToDB(); window.initCalendar(); showCustomAlert('สำเร็จ', 'บันทึกเช็คชื่อเรียบร้อย');
+            await saveStateToDB(); window.initCalendar();
+            document.getElementById('att-date').value = '';
+            document.getElementById('att-selected-date-display').innerHTML = '';
+            const miniDisplay = document.getElementById('attendance-calendar-selected-mini');
+            if (miniDisplay) miniDisplay.innerHTML = '<i class="fas fa-calendar-day text-slate-400 mr-1"></i> ยังไม่ได้เลือกวันที่';
+            document.getElementById('attendance-area').classList.add('hidden');
+            document.getElementById('attendance-placeholder').classList.remove('hidden');
+            showCustomAlert('สำเร็จ', 'บันทึกเช็คชื่อเรียบร้อย');
         };
 
         window.deleteAttendance = () => {
@@ -5576,8 +6035,38 @@ ${resetUrl.toString()}
             document.getElementById('score-week').value = ''; document.getElementById('score-title-input').value = ''; document.getElementById('score-max').value = '10';
             document.getElementById('score-title-input').classList.remove('hidden'); document.getElementById('score-title-select').classList.add('hidden');
             document.getElementById('score-area').classList.add('hidden');
+            document.getElementById('score-placeholder').classList.remove('hidden');
         };
-        window.handleScoreWeekChange = () => {
+
+        window.isSchoolHubMobileView = window.isSchoolHubMobileView || (() => {
+            return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+        });
+
+        window.withMobileScrollLock = window.withMobileScrollLock || ((fn) => {
+            if (!window.isSchoolHubMobileView()) {
+                return fn();
+            }
+            const scroller = document.querySelector('main > div.flex-1.overflow-y-auto') || document.scrollingElement || document.documentElement;
+            const keepTop = scroller ? scroller.scrollTop : 0;
+            const keepLeft = scroller ? scroller.scrollLeft : 0;
+            const keepWindowY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            const result = fn();
+            const restore = () => {
+                if (scroller) {
+                    scroller.scrollTop = keepTop;
+                    scroller.scrollLeft = keepLeft;
+                }
+                window.scrollTo(0, keepWindowY);
+            };
+            restore();
+            requestAnimationFrame(() => {
+                restore();
+                requestAnimationFrame(restore);
+            });
+            return result;
+        });
+
+        window.handleScoreWeekChange = () => window.withMobileScrollLock(() => {
             const cid = currentActiveCourseId; const week = document.getElementById('score-week').value;
             const inf = document.getElementById('score-title-input'), sel = document.getElementById('score-title-select'), mx = document.getElementById('score-max');
 
@@ -5594,8 +6083,8 @@ ${resetUrl.toString()}
             } else {
                 inf.classList.remove('hidden'); sel.classList.add('hidden'); inf.value = ''; mx.value = '10'; mx.removeAttribute('readonly'); document.getElementById('score-placeholder').classList.add('hidden'); renderScoreList();
             }
-        };
-        window.handleScoreTitleSelection = () => {
+        });
+        window.handleScoreTitleSelection = () => window.withMobileScrollLock(() => {
             const sel = document.getElementById('score-title-select'), inf = document.getElementById('score-title-input'), mx = document.getElementById('score-max');
 
             if (sel.value && sel.value !== '__custom__') {
@@ -5604,10 +6093,10 @@ ${resetUrl.toString()}
                 sel.classList.remove('bg-indigo-50', 'text-primary', 'font-bold', 'border-indigo-300');
             }
 
-            if (sel.value === '__custom__') { sel.classList.add('hidden'); inf.classList.remove('hidden'); inf.value = ''; inf.focus(); mx.value = '10'; mx.removeAttribute('readonly'); document.getElementById('score-area').classList.add('hidden'); document.getElementById('score-placeholder').classList.remove('hidden');}
+            if (sel.value === '__custom__') { sel.classList.add('hidden'); inf.classList.remove('hidden'); inf.value = ''; if (!window.isSchoolHubMobileView()) inf.focus(); mx.value = '10'; mx.removeAttribute('readonly'); document.getElementById('score-area').classList.add('hidden'); document.getElementById('score-placeholder').classList.remove('hidden');}
             else if (sel.value) { mx.value = sel.options[sel.selectedIndex].getAttribute('data-max'); mx.setAttribute('readonly', 'true'); document.getElementById('score-placeholder').classList.add('hidden'); renderScoreList(); }
             else { mx.value = ''; document.getElementById('score-area').classList.add('hidden'); document.getElementById('score-placeholder').classList.remove('hidden');}
-        };
+        });
         window.updateMaxScores = () => { const max = parseFloat(document.getElementById('score-max').value) || 0; document.querySelectorAll('.score-input').forEach(inp => { inp.max = max; if(parseFloat(inp.value)>max) inp.value = max; }); };
         window.getScoreTitle = () => { const inf = document.getElementById('score-title-input'); return !inf.classList.contains('hidden') ? inf.value.trim() : document.getElementById('score-title-select').value; };
 
@@ -5644,17 +6133,19 @@ ${resetUrl.toString()}
             }
         };
 
-        window.renderScoreList = () => {
+        window.renderScoreList = () => window.withMobileScrollLock(() => {
             const cid = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const area = document.getElementById('score-area'); const tbody = document.getElementById('score-list'); const max = document.getElementById('score-max').value;
             window.ensureCourseRoomActionFilter('score-area', cid);
             const courseStudents = window.getCourseStudents(cid); if(!cid || !week || (!title || title === '__custom__')) { area.classList.add('hidden'); window.updateScoreSavedStatus(null, week, title); return; }
-            if(courseStudents.length===0) { area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; window.updateScoreSavedStatus(null, week, title); return; }
+            if(courseStudents.length===0) { area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; window.updateScoreSavedStatus(null, week, title); return; }
             area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '';
             const existing = state.scores.find(s => s.courseId === cid && s.week === week && s.title === title); const saved = existing ? existing.records : {};
             window.updateScoreSavedStatus(existing, week, title);
             const maxScoreNum = parseFloat(max);
 
-            courseStudents.forEach(s => {
+            const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            courseStudents.forEach((s, index) => {
+                const studentOrder = index + 1;
                 const sc = saved[s.id] !== undefined ? saved[s.id] : '';
                 let inputHtml = '';
                 if (maxScoreNum === 0) {
@@ -5662,14 +6153,32 @@ ${resetUrl.toString()}
                     inputHtml = `<input type="checkbox" class="score-checkbox w-6 h-6 text-primary rounded focus:ring-primary cursor-pointer mx-auto block shadow-sm" ${isChecked} data-studentid="${s.id}">`;
                 } else {
                     // เอา placeholder="0" ออก ให้แสดงว่างเปล่า
-                    inputHtml = `<input type="number" min="0" max="${max}" placeholder="" value="${sc}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
+                    inputHtml = `<input type="number" inputmode="decimal" pattern="[0-9]*" min="0" max="${max}" placeholder="" value="${sc}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
                 }
-                tbody.innerHTML += `<tr><td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td><td class="bg-indigo-50/50 text-center">${inputHtml}</td></tr>`;
+                if (isMobileCardView) {
+                    const scoreLabel = maxScoreNum === 0 ? 'สถานะงาน' : `คะแนน / ${escapeHTML(max)}`;
+                    tbody.innerHTML += `<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
+                        <div class="schoolhub-mobile-card">
+                            <div class="schoolhub-mobile-card-head">
+                                <div class="min-w-0">
+                                    <div class="schoolhub-seq-text">#${studentOrder}</div>
+                                    <div class="schoolhub-mobile-card-title">${escapeHTML(s.name||'')}</div>
+                                    <div class="schoolhub-mobile-card-sub">${escapeHTML(s.code||'')}</div>
+                                </div>
+                            </div>
+                            <div class="schoolhub-mobile-score-box">
+                                <div class="text-xs font-black text-slate-500 mb-2">${scoreLabel}</div>
+                                <div class="flex items-center justify-center">${inputHtml}</div>
+                            </div>
+                        </div>
+                    </td></tr>`;
+                } else {
+                    tbody.innerHTML += `<tr><td class="text-center"><span class="schoolhub-seq-text">#${studentOrder}</span></td><td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td><td class="bg-indigo-50/50 text-center">${inputHtml}</td></tr>`;
+                }
             });
 
-            setTimeout(() => { area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
-        };
-
+            setTimeout(() => { if (!window.isSchoolHubMobileView()) area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
+        });
         window.saveScores = async () => {
             const cId = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const maxScore = document.getElementById('score-max').value;
             if(!cId || !week || !title || maxScore === '') return showCustomAlert("ข้อมูลไม่ครบ", "ระบุงานและคะแนนเต็มให้ครบ", true);
@@ -6508,7 +7017,7 @@ ${resetUrl.toString()}
     var tbody='<tbody>';
     courseStudents.forEach(function(st,index){
       var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; });
-      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">'+(index+1)+'</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
+      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
       tbody += '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
       var total=0;
       plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { if(raw!==null && raw!=='') total+=Number(raw); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':(raw===''?'<span class="summary-score-cell-content text-rose-500">-</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(raw)+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
@@ -7235,13 +7744,13 @@ import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const cfg = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const app = getApps().length ? getApp() : initializeApp(cfg);
@@ -7724,13 +8233,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const adminLoginFirebaseConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const adminLoginApp = getApps().length ? getApp() : initializeApp(adminLoginFirebaseConfig);
@@ -8205,11 +8714,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/เดือน</label>
-                            <input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <input id="plan-sub-monthly-price" type="number" inputmode="decimal" pattern="[0-9]*" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/ปี</label>
-                            <input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <input id="plan-sub-yearly-price" type="number" inputmode="decimal" pattern="[0-9]*" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
                         </div>
                     </div>
                     <div>
@@ -8237,19 +8746,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">รายวิชาสูงสุด</label>
-                            <input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
+                            <input id="plan-sub-course-limit" type="number" inputmode="decimal" pattern="[0-9]*" min="0" value="1" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">นักเรียนสูงสุด</label>
-                            <input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
+                            <input id="plan-sub-student-limit" type="number" inputmode="decimal" pattern="[0-9]*" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">สัปดาห์ใช้งาน</label>
-                            <input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <input id="plan-sub-week-limit" type="number" inputmode="decimal" pattern="[0-9]*" min="1" value="20" class="w-full bg-white border rounded-xl p-3 text-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">สมาชิกทีม</label>
-                            <input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <input id="plan-sub-team-limit" type="number" inputmode="decimal" pattern="[0-9]*" min="1" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 gap-2 pt-1">
@@ -8275,7 +8784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-semibold text-slate-700 mb-1">ลำดับ</label>
-                            <input id="plan-sub-order" type="number" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <input id="plan-sub-order" type="number" inputmode="decimal" pattern="[0-9]*" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
                         </div>
                         <div class="flex items-end">
                             <label class="flex items-center gap-2 bg-white px-3 py-3 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer w-full">
@@ -8306,13 +8815,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const plansPopupConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const plansPopupApp = getApps().length ? getApp() : initializeApp(plansPopupConfig);
@@ -8699,13 +9208,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const planFixConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const planFixApp = getApps().length ? getApp() : initializeApp(planFixConfig);
@@ -8997,13 +9506,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const globalDashboardConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const globalDashboardApp = getApps().length ? getApp() : initializeApp(globalDashboardConfig);
@@ -9111,13 +9620,13 @@ import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const emailOnlyConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const emailOnlyApp = getApps().length ? getApp() : initializeApp(emailOnlyConfig);
@@ -9542,13 +10051,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const centralAdminConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const centralAdminApp = getApps().length ? getApp() : initializeApp(centralAdminConfig);
@@ -9864,13 +10373,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const adminOnlyConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const adminOnlyApp = getApps().length ? getApp() : initializeApp(adminOnlyConfig);
@@ -10276,13 +10785,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const adminEmailConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const adminEmailApp = getApps().length ? getApp() : initializeApp(adminEmailConfig);
@@ -10676,13 +11185,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const finalAdminConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const finalAdminApp = getApps().length ? getApp() : initializeApp(finalAdminConfig);
@@ -10777,13 +11286,13 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const adminCredFinalConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const adminCredFinalApp = getApps().length ? getApp() : initializeApp(adminCredFinalConfig);
@@ -11236,13 +11745,13 @@ import { getAuth, updateProfile, sendPasswordResetEmail } from "https://www.gsta
 import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const profileFixConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
 };
 
 const profileFixApp = getApps().length ? getApp() : initializeApp(profileFixConfig);
@@ -11608,9 +12117,9 @@ window.requestOwnPasswordReset = async function(){
         }
       });
       var gg = scoreAndGrade(total, totalMax, gradeCriteria);
-      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">'+(index+1)+'</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
+      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
 
-      mobileHtml += '<div class="summary-mobile-card"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(st.name)+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="text-xs font-black text-primary bg-indigo-50 rounded-full px-3 py-1">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+      mobileHtml += '<div class="summary-mobile-card"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(st.name)+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -11708,7 +12217,7 @@ window.requestOwnPasswordReset = async function(){
       }
       if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
       return '<div class="summary-mobile-card">'+
-        '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(no)+'</div></div>'+
+        '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'+
         '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'+
         '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'+
         '<div class="summary-mobile-plans">'+planHtml+'</div>'+
@@ -11737,5 +12246,552 @@ window.requestOwnPasswordReset = async function(){
 })();
 </script>
 
+
+
+<!-- Patch: Mobile overview card values only (attendance + task title). Do not affect desktop. -->
+<style id="mobile-overview-card-attendance-title-only-fix">
+@media (max-width:767px){
+  .summary-mobile-plan-title{
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    line-height:1.25 !important;
+  }
+}
+</style>
+<script id="mobile-overview-card-attendance-title-only-fix-script">
+(function(){
+  if (window.__schoolhubMobileOverviewAttTitleOnlyFix) return;
+  window.__schoolhubMobileOverviewAttTitleOnlyFix = true;
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+  function cleanText(el){
+    return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim();
+  }
+  function splitAttendance(v){
+    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
+    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
+  }
+  function ensureBox(){
+    var table = document.getElementById('course-summary-table');
+    if (!table) return null;
+    var box = document.getElementById('course-summary-mobile-cards');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'course-summary-mobile-cards';
+      var wrap = table.closest('.overflow-x-auto') || table.parentNode;
+      if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
+      else table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+  function parseHeader(th, fallbackIndex){
+    var titleAttr = (th && th.getAttribute && th.getAttribute('title')) || '';
+    var week = '';
+    var title = '';
+    if (titleAttr) {
+      var parts = titleAttr.replace(/^คลิกเพื่อดูรายละเอียด:\s*/,'').split('|').map(function(x){ return x.trim(); });
+      week = (parts[0] || '').replace(/^สัปดาห์\s*/,'').trim();
+      title = parts[1] || '';
+    }
+    if (!week) {
+      var t = cleanText(th);
+      var wm = t.match(/\d+/);
+      week = wm ? wm[0] : String(fallbackIndex + 1);
+    }
+    if (!title) title = cleanText(th).replace(/^สัปดาห์\s*/,'').trim() || 'งาน';
+    return { week: week, title: title };
+  }
+
+  function buildFixedMobileOverviewCards(){
+    if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+    var table = document.getElementById('course-summary-table');
+    var box = ensureBox();
+    if (!table || !box) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    if (!rows.length) { box.innerHTML = ''; return; }
+    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+
+    box.innerHTML = rows.map(function(row, idx){
+      var cells = Array.prototype.slice.call(row.children);
+      var texts = cells.map(cleanText);
+      var no = texts[0] || String(idx + 1);
+      var code = texts[1] || '-';
+      var name = texts[2] || '-';
+
+      /* ตารางบางเวอร์ชันมีคอลัมน์ ชั้น/ห้อง ก่อนคอลัมน์เช็คชื่อ และบางเวอร์ชันไม่มี
+         จึงหาเซลล์เช็คชื่อจากรูปแบบ มา/สาย/ขาด โดยตรง เพื่อให้ช่องสีเขียว/ส้ม/แดงตรงเสมอ */
+      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t); });
+      if (attIndex < 0) attIndex = 3;
+      var att = splitAttendance(texts[attIndex]);
+      var room = '-';
+      if (attIndex > 3) room = texts[3] || '-';
+
+      var totalIndex = Math.max(cells.length - 2, 0);
+      var gradeIndex = Math.max(cells.length - 1, 0);
+      var total = texts[totalIndex] || '0';
+      var grade = texts[gradeIndex] || '-';
+
+      var planHtml = '';
+      for (var i = attIndex + 1; i < totalIndex; i++) {
+        var h = parseHeader(headers[i], i - attIndex - 1);
+        var value = texts[i] || '-';
+        var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500'));
+        var valueHtml = isMissingSavedScore ? '<span class="schoolhub-mobile-missing-score">-</span>' : esc(value);
+        planHtml += '<div class="summary-mobile-plan">'
+          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
+          + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
+          + '</div>';
+      }
+      if (!planHtml) planHtml = '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+
+      return '<div class="summary-mobile-card">'
+        + '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'
+        + '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'
+        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'
+        + '<div class="summary-mobile-plans">'+planHtml+'</div>'
+        + '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.buildMobileOverviewCards = buildFixedMobileOverviewCards;
+  function hookRender(){
+    if (typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileAttTitleOnlyWrapped) {
+      var old = window.renderCourseOverview;
+      var fn = function(){
+        var r = old.apply(this, arguments);
+        setTimeout(buildFixedMobileOverviewCards, 40);
+        setTimeout(buildFixedMobileOverviewCards, 180);
+        return r;
+      };
+      fn.__mobileAttTitleOnlyWrapped = true;
+      window.renderCourseOverview = fn;
+    }
+  }
+  hookRender();
+  document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildFixedMobileOverviewCards, 300); });
+  window.addEventListener('resize', function(){ setTimeout(buildFixedMobileOverviewCards, 100); });
+  document.addEventListener('click', function(){ setTimeout(buildFixedMobileOverviewCards, 120); });
+})();
+</script>
+
+
+
+<!-- SchoolHub Mobile-only two point fix: attendance radio center + hide global stats while scoring -->
+<style id="schoolhub-mobile-att-score-two-point-fix">
+@media (max-width: 767px) {
+    /* จุดที่ 1: radio fix ย้ายไปอยู่ใน schoolhub-mobile-3pages-card-only-fix แล้ว */
+
+    /* จุดที่ 2: กันสถิติรวมทั้งระบบแทรกเข้าหน้าบันทึกคะแนน เฉพาะมือถือและเฉพาะตอนอยู่หน้า scores */
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel {
+        display: none !important;
+    }
+}
+</style>
+<script id="schoolhub-mobile-score-stats-guard-fix">
+(function(){
+    function syncMobileScoreGuard(){
+        try{
+            var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            var courseView = document.getElementById('view-course-detail');
+            var scoreTab = document.getElementById('course-tab-scores');
+            var scoreWeek = document.getElementById('score-week');
+            var inCourse = !!courseView && !courseView.classList.contains('hidden');
+            var inScore = !!scoreTab && !scoreTab.classList.contains('hidden');
+            var hasWeek = !!(scoreWeek && scoreWeek.value);
+            document.body.classList.toggle('schoolhub-mobile-score-card-active', !!(isMobile && inCourse && inScore && hasWeek));
+        }catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', syncMobileScoreGuard);
+    window.addEventListener('resize', syncMobileScoreGuard);
+    document.addEventListener('change', function(e){
+        if(e && e.target && e.target.id === 'score-week') setTimeout(syncMobileScoreGuard, 0);
+    }, true);
+    document.addEventListener('click', function(){ setTimeout(syncMobileScoreGuard, 80); }, true);
+
+    var originalSwitchCourseTab = window.switchCourseTab;
+    if (typeof originalSwitchCourseTab === 'function' && !originalSwitchCourseTab.__schoolhubMobileScoreGuardWrapped) {
+        var wrappedSwitchCourseTab = function(){
+            var result = originalSwitchCourseTab.apply(this, arguments);
+            setTimeout(syncMobileScoreGuard, 0);
+            return result;
+        };
+        wrappedSwitchCourseTab.__schoolhubMobileScoreGuardWrapped = true;
+        window.switchCourseTab = wrappedSwitchCourseTab;
+    }
+
+    var originalRenderScoreList = window.renderScoreList;
+    if (typeof originalRenderScoreList === 'function' && !originalRenderScoreList.__schoolhubMobileScoreGuardWrapped) {
+        var wrappedRenderScoreList = function(){
+            var result = originalRenderScoreList.apply(this, arguments);
+            setTimeout(syncMobileScoreGuard, 0);
+            return result;
+        };
+        wrappedRenderScoreList.__schoolhubMobileScoreGuardWrapped = true;
+        window.renderScoreList = wrappedRenderScoreList;
+    }
+
+    setInterval(syncMobileScoreGuard, 700);
+})();
+</script>
+
+
+<!-- SchoolHub Mobile-only score blank space final fix -->
+<style id="schoolhub-mobile-score-blank-final-fix">
+@media (max-width: 767px) {
+    /* เฉพาะมือถือ + เฉพาะหน้าบันทึกคะแนนที่เลือกสัปดาห์แล้ว: ยุบพื้นที่ว่างของสถิติรวมทั้งระบบให้หมด */
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel,
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel *,
+    body.schoolhub-mobile-score-card-active .schoolhub-mobile-score-hidden-stats,
+    body.schoolhub-mobile-score-card-active .schoolhub-mobile-score-hidden-stats * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+    }
+
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel {
+        position: static !important;
+        pointer-events: none !important;
+    }
+}
+</style>
+<script id="schoolhub-mobile-score-blank-final-fix-script">
+(function(){
+    function isMobileScoreActive(){
+        try{
+            var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            var courseView = document.getElementById('view-course-detail');
+            var scoreTab = document.getElementById('course-tab-scores');
+            var scoreWeek = document.getElementById('score-week');
+            var scoreArea = document.getElementById('score-area');
+            return !!(isMobile && courseView && !courseView.classList.contains('hidden') && scoreTab && !scoreTab.classList.contains('hidden') && scoreWeek && scoreWeek.value && scoreArea && !scoreArea.classList.contains('hidden'));
+        }catch(e){ return false; }
+    }
+
+    function collapseScoreBlankStats(){
+        try{
+            var active = isMobileScoreActive();
+            document.body.classList.toggle('schoolhub-mobile-score-card-active', active);
+            var panel = document.getElementById('admin-global-stats-panel');
+            if(!panel) return;
+            panel.classList.toggle('schoolhub-mobile-score-hidden-stats', active);
+            if(active){
+                panel.setAttribute('aria-hidden','true');
+                panel.style.setProperty('display','none','important');
+                panel.style.setProperty('height','0','important');
+                panel.style.setProperty('min-height','0','important');
+                panel.style.setProperty('max-height','0','important');
+                panel.style.setProperty('margin','0','important');
+                panel.style.setProperty('padding','0','important');
+                panel.style.setProperty('border','0','important');
+                panel.style.setProperty('overflow','hidden','important');
+            }else{
+                panel.removeAttribute('aria-hidden');
+                panel.classList.remove('schoolhub-mobile-score-hidden-stats');
+                ['display','height','min-height','max-height','margin','padding','border','overflow'].forEach(function(k){ panel.style.removeProperty(k); });
+            }
+        }catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(collapseScoreBlankStats, 80); setTimeout(collapseScoreBlankStats, 350); });
+    window.addEventListener('resize', function(){ setTimeout(collapseScoreBlankStats, 80); });
+    document.addEventListener('change', function(e){ if(e && e.target && e.target.id === 'score-week') { setTimeout(collapseScoreBlankStats, 0); setTimeout(collapseScoreBlankStats, 180); } }, true);
+    document.addEventListener('click', function(){ setTimeout(collapseScoreBlankStats, 100); }, true);
+
+    var oldRenderScoreList = window.renderScoreList;
+    if(typeof oldRenderScoreList === 'function' && !oldRenderScoreList.__schoolhubMobileScoreBlankFinalWrapped){
+        var wrapped = function(){
+            var r = oldRenderScoreList.apply(this, arguments);
+            setTimeout(collapseScoreBlankStats, 0);
+            setTimeout(collapseScoreBlankStats, 160);
+            return r;
+        };
+        wrapped.__schoolhubMobileScoreBlankFinalWrapped = true;
+        window.renderScoreList = wrapped;
+    }
+
+    var oldSwitchCourseTab = window.switchCourseTab;
+    if(typeof oldSwitchCourseTab === 'function' && !oldSwitchCourseTab.__schoolhubMobileScoreBlankFinalWrapped){
+        var wrappedTab = function(){
+            var r = oldSwitchCourseTab.apply(this, arguments);
+            setTimeout(collapseScoreBlankStats, 0);
+            setTimeout(collapseScoreBlankStats, 160);
+            return r;
+        };
+        wrappedTab.__schoolhubMobileScoreBlankFinalWrapped = true;
+        window.switchCourseTab = wrappedTab;
+    }
+
+    setInterval(collapseScoreBlankStats, 900);
+})();
+</script>
+
+
+<style id="schoolhub-seq-text-only-fix">
+.schoolhub-seq-text{
+  color:#2563eb!important;
+  font-weight:800!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  display:block!important;
+  line-height:1.25!important;
+}
+#course-summary-mobile-cards .summary-mobile-card-no,
+#course-summary-mobile-cards .summary-mobile-seq-text{
+  color:#2563eb!important;
+  font-weight:800!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  display:block!important;
+  line-height:1.25!important;
+}
+#course-summary-mobile-cards .summary-mobile-card-code{display:none!important;}
+</style>
+<style id="schoolhub-mobile-att-no-circle-color-only-final">
+/* Mobile View เท่านั้น: หน้าเช็คชื่อ ใช้สีของกล่องแทนวงกลม radio */
+@media (max-width: 767px) {
+    #attendance-list .schoolhub-mobile-att-btn > input[type="radio"] {
+        position: absolute !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        outline: 0 !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        pointer-events: none !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present,
+    #attendance-list .schoolhub-mobile-att-btn.late,
+    #attendance-list .schoolhub-mobile-att-btn.absent {
+        background: #f8fafc !important;
+        border-color: #e5e7eb !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present span {
+        color: #059669 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late span {
+        color: #d97706 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent span {
+        color: #e11d48 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.present:has(input[type="radio"]:checked) {
+        background: #d1fae5 !important;
+        border-color: #10b981 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.late:has(input[type="radio"]:checked) {
+        background: #fef3c7 !important;
+        border-color: #f59e0b !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.absent:has(input[type="radio"]:checked) {
+        background: #ffe4e6 !important;
+        border-color: #f43f5e !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.present:has(input[type="radio"]:checked) span {
+        color: #047857 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.late:has(input[type="radio"]:checked) span {
+        color: #b45309 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.absent:has(input[type="radio"]:checked) span {
+        color: #be123c !important;
+    }
+}
+</style>
+
+<!-- Patch: Mobile overview show no + student code under name only. Do not affect desktop. -->
+<style id="schoolhub-mobile-overview-no-code-fold-idline-fix">
+@media (max-width:767px){
+  .summary-mobile-card-code{display:none!important;}
+  .summary-mobile-card-no{display:block!important;}
+  .summary-mobile-card-idline{
+    margin-top:.28rem!important;
+    display:block!important;
+    font-size:.74rem!important;
+    font-weight:900!important;
+    color:#64748b!important;
+    line-height:1.25!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+  }
+  .summary-mobile-card-idline .summary-mobile-id-symbol{
+    color:#cbd5e1!important;
+    font-weight:900!important;
+  }
+  .summary-mobile-card-room{margin-top:.2rem!important;}
+}
+</style>
+<script id="schoolhub-mobile-overview-no-code-fold-idline-fix-script">
+(function(){
+  if (window.__schoolhubMobileOverviewNoCodeFoldIdlineFix) return;
+  window.__schoolhubMobileOverviewNoCodeFoldIdlineFix = true;
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+  function cleanText(el){
+    return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim();
+  }
+  function splitAttendance(v){
+    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
+    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
+  }
+  function ensureBox(){
+    var table = document.getElementById('course-summary-table');
+    if (!table) return null;
+    var box = document.getElementById('course-summary-mobile-cards');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'course-summary-mobile-cards';
+      var wrap = table.closest('.overflow-x-auto') || table.parentNode;
+      if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
+      else table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+  function parseHeader(th, fallbackIndex){
+    var titleAttr = (th && th.getAttribute && th.getAttribute('title')) || '';
+    var week = '';
+    var title = '';
+    if (titleAttr) {
+      var parts = titleAttr.replace(/^คลิกเพื่อดูรายละเอียด:\s*/,'').split('|').map(function(x){ return x.trim(); });
+      week = (parts[0] || '').replace(/^สัปดาห์\s*/,'').trim();
+      title = parts[1] || '';
+    }
+    if (!week) {
+      var t = cleanText(th);
+      var wm = t.match(/\d+/);
+      week = wm ? wm[0] : String(fallbackIndex + 1);
+    }
+    if (!title) title = cleanText(th).replace(/^สัปดาห์\s*/,'').trim() || 'งาน';
+    return { week: week, title: title };
+  }
+
+  function buildOverviewCardsNoFoldCode(){
+    if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+    var table = document.getElementById('course-summary-table');
+    var box = ensureBox();
+    if (!table || !box) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    if (!rows.length) { box.innerHTML = ''; return; }
+    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+
+    box.innerHTML = rows.map(function(row, idx){
+      var cells = Array.prototype.slice.call(row.children);
+      var texts = cells.map(cleanText);
+      var no = texts[0] || String(idx + 1);
+      var code = texts[1] || '-';
+      var name = texts[2] || '-';
+      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t); });
+      if (attIndex < 0) attIndex = 3;
+      var att = splitAttendance(texts[attIndex]);
+      var room = '-';
+      if (attIndex > 3) room = texts[3] || '-';
+      var totalIndex = Math.max(cells.length - 2, 0);
+      var gradeIndex = Math.max(cells.length - 1, 0);
+      var total = texts[totalIndex] || '0';
+      var grade = texts[gradeIndex] || '-';
+      var planHtml = '';
+      for (var i = attIndex + 1; i < totalIndex; i++) {
+        var h = parseHeader(headers[i], i - attIndex - 1);
+        var value = texts[i] || '-';
+        var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500'));
+        var valueHtml = isMissingSavedScore ? '<span class="schoolhub-mobile-missing-score">-</span>' : esc(value);
+        planHtml += '<div class="summary-mobile-plan">'
+          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
+          + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
+          + '</div>';
+      }
+      if (!planHtml) planHtml = '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+      return '<div class="summary-mobile-card">'
+        + '<div class="summary-mobile-seq-text">#'+esc(String(no).replace(/^#/,''))+'</div>'
+        + '<div class="summary-mobile-card-name">'+esc(name)+'</div>'
+        + '<div class="summary-mobile-card-idline"><span>'+esc(code)+'</span></div>'
+        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'
+        + '<div class="summary-mobile-plans">'+planHtml+'</div>'
+        + '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.buildMobileOverviewCards = buildOverviewCardsNoFoldCode;
+  function hookRender(){
+    if (typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileNoFoldCodeIdlineWrapped) {
+      var old = window.renderCourseOverview;
+      var fn = function(){
+        var r = old.apply(this, arguments);
+        setTimeout(buildOverviewCardsNoFoldCode, 50);
+        setTimeout(buildOverviewCardsNoFoldCode, 200);
+        return r;
+      };
+      fn.__mobileNoFoldCodeIdlineWrapped = true;
+      window.renderCourseOverview = fn;
+    }
+  }
+  hookRender();
+  document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildOverviewCardsNoFoldCode, 300); });
+  window.addEventListener('resize', function(){ setTimeout(buildOverviewCardsNoFoldCode, 100); });
+  document.addEventListener('click', function(){ setTimeout(buildOverviewCardsNoFoldCode, 140); });
+})();
+</script>
+
+<style id="schoolhub-mobile-overview-hide-room-red-dash-fix">
+@media (max-width: 767px){
+  #course-summary-mobile-cards .summary-mobile-card-room{
+    display:none!important;
+  }
+  #course-summary-mobile-cards .schoolhub-mobile-missing-score{
+    color:#ef4444!important;
+    font-weight:900!important;
+  }
+}
+</style>
 </body>
 </html>
