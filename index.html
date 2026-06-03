@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3426,6 +3427,44 @@ document.addEventListener('click',function(){
     </div>
     <div id="public-share-view" class="fixed inset-0 share-public-bg z-[210] hidden overflow-y-auto p-4 md:p-8"><div class="max-w-4xl mx-auto"><div class="flex items-center gap-3 mb-5"><div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg"><i class="fas fa-graduation-cap"></i></div><div><h1 class="text-2xl font-black text-slate-900">SchoolHub</h1><p class="text-sm text-slate-500">ข้อมูลที่ครูแชร์ให้ดู</p></div></div><div id="public-share-content" class="share-mini-card rounded-[2rem] p-6 md:p-8 shadow-xl"></div></div></div>
 
+
+
+    <!-- Course Teachers Modal (SchoolHub patch: shared teachers per course only) -->
+    <div id="course-teachers-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[900000] hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start gap-4 shrink-0">
+                <div>
+                    <h3 class="text-xl font-black text-slate-800"><i class="fas fa-chalkboard-user text-primary mr-2"></i>จัดการครูในรายวิชา</h3>
+                    <p id="course-teachers-modal-subtitle" class="text-sm text-slate-500 mt-1">เพิ่มครูด้วยอีเมลและกำหนดสิทธิ์เฉพาะรายวิชานี้</p>
+                </div>
+                <button type="button" onclick="closeCourseTeachersModal()" class="w-10 h-10 rounded-full bg-white border text-slate-500 hover:bg-slate-100 shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-5">
+                <div class="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3 md:items-end">
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">อีเมลครู</label>
+                        <input id="course-teacher-email" type="email" class="w-full bg-white border border-slate-200 rounded-2xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="teacher@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">สิทธิ์</label>
+                        <select id="course-teacher-permission" class="w-full bg-white border border-slate-200 rounded-2xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                            <option value="view">ดูอย่างเดียว</option>
+                            <option value="edit">แก้ไขได้</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="addCourseTeacher()" class="bg-primary hover:bg-indigo-700 text-white rounded-2xl p-3 font-bold shadow-lg shadow-indigo-100"><i class="fas fa-user-plus mr-1"></i> เพิ่มครู</button>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-black text-slate-800">รายชื่อครูที่ถูกเพิ่มแล้ว</h4>
+                        <span id="course-teachers-count" class="text-xs font-bold text-slate-400"></span>
+                    </div>
+                    <div id="course-teachers-list" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Logic via JS Module -->
 
     <!-- Plan Payment Modal -->
@@ -3537,7 +3576,7 @@ document.addEventListener('click',function(){
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
   apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
@@ -3746,90 +3785,6 @@ document.addEventListener('click',function(){
             window.__currentUserDir = null;
             window.__schoolhubPlanLocked = false;
             window.__schoolhubPendingInvites = [];
-            stopSchoolHubRealtimeListeners();
-        }
-
-        let schoolhubRealtimeUnsubs = [];
-        let schoolhubRealtimeUserKey = '';
-        let schoolhubRealtimeRenderTimer = null;
-
-        function stopSchoolHubRealtimeListeners(){
-            try { schoolhubRealtimeUnsubs.forEach(fn => { try { if (typeof fn === 'function') fn(); } catch(e){} }); } catch(e) {}
-            schoolhubRealtimeUnsubs = [];
-            schoolhubRealtimeUserKey = '';
-            if (schoolhubRealtimeRenderTimer) { clearTimeout(schoolhubRealtimeRenderTimer); schoolhubRealtimeRenderTimer = null; }
-        }
-
-        function applySchoolHubStateData(data){
-            data = data || {};
-            state.courses = Array.isArray(data.courses) ? data.courses : [];
-            state.students = Array.isArray(data.students) ? data.students : [];
-            state.scores = Array.isArray(data.scores) ? data.scores : [];
-            state.attendance = data.attendance || {};
-            state.coursePlans = data.coursePlans || {};
-            state.courseGrades = data.courseGrades || {};
-            window.state = state;
-        }
-
-        function renderSchoolHubRealtimeViews(){
-            if (schoolhubRealtimeRenderTimer) clearTimeout(schoolhubRealtimeRenderTimer);
-            schoolhubRealtimeRenderTimer = setTimeout(function(){
-                try { updateGlobalViews(); } catch(e) {}
-                try { if (typeof renderStudentsMaster === 'function' && !document.getElementById('view-students-master')?.classList.contains('hidden')) renderStudentsMaster(); } catch(e) {}
-                try {
-                    if (currentActiveCourseId && !document.getElementById('view-course-detail')?.classList.contains('hidden')) {
-                        const course = state.courses.find(c => c.id === currentActiveCourseId);
-                        if (course) {
-                            const title = document.getElementById('page-title');
-                            const sub = document.getElementById('page-subtitle');
-                            const side = document.getElementById('sidebar-course-name');
-                            const mob = document.getElementById('mobile-course-name');
-                            if (title) title.textContent = course.name || '';
-                            if (sub) sub.innerHTML = `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs font-bold mr-2">${course.code || ''}</span> จัดการข้อมูลรายวิชานี้`;
-                            if (side) side.textContent = `วิชา: ${course.code || ''}`;
-                            if (mob) mob.textContent = `เมนูประจำรายวิชา: ${course.code || ''} ${course.name || ''}`;
-                        }
-                        if (!document.getElementById('course-tab-overview')?.classList.contains('hidden')) { try { renderCourseOverview(); } catch(e) {} }
-                        if (!document.getElementById('course-tab-attendance')?.classList.contains('hidden')) { try { initCalendar(); renderAttendanceList(); } catch(e) {} }
-                        if (!document.getElementById('course-tab-scores')?.classList.contains('hidden')) { try { handleScoreCourseChange(); renderScoreList(); renderPlanList(currentActiveCourseId); } catch(e) {} }
-                    }
-                } catch(e) {}
-            }, 120);
-        }
-
-        function startSchoolHubRealtimeListeners(userForDir){
-            const u = userForDir || currentUser || (auth && auth.currentUser);
-            if (!u || u.uid === 'admin-bypass') return;
-            const key = getUserKey(u);
-            if (!key) return;
-            if (schoolhubRealtimeUserKey === key && schoolhubRealtimeUnsubs.length) return;
-            stopSchoolHubRealtimeListeners();
-            schoolhubRealtimeUserKey = key;
-            try {
-                schoolhubRealtimeUnsubs.push(onSnapshot(doc(db, getPrivatePath(key), 'state'), function(docSnap){
-                    if (docSnap.exists()) applySchoolHubStateData(docSnap.data());
-                    else applySchoolHubStateData({ courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} });
-                    renderSchoolHubRealtimeViews();
-                }, function(error){ console.warn('SchoolHub realtime state failed:', error); }));
-            } catch(e) { console.warn('start state realtime failed:', e); }
-            try {
-                if (u.uid) schoolhubRealtimeUnsubs.push(onSnapshot(doc(db, getPublicPath(), u.uid), function(docSnap){
-                    window.__currentUserDir = docSnap.exists() ? (docSnap.data() || {}) : {};
-                    try { refreshCurrentUserPlanLock(); } catch(e) {}
-                    try { renderUserPlans(); } catch(e) {}
-                }, function(error){ console.warn('SchoolHub realtime user dir failed:', error); }));
-            } catch(e) { console.warn('start user realtime failed:', e); }
-            try {
-                schoolhubRealtimeUnsubs.push(onSnapshot(getPlansDocRef(), function(docSnap){
-                    if (docSnap.exists() && Array.isArray(docSnap.data().items)) {
-                        subscriptionPlans = docSnap.data().items;
-                        writeLocalJSON(PLANS_CACHE_KEY, subscriptionPlans);
-                        try { renderLandingPlans(); } catch(e) {}
-                        try { renderUserPlans(); } catch(e) {}
-                        try { if (isAdmin) renderAdminPlans(); } catch(e) {}
-                    }
-                }, function(error){ console.warn('SchoolHub realtime plans failed:', error); }));
-            } catch(e) { console.warn('start plans realtime failed:', e); }
         }
 
         async function loadSchoolHubDataAfterAuth(userForDir) {
@@ -3843,7 +3798,6 @@ document.addEventListener('click',function(){
             } catch(e) { console.warn('load auth user dir failed:', e); }
             try { await refreshCurrentUserPlanLock(); } catch(e) { console.warn('refresh plan after auth failed:', e); }
             try { await loadPublicPlans(); } catch(e) { console.warn('load plans after auth failed:', e); }
-            try { startSchoolHubRealtimeListeners(userForDir || currentUser); } catch(e) { console.warn('start realtime after auth failed:', e); }
             updateGlobalViews();
         }
 
@@ -5067,10 +5021,119 @@ async function submitPlanRequest(planId){
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
         window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 
+
+        // SchoolHub shared-course-teachers core patch (เฉพาะรายวิชา)
+        let schoolhubSharedOwnerStates = {};
+        let schoolhubSharedCourseIds = new Set();
+        const schoolhubNormalizeEmail = (v) => String(v || '').trim().toLowerCase();
+        const schoolhubGetMyEmail = () => schoolhubNormalizeEmail(currentUser?.email || window.currentUserEmail || '');
+        const schoolhubReadSharedTeachers = (course) => {
+            if (!course) return [];
+            if (Array.isArray(course.sharedTeachers)) return course.sharedTeachers.filter(Boolean);
+            if (course.sharedTeachers && typeof course.sharedTeachers === 'object') return Object.entries(course.sharedTeachers).map(([email, info]) => ({ email, ...(info || {}) }));
+            return [];
+        };
+        const schoolhubWriteSharedTeachers = (course, list) => {
+            if (!course) return;
+            course.sharedTeachers = (list || []).map(t => ({ email: schoolhubNormalizeEmail(t.email), permission: t.permission === 'edit' ? 'edit' : 'view', addedAt: t.addedAt || new Date().toISOString(), addedBy: t.addedBy || schoolhubGetMyEmail() })).filter(t => t.email);
+        };
+        const schoolhubGetShareInfo = (courseId) => {
+            const course = (state.courses || []).find(c => String(c.id) === String(courseId));
+            if (!course) return { isShared:false, isOwner:true, permission:'owner', canEdit:true, canManage:true };
+            if (course.__sharedCourse) return { isShared:true, isOwner:false, permission:course.__sharedPermission || 'view', canEdit:course.__sharedPermission === 'edit', canManage:false, ownerKey:course.__sharedOwnerKey };
+            return { isShared:false, isOwner:true, permission:'owner', canEdit:true, canManage:true, ownerKey:getUserKey(currentUser) };
+        };
+        window.schoolhubCanEditCourse = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId).canEdit;
+        window.schoolhubCanManageCourseTeachers = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId).canManage;
+        window.schoolhubGetCourseShareInfo = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId);
+        const schoolhubOwnStateOnly = () => {
+            const sharedIds = schoolhubSharedCourseIds || new Set();
+            const own = { ...(state || {}), courses: (state.courses || []).filter(c => !c.__sharedCourse).map(c => { const x = { ...c }; delete x.__sharedCourse; delete x.__sharedOwnerKey; delete x.__sharedPermission; return x; }), students: (state.students || []).filter(st => !st.__sharedOwnerKey).map(st => { const x = { ...st }; delete x.__sharedOwnerKey; return x; }), scores: (state.scores || []).filter(sc => !sharedIds.has(String(sc.courseId))), attendance: {}, coursePlans: {}, courseGrades: {} };
+            Object.keys(state.attendance || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.attendance[cid] = state.attendance[cid]; });
+            Object.keys(state.coursePlans || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.coursePlans[cid] = state.coursePlans[cid]; });
+            Object.keys(state.courseGrades || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.courseGrades[cid] = state.courseGrades[cid]; });
+            return own;
+        };
+        async function schoolhubLoadSharedCoursesForCurrentUser() {
+            schoolhubSharedOwnerStates = {}; schoolhubSharedCourseIds = new Set();
+            const myEmail = schoolhubGetMyEmail();
+            if (!myEmail || !currentUser || currentUser.uid === 'admin-bypass') return;
+            try {
+                const usersSnap = await withTimeout(getDocs(collection(db, getPublicPath())), 8000, 'loadSharedCourseUsers');
+                const myKey = getUserKey(currentUser);
+                const sharedCourses = [], sharedStudents = [], sharedScores = [];
+                const sharedAttendance = {}, sharedPlans = {}, sharedGrades = {};
+                for (const udoc of usersSnap.docs) {
+                    const u = udoc.data() || {}; const ownerKey = u.userKey || u.email || udoc.id;
+                    if (!ownerKey || String(ownerKey) === String(myKey)) continue;
+                    try {
+                        const snap = await withTimeout(getDoc(doc(db, getPrivatePath(ownerKey), 'state')), 5000, 'loadSharedOwnerState');
+                        if (!snap.exists()) continue;
+                        const ownerData = snap.data() || {};
+                        const matched = (ownerData.courses || []).filter(c => schoolhubReadSharedTeachers(c).some(t => schoolhubNormalizeEmail(t.email) === myEmail));
+                        if (!matched.length) continue;
+                        schoolhubSharedOwnerStates[ownerKey] = ownerData;
+                        matched.forEach(c => {
+                            const share = schoolhubReadSharedTeachers(c).find(t => schoolhubNormalizeEmail(t.email) === myEmail) || {};
+                            const cid = String(c.id); schoolhubSharedCourseIds.add(cid);
+                            sharedCourses.push({ ...c, __sharedCourse:true, __sharedOwnerKey:ownerKey, __sharedPermission:share.permission === 'edit' ? 'edit' : 'view' });
+                            if (ownerData.coursePlans && ownerData.coursePlans[cid]) sharedPlans[cid] = ownerData.coursePlans[cid];
+                            if (ownerData.attendance && ownerData.attendance[cid]) sharedAttendance[cid] = ownerData.attendance[cid];
+                            if (ownerData.courseGrades && ownerData.courseGrades[cid]) sharedGrades[cid] = ownerData.courseGrades[cid];
+                            (ownerData.scores || []).filter(sc => String(sc.courseId) === cid).forEach(sc => sharedScores.push(sc));
+                        });
+                        (ownerData.students || []).forEach(st => sharedStudents.push({ ...st, __sharedOwnerKey:ownerKey }));
+                    } catch(e) { console.warn('load shared owner skipped:', ownerKey, e); }
+                }
+                if (sharedCourses.length) {
+                    const sharedIdSet = new Set(sharedCourses.map(c => String(c.id)));
+                    state.courses = (state.courses || []).filter(c => !sharedIdSet.has(String(c.id))).concat(sharedCourses);
+                    state.students = (state.students || []).filter(st => !st.__sharedOwnerKey).concat(sharedStudents);
+                    state.scores = (state.scores || []).filter(sc => !sharedIdSet.has(String(sc.courseId))).concat(sharedScores);
+                    state.attendance = { ...(state.attendance || {}), ...sharedAttendance };
+                    state.coursePlans = { ...(state.coursePlans || {}), ...sharedPlans };
+                    state.courseGrades = { ...(state.courseGrades || {}), ...sharedGrades };
+                    window.state = state;
+                }
+            } catch(e) { console.warn('schoolhubLoadSharedCoursesForCurrentUser failed:', e); }
+        }
+        async function schoolhubSaveSharedOwnerStatesFromMergedState() {
+            for (const [ownerKey, ownerData] of Object.entries(schoolhubSharedOwnerStates || {})) {
+                const courseIds = (state.courses || []).filter(c => c.__sharedCourse && c.__sharedOwnerKey === ownerKey && c.__sharedPermission === 'edit').map(c => String(c.id));
+                if (!courseIds.length) continue;
+                const next = { ...(ownerData || {}), courses: (ownerData.courses || []).map(c => { const found = (state.courses || []).find(x => String(x.id) === String(c.id) && x.__sharedOwnerKey === ownerKey); if (!found) return c; const clean = { ...found }; delete clean.__sharedCourse; delete clean.__sharedOwnerKey; delete clean.__sharedPermission; return clean; }), scores: (ownerData.scores || []).filter(sc => !courseIds.includes(String(sc.courseId))).concat((state.scores || []).filter(sc => courseIds.includes(String(sc.courseId)))), attendance: { ...(ownerData.attendance || {}) }, coursePlans: { ...(ownerData.coursePlans || {}) }, courseGrades: { ...(ownerData.courseGrades || {}) }, students: (ownerData.students || []).map(st => { const found = (state.students || []).find(x => x.__sharedOwnerKey === ownerKey && String(x.id) === String(st.id)); if (!found) return st; const clean = { ...found }; delete clean.__sharedOwnerKey; return clean; }) };
+                courseIds.forEach(cid => { next.attendance[cid] = state.attendance?.[cid] || {}; next.coursePlans[cid] = state.coursePlans?.[cid] || []; if (state.courseGrades && state.courseGrades[cid]) next.courseGrades[cid] = state.courseGrades[cid]; });
+                await withTimeout(setDoc(doc(db, getPrivatePath(ownerKey), 'state'), next), 8000, 'saveSharedOwnerState');
+                schoolhubSharedOwnerStates[ownerKey] = next;
+            }
+        }
+        function schoolhubAssertCanEditCourse(courseId, actionText='แก้ไขข้อมูล') { if (!schoolhubGetShareInfo(courseId).canEdit) { showCustomAlert('ดูได้อย่างเดียว', 'รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถ' + actionText + 'ได้', true); return false; } return true; }
+        function schoolhubEnsureCourseTeacherButton() {
+            const box = document.getElementById('header-actions'); if (!box || !currentActiveCourseId) return;
+            const old = document.getElementById('course-teachers-btn'); const info = schoolhubGetShareInfo(currentActiveCourseId);
+            if (!info.canManage) { if (old) old.remove(); return; } if (old) return;
+            const btn = document.createElement('button'); btn.id = 'course-teachers-btn'; btn.type = 'button'; btn.onclick = () => window.openCourseTeachersModal(); btn.className = 'bg-indigo-50 border border-indigo-100 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-100 transition shadow-sm'; btn.innerHTML = '<i class="fas fa-chalkboard-user"></i> <span>จัดการครูในรายวิชา</span>'; box.insertBefore(btn, box.firstChild);
+        }
+        function schoolhubApplyReadonlyUI() {
+            if (!currentActiveCourseId) return; const canEdit = schoolhubGetShareInfo(currentActiveCourseId).canEdit;
+            ['#course-tab-attendance button[onclick="saveAttendance()"]','#btn-delete-attendance','#course-tab-scores button[onclick="saveScores()"]','#btn-delete-scores','#score-list input','#attendance-list input','#score-max','#score-title-input','#score-title-select'].forEach(sel => document.querySelectorAll(sel).forEach(el => { el.disabled = !canEdit; el.classList.toggle('opacity-50', !canEdit); el.classList.toggle('pointer-events-none', !canEdit); }));
+            document.querySelectorAll('#plan-list button, #plan-modal input, #plan-modal select, #plan-submit-btn, #plan-cancel-edit-btn').forEach(el => { if (el.closest('#plan-modal') && el.closest('.p-6.border-b')) return; el.disabled = !canEdit; el.classList.toggle('opacity-50', !canEdit); el.classList.toggle('pointer-events-none', !canEdit); });
+            schoolhubEnsureCourseTeacherButton();
+        }
+        window.openCourseTeachersModal = () => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้นที่จัดการครูในรายวิชาได้', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); if (!course) return; const sub = document.getElementById('course-teachers-modal-subtitle'); if (sub) sub.textContent = `${course.code || ''} ${course.name || ''}`.trim(); document.getElementById('course-teacher-email').value = ''; document.getElementById('course-teacher-permission').value = 'view'; window.renderCourseTeachersList(); window.openModal('course-teachers-modal'); };
+        window.closeCourseTeachersModal = () => window.closeModal('course-teachers-modal');
+        window.renderCourseTeachersList = () => { const box = document.getElementById('course-teachers-list'); const count = document.getElementById('course-teachers-count'); if (!box || !currentActiveCourseId) return; const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const items = schoolhubReadSharedTeachers(course); if (count) count.textContent = `${items.length} คน`; if (!items.length) { box.innerHTML = '<div class="text-center text-slate-400 border border-dashed rounded-2xl p-8">ยังไม่มีครูที่ถูกเพิ่มในรายวิชานี้</div>'; return; } box.innerHTML = items.map(t => { const email = escapeHTML(t.email || ''); const perm = t.permission === 'edit' ? 'edit' : 'view'; return `<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"><div class="min-w-0"><div class="font-black text-slate-800 truncate">${email}</div><div class="text-xs text-slate-400 mt-1">สิทธิ์ปัจจุบัน: ${perm === 'edit' ? 'แก้ไขได้' : 'ดูอย่างเดียว'}</div></div><div class="flex flex-col sm:flex-row gap-2"><select onchange="changeCourseTeacherPermission('${email}', this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"><option value="view" ${perm==='view'?'selected':''}>ดูอย่างเดียว</option><option value="edit" ${perm==='edit'?'selected':''}>แก้ไขได้</option></select><button type="button" onclick="removeCourseTeacher('${email}')" class="bg-rose-50 text-rose-600 border border-rose-100 px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-100"><i class="fas fa-trash"></i> ลบ</button></div></div>`; }).join(''); };
+        window.addCourseTeacher = async () => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const email = schoolhubNormalizeEmail(document.getElementById('course-teacher-email')?.value); const permission = document.getElementById('course-teacher-permission')?.value === 'edit' ? 'edit' : 'view'; if (!email || !email.includes('@')) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลครูให้ถูกต้อง', true); if (email === schoolhubGetMyEmail()) return showCustomAlert('เพิ่มไม่ได้', 'ไม่ต้องเพิ่มอีเมลเจ้าของรายวิชา', true); const list = schoolhubReadSharedTeachers(course).filter(t => schoolhubNormalizeEmail(t.email) !== email); list.push({ email, permission, addedAt:new Date().toISOString(), addedBy:schoolhubGetMyEmail() }); schoolhubWriteSharedTeachers(course, list); await saveStateToDB(); window.renderCourseTeachersList(); showCustomAlert('สำเร็จ', 'เพิ่มครูในรายวิชาแล้ว'); };
+        window.changeCourseTeacherPermission = async (email, permission) => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const target = schoolhubNormalizeEmail(email); schoolhubWriteSharedTeachers(course, schoolhubReadSharedTeachers(course).map(t => schoolhubNormalizeEmail(t.email) === target ? { ...t, permission: permission === 'edit' ? 'edit' : 'view' } : t)); await saveStateToDB(); window.renderCourseTeachersList(); };
+        window.removeCourseTeacher = async (email) => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); window.showCustomConfirm('ลบครูออกจากรายวิชา', 'ต้องการลบครูคนนี้ออกจากรายวิชาหรือไม่?', async () => { const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); schoolhubWriteSharedTeachers(course, schoolhubReadSharedTeachers(course).filter(t => schoolhubNormalizeEmail(t.email) !== schoolhubNormalizeEmail(email))); await saveStateToDB(); window.renderCourseTeachersList(); }); };
+
         async function saveStateToDB() {
             if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return; }
             if (!currentUser || currentUser.uid === 'admin-bypass') return;
-            try { await withTimeout(setDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state'), state), 8000, 'saveState'); }
+            try {
+                await withTimeout(setDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state'), schoolhubOwnStateOnly()), 8000, 'saveState');
+                await schoolhubSaveSharedOwnerStatesFromMergedState();
+            }
             catch (error) { showCustomAlert("ผิดพลาด", "ข้อมูลไม่ถูกบันทึกลง Cloud โปรดตรวจสอบอินเทอร์เน็ตหรือ Firestore Rules", true); }
         }
 
@@ -5079,9 +5142,14 @@ async function submitPlanRequest(planId){
             try {
                 const docSnap = await withTimeout(getDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state')), 8000, 'loadState');
                 if (docSnap.exists()) {
-                    applySchoolHubStateData(docSnap.data());
+                    const data = docSnap.data();
+                    state.courses = data.courses || []; state.students = data.students || [];
+                    state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
+                    state.courseGrades = data.courseGrades || {};
+                    window.state = state;
                 } else {
-                    applySchoolHubStateData({ courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} });
+                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                    window.state = state;
                     await saveStateToDB();
                 }
             } catch (error) {
@@ -5107,6 +5175,7 @@ async function submitPlanRequest(planId){
                     showCustomAlert("ดึงข้อมูลออนไลน์ไม่ได้", msg, true);
                 }
             } finally {
+                await schoolhubLoadSharedCoursesForCurrentUser();
                 updateGlobalViews();
             }
         }
@@ -5607,9 +5676,11 @@ ${resetUrl.toString()}
                     <i class="fas fa-arrow-left"></i> <span>กลับหน้าหลัก</span>
                 </button>
             `;
+            schoolhubEnsureCourseTeacherButton();
 
             window.switchView('course-detail');
             window.switchCourseTab('overview');
+            setTimeout(schoolhubApplyReadonlyUI, 60);
         };
 
         window.switchCourseTab = (tabId) => {
@@ -5628,6 +5699,7 @@ ${resetUrl.toString()}
             if(tabId === 'overview') renderCourseOverview();
             if(tabId === 'attendance') { window.initCalendar(); document.getElementById('attendance-placeholder').classList.remove('hidden'); document.getElementById('attendance-area').classList.add('hidden'); document.getElementById('att-date').value = '';}
             if(tabId === 'scores') { handleScoreCourseChange(); document.getElementById('score-placeholder').classList.remove('hidden'); document.getElementById('score-area').classList.add('hidden');}
+            setTimeout(schoolhubApplyReadonlyUI, 60);
         };
 
         function updateGlobalViews() {
@@ -6104,18 +6176,18 @@ ${resetUrl.toString()}
                 const rows = [];
                 plans.sort((a,b) => a.week - b.week).forEach(p => {
                     if (isMobileCardView) {
+                        const canEditPlan = schoolhubGetShareInfo(id).canEdit;
                         rows.push(`<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
-                            <div class="schoolhub-mobile-card">
-                                <div class="schoolhub-mobile-card-head">
-                                    <div class="min-w-0">
+                            <div class="schoolhub-mobile-card schoolhub-mobile-plan-card">
+                                <div class="schoolhub-mobile-card-head schoolhub-mobile-plan-card-head">
+                                    <div class="min-w-0 schoolhub-mobile-plan-title-wrap">
                                         <div class="schoolhub-mobile-card-title">${escapeHTML(p.title||'')}</div>
-                                        <div class="schoolhub-mobile-card-sub"><i class="fas fa-calendar-week text-primary mr-1"></i>สัปดาห์ ${escapeHTML(p.week||'')}</div>
+                                        <div class="schoolhub-mobile-card-sub"><i class="fas fa-calendar-week text-primary mr-1"></i>สัปดาห์ ${escapeHTML(p.week||'')} · คะแนนเต็ม ${escapeHTML(p.maxScore||'0')}</div>
                                     </div>
-                                    <div class="schoolhub-mobile-plan-score">${escapeHTML(p.maxScore||'0')}</div>
+                                    <button onclick="deletePlan('${id}', '${p.id}')" ${canEditPlan ? '' : 'disabled'} class="schoolhub-mobile-plan-delete-x ${canEditPlan ? '' : 'opacity-50 pointer-events-none'}" aria-label="ลบแผนคะแนน"><i class="fas fa-times"></i></button>
                                 </div>
                                 <div class="schoolhub-mobile-card-actions">
-                                    <button onclick="editPlan('${id}', '${p.id}')" class="schoolhub-mobile-action-btn edit"><i class="fas fa-edit"></i> แก้ไข</button>
-                                    <button onclick="deletePlan('${id}', '${p.id}')" class="schoolhub-mobile-action-btn delete"><i class="fas fa-trash"></i> ลบ</button>
+                                    <button onclick="editPlan('${id}', '${p.id}')" ${canEditPlan ? '' : 'disabled'} class="schoolhub-mobile-action-btn edit ${canEditPlan ? '' : 'opacity-50 pointer-events-none'}"><i class="fas fa-edit"></i> แก้ไข</button>
                                 </div>
                             </div>
                         </td></tr>`);
@@ -6128,6 +6200,7 @@ ${resetUrl.toString()}
         };
 
         window.editPlan = (courseId, planId) => {
+            if(!schoolhubAssertCanEditCourse(courseId, 'แก้ไขแผนคะแนน')) return;
             const p = state.coursePlans[courseId].find(x => x.id === planId); if(!p) return;
             editingPlanId = planId;
             document.getElementById('plan-week').value = p.week; document.getElementById('plan-title').value = p.title; document.getElementById('plan-max').value = p.maxScore;
@@ -6146,14 +6219,15 @@ ${resetUrl.toString()}
             document.getElementById('plan-cancel-edit-btn').classList.add('hidden'); document.getElementById('plan-edit-badge').classList.add('hidden');
         };
         window.handleAddPlan = async (e) => {
-            const id = document.getElementById('plan-course-id').value; if(!state.coursePlans[id]) state.coursePlans[id] = [];
+            const id = document.getElementById('plan-course-id').value; if(!schoolhubAssertCanEditCourse(id, 'เพิ่มหรือแก้ไขแผนคะแนน')) return;
+            if(!state.coursePlans[id]) state.coursePlans[id] = [];
             if(editingPlanId) {
                 const idx = state.coursePlans[id].findIndex(p => p.id === editingPlanId);
                 if(idx > -1) { state.coursePlans[id][idx].week = document.getElementById('plan-week').value; state.coursePlans[id][idx].title = document.getElementById('plan-title').value; state.coursePlans[id][idx].maxScore = document.getElementById('plan-max').value; }
             } else { state.coursePlans[id].push({ id: Date.now().toString(), week: document.getElementById('plan-week').value, title: document.getElementById('plan-title').value, maxScore: document.getElementById('plan-max').value }); }
             window.cancelEditPlan(); window.renderPlanList(id); await saveStateToDB();
         };
-        window.deletePlan = (cId, pId) => { window.showCustomConfirm("ยืนยัน", "ต้องการลบแผนคะแนนนี้ใช่หรือไม่?", async () => { state.coursePlans[cId] = state.coursePlans[cId].filter(p => p.id !== pId); window.renderPlanList(cId); await saveStateToDB(); }); };
+        window.deletePlan = (cId, pId) => { if(!schoolhubAssertCanEditCourse(cId, 'ลบแผนคะแนน')) return; window.showCustomConfirm("ยืนยัน", "ต้องการลบแผนคะแนนนี้ใช่หรือไม่?", async () => { state.coursePlans[cId] = state.coursePlans[cId].filter(p => p.id !== pId); window.renderPlanList(cId); await saveStateToDB(); }); };
 
         window.populateHiddenCourseDropdowns = () => {
             const opts = '<option value="">-- เลือกวิชา --</option>' + state.courses.map(c => `<option value="${c.id}">${c.code}</option>`).join('');
@@ -6280,7 +6354,7 @@ ${resetUrl.toString()}
             });
         };
         window.saveAttendance = async () => {
-            const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; if(!cid || !date) return;
+            const cid = currentActiveCourseId; if(!schoolhubAssertCanEditCourse(cid, 'บันทึกเช็คชื่อ')) return; const date = document.getElementById('att-date').value; if(!cid || !date) return;
             const records = Object.assign({}, (state.attendance[cid] && state.attendance[cid][date] && state.attendance[cid][date].records) ? state.attendance[cid][date].records : {}); window.getCourseStudents(cid).forEach(s => { if(window.isStudentWithdrawn(s)) return; const checked = document.querySelector(`input[name="att_${s.id}"]:checked`); if(checked) records[s.id] = checked.value; });
             if(!state.attendance[cid]) state.attendance[cid] = {}; state.attendance[cid][date] = { records, updatedAt: Date.now() };
             await saveStateToDB(); window.initCalendar();
@@ -6294,7 +6368,7 @@ ${resetUrl.toString()}
         };
 
         window.deleteAttendance = () => {
-            const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; if(!cid || !date) return;
+            const cid = currentActiveCourseId; if(!schoolhubAssertCanEditCourse(cid, 'ลบข้อมูลเช็คชื่อ')) return; const date = document.getElementById('att-date').value; if(!cid || !date) return;
             if(!state.attendance[cid] || !state.attendance[cid][date]) return;
 
             window.showCustomConfirm("ยืนยันการลบ", "คุณต้องการลบข้อมูลการเช็คชื่อของวันที่เลือกใช่หรือไม่?\n(สถานะของทุกคนในวันนี้จะถูกรีเซ็ต)", async () => {
@@ -6457,7 +6531,7 @@ ${resetUrl.toString()}
             setTimeout(() => { if (!window.isSchoolHubMobileView()) area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
         });
         window.saveScores = async () => {
-            const cId = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const maxScore = document.getElementById('score-max').value;
+            const cId = currentActiveCourseId; if(!schoolhubAssertCanEditCourse(cId, 'บันทึกคะแนน')) return; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const maxScore = document.getElementById('score-max').value;
             if(!cId || !week || !title || maxScore === '') return showCustomAlert("ข้อมูลไม่ครบ", "ระบุงานและคะแนนเต็มให้ครบ", true);
             const existingScoreRow = state.scores.find(s => s.courseId === cId && s.week === week && s.title === title);
             const records = Object.assign({}, existingScoreRow && existingScoreRow.records ? existingScoreRow.records : {});
@@ -6504,7 +6578,7 @@ ${resetUrl.toString()}
         };
 
         window.deleteScores = async () => {
-            const cId = currentActiveCourseId;
+            const cId = currentActiveCourseId; if(!schoolhubAssertCanEditCourse(cId, 'ลบคะแนน')) return;
             const week = document.getElementById('score-week').value;
             const title = window.getScoreTitle();
             if(!cId || !week || !title || title === '__custom__') return showCustomAlert("ข้อมูลไม่ครบ", "กรุณาเลือกสัปดาห์และชื่องานที่ต้องการลบ", true);
@@ -15417,6 +15491,58 @@ window.allowTeam=function(){
     document.addEventListener('DOMContentLoaded', function(){ setTimeout(movePlanModalToBody, 100); });
 })();
 </script>
+
+
+
+<style id="schoolhub-course-teachers-and-plan-x-fix">
+@media (max-width: 767px) {
+    #plan-list .schoolhub-mobile-plan-card {
+        position: relative !important;
+        padding-top: 1rem !important;
+    }
+    #plan-list .schoolhub-mobile-plan-card-head {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 0.75rem !important;
+        flex-wrap: nowrap !important;
+        padding-right: 0 !important;
+    }
+    #plan-list .schoolhub-mobile-plan-title-wrap {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding-right: 0.5rem !important;
+    }
+    #plan-list .schoolhub-mobile-plan-delete-x {
+        flex: 0 0 auto !important;
+        margin-left: auto !important;
+        width: 2.35rem !important;
+        height: 2.35rem !important;
+        min-width: 2.35rem !important;
+        border-radius: 9999px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #fff1f2 !important;
+        color: #e11d48 !important;
+        border: 1px solid #ffe4e6 !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+    }
+    #plan-list .schoolhub-mobile-card-actions {
+        grid-template-columns: 1fr !important;
+    }
+    #course-teachers-modal {
+        align-items: flex-start !important;
+        padding: calc(env(safe-area-inset-top) + .75rem) .75rem calc(env(safe-area-inset-bottom) + .75rem) !important;
+    }
+    #course-teachers-modal > div {
+        max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+        border-radius: 1.35rem !important;
+    }
+}
+</style>
 
 </body>
 </html>
