@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3695,7 +3696,16 @@ document.addEventListener('click',function(){
             }, 9000);
         });
 
-        const getUserKey = (user) => user.email || user.uid;
+        const isSchoolHubValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
+        const normalizeSchoolHubEmail = (v) => String(v || '').trim().toLowerCase();
+        const getUserKey = (user) => {
+            const email = normalizeSchoolHubEmail(user && user.email);
+            if (!isSchoolHubValidEmail(email)) {
+                console.error('Blocked invalid user creation: email required', user);
+                throw new Error('Blocked invalid user creation: email required');
+            }
+            return email;
+        };
         const getPrivatePath = (userKey) => `users/${userKey}/school_data`;
         const getPublicPath = () => `public_users_directory`;
         const getAnnouncementDocRef = () => doc(db, 'system_settings', 'announcements');
@@ -4864,7 +4874,7 @@ document.addEventListener('click',function(){
                 slipReference:verification.reference
             },{merge:true});
             await setDoc(doc(db,getPublicPath(),payload.uid),{
-                uid:payload.uid,email:payload.email||'',userKey:payload.userKey||payload.email||payload.uid,
+                uid:payload.uid,email:payload.email||'',userKey:normalizeSchoolHubEmail(payload.email||payload.userKey),
                 name:payload.name||payload.email||'',role:'user',status:'active',
                 planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
                 planApprovedAt:now,planStartAt:now,
@@ -4874,7 +4884,7 @@ document.addEventListener('click',function(){
                 requestedPlanId:null,requestedPlanName:null,
                 lastAutoApprovedPaymentRef:verification.reference
             },{merge:true});
-            await setDoc(doc(db,'users_status',payload.userKey||payload.email||payload.uid),{
+            await setDoc(doc(db,'users_status',normalizeSchoolHubEmail(payload.email||payload.userKey)),{
                 status:'active',planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
                 planApprovedAt:now,planStartAt:now,
                 planNextBillingAt:getPlanNextBillingAt(getPlanById(payload.planId)||payload,now,payload.planBillingCycle||'monthly'),
@@ -5596,8 +5606,28 @@ async function submitPlanRequest(planId){
 
         async function addUserToDirectory(user, name, role = 'user') {
             const userKey = getUserKey(user);
-            try { await withTimeout(setDoc(doc(db, getPublicPath(), user.uid), { uid: user.uid, email: user.email || '', userKey: userKey, name: name || userKey, role: role, joinedAt: new Date().toISOString(), status: 'active' }, { merge: true }), 8000, 'addUserDirectory'); }
-            catch(e) {}
+            const email = userKey;
+            if (!user || !user.uid || !isSchoolHubValidEmail(email)) {
+                console.error('Blocked invalid user creation: email required', user);
+                throw new Error('Blocked invalid user creation: email required');
+            }
+            const now = new Date().toISOString();
+            try {
+                await withTimeout(setDoc(doc(db, getPublicPath(), user.uid), {
+                    uid: user.uid,
+                    email: email,
+                    userKey: email,
+                    name: name || user.displayName || email,
+                    role: role,
+                    joinedAt: now,
+                    createdAt: now,
+                    updatedAt: now,
+                    status: 'active'
+                }, { merge: true }), 8000, 'addUserDirectory');
+            } catch(e) {
+                console.error('addUserToDirectory failed:', e);
+                throw e;
+            }
         }
 
         window.toggleAuthMode = (mode) => {
@@ -5614,7 +5644,7 @@ async function submitPlanRequest(planId){
 
         window.handleLogin = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value.trim();
+            const email = normalizeSchoolHubEmail(document.getElementById('login-email').value);
             const pass = document.getElementById('login-pass').value;
 
             // Admin shortcut: ใช้จาก Firebase เท่านั้น
@@ -5692,6 +5722,7 @@ async function submitPlanRequest(planId){
             }
 
             if(!email || !pass) return showCustomAlert("ผิดพลาด", "กรุณากรอกอีเมลและรหัสผ่าน", true);
+            if(!isSchoolHubValidEmail(email)) return showCustomAlert("ไม่พบอีเมลผู้ใช้", "กรุณาเข้าสู่ระบบด้วยอีเมล", true);
 
             toggleLoader(true);
             try {
@@ -5703,6 +5734,12 @@ async function submitPlanRequest(planId){
 
             try {
                 const userCred = await signInWithEmailAndPassword(auth, email, pass);
+                const authEmail = normalizeSchoolHubEmail(userCred.user && userCred.user.email);
+                if(!isSchoolHubValidEmail(authEmail)) {
+                    await signOut(auth);
+                    toggleLoader(false);
+                    return showCustomAlert("ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล", "ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชีนี้ไม่มีอีเมล", true);
+                }
                 const verifySnap = await getDoc(doc(db, `users_status`, email));
                 const isSchoolHubVerified = verifySnap.exists() && verifySnap.data().emailVerified === true;
                 const isFirebaseVerified = userCred.user.emailVerified === true;
@@ -5749,10 +5786,11 @@ async function submitPlanRequest(planId){
         window.handleRegister = async (e) => {
             e.preventDefault();
             const name = document.getElementById('reg-name').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
+            const email = normalizeSchoolHubEmail(document.getElementById('reg-email').value);
             const pass = document.getElementById('reg-pass').value;
             const confirmPass = document.getElementById('reg-pass-confirm').value;
 
+            if(!isSchoolHubValidEmail(email)) return showCustomAlert("ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล", "กรุณากรอกอีเมลให้ถูกต้องก่อนสมัครสมาชิก", true);
             if(pass !== confirmPass) return showCustomAlert("รหัสไม่ตรงกัน", "กรุณายืนยันรหัสผ่านให้ถูกต้อง", true);
             if(pass.length < 6) return showCustomAlert("รหัสผ่านสั้นเกินไป", "ตั้งรหัสผ่าน 6 ตัวอักษรขึ้นไป", true);
 
@@ -5802,7 +5840,7 @@ async function submitPlanRequest(planId){
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
             }
             let provider = new GoogleAuthProvider(); window.isSocialAuthenticating = true; toggleLoader(true);
-            try { const result = await signInWithPopup(auth, provider); await addUserToDirectory(result.user, result.user.displayName || 'Google User', 'user'); window.isSocialAuthenticating = false; }
+            try { const result = await signInWithPopup(auth, provider); const email = normalizeSchoolHubEmail(result.user && result.user.email); if(!isSchoolHubValidEmail(email)){ await signOut(auth); window.isSocialAuthenticating = false; toggleLoader(false); return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true); } await addUserToDirectory(result.user, result.user.displayName || email, 'user'); window.isSocialAuthenticating = false; }
             catch (error) { window.isSocialAuthenticating = false; toggleLoader(false); showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true); }
         };
 
@@ -7174,14 +7212,14 @@ ${resetUrl.toString()}
                 try{
                     await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now},{merge:true});
                     await setDoc(doc(db,getPublicPath(),r.uid),{
-                        uid:r.uid,email:r.email||'',userKey:r.userKey||r.email||r.uid,
+                        uid:r.uid,email:r.email||'',userKey:normalizeSchoolHubEmail(r.email||r.userKey),
                         name:r.name||r.email||'',role:'user',status:'active',
                         planId:r.planId,planName:r.planName,planPrice:r.planPrice,
                         planApprovedAt:now,
                         planStartAt:now,          // ← รอบเริ่มนับจากวันอนุมัติ
                         requestedPlanId:null,requestedPlanName:null
                     },{merge:true});
-                    await setDoc(doc(db,'users_status',r.userKey||r.email||r.uid),{
+                    await setDoc(doc(db,'users_status',normalizeSchoolHubEmail(r.email||r.userKey)),{
                         status:'active',planId:r.planId,planName:r.planName,planPrice:r.planPrice,
                         planApprovedAt:now,planStartAt:now,deletedAt:null
                     },{merge:true});
@@ -7464,7 +7502,7 @@ ${resetUrl.toString()}
         const __oldSubmitPlanPaymentForm = window.submitPlanPaymentForm;
         // submitPlanPaymentForm เดิมยังใช้ OCR/สลิปเดิม แต่หลังบันทึกจะได้รอบชำระจากแผนที่เลือกผ่าน extractPlanAmount
         approvePlanRequest = window.approvePlanRequest = async function(id){
-            const snap=await getDoc(getPlanRequestDocRef(id)); if(!snap.exists())return showCustomAlert('ไม่พบคำขอ','คำขอนี้อาจถูกลบไปแล้ว',true); const r=snap.data(); const plan=getPlanById(r.planId)||r; window.showCustomConfirm('อนุมัติแผน',`อนุมัติให้ ${r.name||r.email} ใช้แผน ${r.planName} หรือไม่?`,async()=>{ toggleLoader(true); const now=Date.now(); const cycle=r.planBillingCycle||plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:r.uid,email:r.email||'',userKey:r.userKey||r.email||r.uid,name:r.name||r.email||'',role:'user'}); try{ await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now,planNextBillingAt:planPayload.planNextBillingAt,planExpiresAt:planPayload.planExpiresAt,courseLimit:planPayload.courseLimit},{merge:true}); await setDoc(doc(db,getPublicPath(),r.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',r.userKey||r.email||r.uid),planPayload,{merge:true}); sendMailViaWebApp({to:r.email||r.userKey,name:r.name||'',type:'plan_approved',subject:`อนุมัติแผน ${r.planName||''} แล้ว`,message:`สวัสดี ${r.name||r.email||''}\n\nคำขอสมัครแผน ${r.planName||''} ได้รับการอนุมัติแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}\n\nขอบคุณที่ใช้ SchoolHub`,extra:{planName:r.planName||'',planPrice:r.planPrice||'',requestId:id}}); await loadPlanRequests();await loadAdminData();window.closePlanRequestPopup(); showCustomAlert('อนุมัติแล้ว',`เปลี่ยนสิทธิ์ผู้ใช้เป็นแผน ${r.planName}\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`);}catch(e){showCustomAlert('อนุมัติไม่ได้',getFirebaseErrorText(e),true);} toggleLoader(false); });
+            const snap=await getDoc(getPlanRequestDocRef(id)); if(!snap.exists())return showCustomAlert('ไม่พบคำขอ','คำขอนี้อาจถูกลบไปแล้ว',true); const r=snap.data(); const plan=getPlanById(r.planId)||r; window.showCustomConfirm('อนุมัติแผน',`อนุมัติให้ ${r.name||r.email} ใช้แผน ${r.planName} หรือไม่?`,async()=>{ toggleLoader(true); const now=Date.now(); const cycle=r.planBillingCycle||plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:r.uid,email:r.email||'',userKey:normalizeSchoolHubEmail(r.email||r.userKey),name:r.name||r.email||'',role:'user'}); try{ await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now,planNextBillingAt:planPayload.planNextBillingAt,planExpiresAt:planPayload.planExpiresAt,courseLimit:planPayload.courseLimit},{merge:true}); await setDoc(doc(db,getPublicPath(),r.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',normalizeSchoolHubEmail(r.email||r.userKey)),planPayload,{merge:true}); sendMailViaWebApp({to:r.email||r.userKey,name:r.name||'',type:'plan_approved',subject:`อนุมัติแผน ${r.planName||''} แล้ว`,message:`สวัสดี ${r.name||r.email||''}\n\nคำขอสมัครแผน ${r.planName||''} ได้รับการอนุมัติแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}\n\nขอบคุณที่ใช้ SchoolHub`,extra:{planName:r.planName||'',planPrice:r.planPrice||'',requestId:id}}); await loadPlanRequests();await loadAdminData();window.closePlanRequestPopup(); showCustomAlert('อนุมัติแล้ว',`เปลี่ยนสิทธิ์ผู้ใช้เป็นแผน ${r.planName}\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`);}catch(e){showCustomAlert('อนุมัติไม่ได้',getFirebaseErrorText(e),true);} toggleLoader(false); });
         };
         const __oldOpenUserPlanSelector = window.openUserPlanSelector;
         window.openUserPlanSelector = async function(){ await loadPublicPlans(); if(currentUser&&currentUser.uid!=='admin-bypass') await refreshCurrentUserPlanLock(); return __oldOpenUserPlanSelector(); };
@@ -16295,5 +16333,106 @@ import { getFirestore, doc, getDoc, collection, getDocs, setDoc, deleteDoc } fro
   document.addEventListener('DOMContentLoaded', () => setTimeout(addDeleteButtonsToAdminTable, 500));
 })();
 </script>
+
+
+<script>
+/* SchoolHub Email Required Firebase Guard - final file-only patch */
+(function(){
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const isEmail = (v) => emailRe.test(norm(v));
+  window.schoolhubIsValidUserEmail = isEmail;
+  window.schoolhubNormalizeEmailKey = function(v){
+    const email = norm(v);
+    if(!isEmail(email)) throw new Error('Blocked invalid user creation: email required');
+    return email;
+  };
+  window.schoolhubIsAbnormalUserRow = function(u, docId){
+    u = u || {};
+    const email = norm(u.email);
+    const key = norm(u.userKey);
+    const id = norm(docId || u.docId || u.uid);
+    return !isEmail(email) || !isEmail(key || email) || (!!id && id === key && !isEmail(id));
+  };
+
+  function markInvalidAdminRows(){
+    try{
+      const map = window.__adminUsersByUid || {};
+      document.querySelectorAll('#admin-user-list tr').forEach(tr => {
+        const btn = tr.querySelector('button[onclick^="updateUserStatus"], button.schoolhub-delete-user-btn');
+        if(!btn) return;
+        const onclick = btn.getAttribute('onclick') || '';
+        const m = onclick.match(/\('([^']*)'/);
+        const uid = m ? m[1] : '';
+        const u = map[uid] || {};
+        if(!window.schoolhubIsAbnormalUserRow(u, uid)) return;
+        if(!tr.querySelector('.schoolhub-invalid-user-badge')){
+          const firstTd = tr.querySelector('td');
+          if(firstTd){
+            firstTd.insertAdjacentHTML('beforeend', '<div class="schoolhub-invalid-user-badge inline-flex items-center gap-1 mt-2 bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-full text-[11px] font-black"><i class="fas fa-triangle-exclamation"></i> ข้อมูลผิดปกติ</div>');
+          }
+        }
+      });
+    }catch(e){ console.warn('mark invalid users failed:', e); }
+  }
+
+  const oldLoad = window.loadAdminData;
+  if(typeof oldLoad === 'function' && !oldLoad.__emailGuardInvalidBadge){
+    const wrapped = async function(){
+      const r = await oldLoad.apply(this, arguments);
+      setTimeout(markInvalidAdminRows, 120);
+      return r;
+    };
+    wrapped.__emailGuardInvalidBadge = true;
+    window.loadAdminData = wrapped;
+  }
+
+  const oldAdd = window.addUserToDirectory;
+  if(typeof oldAdd === 'function' && !oldAdd.__emailRequiredGuard){
+    const wrappedAdd = async function(user, name, role){
+      const email = norm(user && user.email);
+      if(!isEmail(email)){
+        console.error('Blocked invalid user creation: email required', user);
+        try { if(window.auth && window.auth.signOut) await window.auth.signOut(); } catch(e){}
+        throw new Error('Blocked invalid user creation: email required');
+      }
+      user.email = email;
+      return oldAdd.call(this, user, name || user.displayName || email, role);
+    };
+    wrappedAdd.__emailRequiredGuard = true;
+    window.addUserToDirectory = wrappedAdd;
+  }
+
+  const oldLogin = window.handleLogin;
+  if(typeof oldLogin === 'function' && !oldLogin.__emailRequiredGuard){
+    const wrappedLogin = async function(e){
+      const raw = document.getElementById('login-email')?.value || '';
+      const v = norm(raw);
+      if(v && v !== 'admin') document.getElementById('login-email').value = v;
+      return oldLogin.call(this, e);
+    };
+    wrappedLogin.__emailRequiredGuard = true;
+    window.handleLogin = wrappedLogin;
+  }
+
+  const oldRegister = window.handleRegister;
+  if(typeof oldRegister === 'function' && !oldRegister.__emailRequiredGuard){
+    const wrappedRegister = async function(e){
+      const inp = document.getElementById('reg-email');
+      const email = norm(inp && inp.value);
+      if(inp) inp.value = email;
+      if(!isEmail(email)){
+        if(e && e.preventDefault) e.preventDefault();
+        return (window.showCustomAlert || alert)('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล', 'กรุณากรอกอีเมลให้ถูกต้องก่อนสมัครสมาชิก', true);
+      }
+      return oldRegister.call(this, e);
+    };
+    wrappedRegister.__emailRequiredGuard = true;
+    window.handleRegister = wrappedRegister;
+  }
+})();
+</script>
+
 </body>
 </html>
