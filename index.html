@@ -3537,7 +3537,7 @@ document.addEventListener('click',function(){
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
   apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
@@ -3746,6 +3746,90 @@ document.addEventListener('click',function(){
             window.__currentUserDir = null;
             window.__schoolhubPlanLocked = false;
             window.__schoolhubPendingInvites = [];
+            stopSchoolHubRealtimeListeners();
+        }
+
+        let schoolhubRealtimeUnsubs = [];
+        let schoolhubRealtimeUserKey = '';
+        let schoolhubRealtimeRenderTimer = null;
+
+        function stopSchoolHubRealtimeListeners(){
+            try { schoolhubRealtimeUnsubs.forEach(fn => { try { if (typeof fn === 'function') fn(); } catch(e){} }); } catch(e) {}
+            schoolhubRealtimeUnsubs = [];
+            schoolhubRealtimeUserKey = '';
+            if (schoolhubRealtimeRenderTimer) { clearTimeout(schoolhubRealtimeRenderTimer); schoolhubRealtimeRenderTimer = null; }
+        }
+
+        function applySchoolHubStateData(data){
+            data = data || {};
+            state.courses = Array.isArray(data.courses) ? data.courses : [];
+            state.students = Array.isArray(data.students) ? data.students : [];
+            state.scores = Array.isArray(data.scores) ? data.scores : [];
+            state.attendance = data.attendance || {};
+            state.coursePlans = data.coursePlans || {};
+            state.courseGrades = data.courseGrades || {};
+            window.state = state;
+        }
+
+        function renderSchoolHubRealtimeViews(){
+            if (schoolhubRealtimeRenderTimer) clearTimeout(schoolhubRealtimeRenderTimer);
+            schoolhubRealtimeRenderTimer = setTimeout(function(){
+                try { updateGlobalViews(); } catch(e) {}
+                try { if (typeof renderStudentsMaster === 'function' && !document.getElementById('view-students-master')?.classList.contains('hidden')) renderStudentsMaster(); } catch(e) {}
+                try {
+                    if (currentActiveCourseId && !document.getElementById('view-course-detail')?.classList.contains('hidden')) {
+                        const course = state.courses.find(c => c.id === currentActiveCourseId);
+                        if (course) {
+                            const title = document.getElementById('page-title');
+                            const sub = document.getElementById('page-subtitle');
+                            const side = document.getElementById('sidebar-course-name');
+                            const mob = document.getElementById('mobile-course-name');
+                            if (title) title.textContent = course.name || '';
+                            if (sub) sub.innerHTML = `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs font-bold mr-2">${course.code || ''}</span> จัดการข้อมูลรายวิชานี้`;
+                            if (side) side.textContent = `วิชา: ${course.code || ''}`;
+                            if (mob) mob.textContent = `เมนูประจำรายวิชา: ${course.code || ''} ${course.name || ''}`;
+                        }
+                        if (!document.getElementById('course-tab-overview')?.classList.contains('hidden')) { try { renderCourseOverview(); } catch(e) {} }
+                        if (!document.getElementById('course-tab-attendance')?.classList.contains('hidden')) { try { initCalendar(); renderAttendanceList(); } catch(e) {} }
+                        if (!document.getElementById('course-tab-scores')?.classList.contains('hidden')) { try { handleScoreCourseChange(); renderScoreList(); renderPlanList(currentActiveCourseId); } catch(e) {} }
+                    }
+                } catch(e) {}
+            }, 120);
+        }
+
+        function startSchoolHubRealtimeListeners(userForDir){
+            const u = userForDir || currentUser || (auth && auth.currentUser);
+            if (!u || u.uid === 'admin-bypass') return;
+            const key = getUserKey(u);
+            if (!key) return;
+            if (schoolhubRealtimeUserKey === key && schoolhubRealtimeUnsubs.length) return;
+            stopSchoolHubRealtimeListeners();
+            schoolhubRealtimeUserKey = key;
+            try {
+                schoolhubRealtimeUnsubs.push(onSnapshot(doc(db, getPrivatePath(key), 'state'), function(docSnap){
+                    if (docSnap.exists()) applySchoolHubStateData(docSnap.data());
+                    else applySchoolHubStateData({ courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} });
+                    renderSchoolHubRealtimeViews();
+                }, function(error){ console.warn('SchoolHub realtime state failed:', error); }));
+            } catch(e) { console.warn('start state realtime failed:', e); }
+            try {
+                if (u.uid) schoolhubRealtimeUnsubs.push(onSnapshot(doc(db, getPublicPath(), u.uid), function(docSnap){
+                    window.__currentUserDir = docSnap.exists() ? (docSnap.data() || {}) : {};
+                    try { refreshCurrentUserPlanLock(); } catch(e) {}
+                    try { renderUserPlans(); } catch(e) {}
+                }, function(error){ console.warn('SchoolHub realtime user dir failed:', error); }));
+            } catch(e) { console.warn('start user realtime failed:', e); }
+            try {
+                schoolhubRealtimeUnsubs.push(onSnapshot(getPlansDocRef(), function(docSnap){
+                    if (docSnap.exists() && Array.isArray(docSnap.data().items)) {
+                        subscriptionPlans = docSnap.data().items;
+                        writeLocalJSON(PLANS_CACHE_KEY, subscriptionPlans);
+                        try { renderLandingPlans(); } catch(e) {}
+                        try { renderUserPlans(); } catch(e) {}
+                        try { if (isAdmin) renderAdminPlans(); } catch(e) {}
+                    }
+                }, function(error){ console.warn('SchoolHub realtime plans failed:', error); }));
+            } catch(e) { console.warn('start plans realtime failed:', e); }
         }
 
         async function loadSchoolHubDataAfterAuth(userForDir) {
@@ -3759,6 +3843,7 @@ document.addEventListener('click',function(){
             } catch(e) { console.warn('load auth user dir failed:', e); }
             try { await refreshCurrentUserPlanLock(); } catch(e) { console.warn('refresh plan after auth failed:', e); }
             try { await loadPublicPlans(); } catch(e) { console.warn('load plans after auth failed:', e); }
+            try { startSchoolHubRealtimeListeners(userForDir || currentUser); } catch(e) { console.warn('start realtime after auth failed:', e); }
             updateGlobalViews();
         }
 
@@ -4994,14 +5079,9 @@ async function submitPlanRequest(planId){
             try {
                 const docSnap = await withTimeout(getDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state')), 8000, 'loadState');
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    state.courses = data.courses || []; state.students = data.students || [];
-                    state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
-                    state.courseGrades = data.courseGrades || {};
-                    window.state = state;
+                    applySchoolHubStateData(docSnap.data());
                 } else {
-                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
-                    window.state = state;
+                    applySchoolHubStateData({ courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} });
                     await saveStateToDB();
                 }
             } catch (error) {
