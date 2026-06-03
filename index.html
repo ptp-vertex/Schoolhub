@@ -15974,5 +15974,271 @@ window.allowTeam=function(){
 }
 </style>
 
+
+<!-- SchoolHub readonly shared course action alert patch: plan + grade buttons only -->
+<script id="schoolhub-readonly-shared-action-alert-patch">
+(function(){
+    if (window.__schoolhubReadonlySharedActionAlertPatch) return;
+    window.__schoolhubReadonlySharedActionAlertPatch = true;
+
+    function getCurrentCourseForReadonlyPatch(){
+        try {
+            if (!window.state || !Array.isArray(state.courses) || !window.currentActiveCourseId) return null;
+            return state.courses.find(function(c){ return String(c.id) === String(window.currentActiveCourseId); }) || null;
+        } catch(e){ return null; }
+    }
+
+    function isReadonlySharedCourseForPatch(){
+        var c = getCurrentCourseForReadonlyPatch();
+        return !!(c && c.__sharedOwnerKey && c.__sharedPermission === 'view');
+    }
+
+    function showReadonlySharedAlertForPatch(){
+        if (typeof window.showCustomAlert === 'function') {
+            window.showCustomAlert('ดูอย่างเดียว', 'รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถจัดการแผนเก็บคะแนนหรือตั้งค่าเกณฑ์เกรดได้');
+        } else {
+            alert('รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถจัดการแผนเก็บคะแนนหรือตั้งค่าเกณฑ์เกรดได้');
+        }
+    }
+
+    function keepReadonlyActionButtonsClickable(){
+        if (!isReadonlySharedCourseForPatch()) return;
+        document.querySelectorAll('button[onclick*="openPlanModalForCurrentCourse"], button[onclick*="openGradeCriteriaModalForCurrentCourse"]').forEach(function(btn){
+            btn.disabled = false;
+            btn.classList.remove('pointer-events-none');
+            btn.classList.remove('opacity-60');
+            btn.classList.remove('opacity-50');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.title = 'รายวิชานี้ถูกแชร์แบบดูอย่างเดียว';
+        });
+    }
+
+    var oldApplyReadonlyUI = window.schoolhubApplyReadonlyUI;
+    if (typeof oldApplyReadonlyUI === 'function' && !oldApplyReadonlyUI.__schoolhubReadonlySharedActionAlertPatchWrapped) {
+        var wrappedApplyReadonlyUI = function(){
+            var result = oldApplyReadonlyUI.apply(this, arguments);
+            keepReadonlyActionButtonsClickable();
+            setTimeout(keepReadonlyActionButtonsClickable, 0);
+            return result;
+        };
+        wrappedApplyReadonlyUI.__schoolhubReadonlySharedActionAlertPatchWrapped = true;
+        window.schoolhubApplyReadonlyUI = wrappedApplyReadonlyUI;
+    }
+
+    var oldOpenPlan = window.openPlanModalForCurrentCourse;
+    if (typeof oldOpenPlan === 'function' && !oldOpenPlan.__schoolhubReadonlySharedActionAlertPatchWrapped) {
+        var wrappedOpenPlan = function(){
+            if (isReadonlySharedCourseForPatch()) {
+                showReadonlySharedAlertForPatch();
+                return false;
+            }
+            return oldOpenPlan.apply(this, arguments);
+        };
+        wrappedOpenPlan.__schoolhubReadonlySharedActionAlertPatchWrapped = true;
+        window.openPlanModalForCurrentCourse = wrappedOpenPlan;
+    }
+
+    var oldOpenGrade = window.openGradeCriteriaModalForCurrentCourse;
+    if (typeof oldOpenGrade === 'function' && !oldOpenGrade.__schoolhubReadonlySharedActionAlertPatchWrapped) {
+        var wrappedOpenGrade = function(){
+            if (isReadonlySharedCourseForPatch()) {
+                showReadonlySharedAlertForPatch();
+                return false;
+            }
+            return oldOpenGrade.apply(this, arguments);
+        };
+        wrappedOpenGrade.__schoolhubReadonlySharedActionAlertPatchWrapped = true;
+        window.openGradeCriteriaModalForCurrentCourse = wrappedOpenGrade;
+    }
+
+    document.addEventListener('click', function(e){
+        var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"], button[onclick*="openGradeCriteriaModalForCurrentCourse"]');
+        if (!btn || !isReadonlySharedCourseForPatch()) return;
+        keepReadonlyActionButtonsClickable();
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        showReadonlySharedAlertForPatch();
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', function(){
+        keepReadonlyActionButtonsClickable();
+        setTimeout(keepReadonlyActionButtonsClickable, 200);
+    });
+    setInterval(function(){
+        if (isReadonlySharedCourseForPatch()) keepReadonlyActionButtonsClickable();
+    }, 700);
+})();
+
+/* Patch: เพิ่มปุ่มลบผู้ใช้ถาวรในหน้า จัดการสิทธิ์ + ลบข้อมูลที่เกี่ยวข้องและหยุดการใช้งาน */
+(function(){
+  function shDelEsc(v){
+    try { return escapeHTML(v || ''); }
+    catch(e){ return String(v || '').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  }
+  function shDelArg(v){ return String(v || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' '); }
+  function shDelKeyList(u, uid, fallbackKey){
+    const arr = [uid, u && u.uid, u && u.userKey, u && u.email, fallbackKey].map(x => String(x || '').trim()).filter(Boolean);
+    return Array.from(new Set(arr.filter(x => x && x !== '-' && x !== 'undefined' && x !== 'null')));
+  }
+  function shDelIsAdmin(u){ return String((u && u.role) || '').toLowerCase() === 'admin'; }
+
+  window.deleteSystemUserCompletely = function(uid, userKey){
+    const u = (window.__adminUsersByUid && (window.__adminUsersByUid[uid] || window.__adminUsersByUid[userKey])) || {};
+    if (shDelIsAdmin(u)) return showCustomAlert('ลบไม่ได้','ไม่สามารถลบบัญชี Admin ได้',true);
+    const displayName = u.name || u.email || u.userKey || userKey || uid || 'ผู้ใช้นี้';
+    window.showCustomConfirm(
+      'ลบผู้ใช้นี้ถาวร?',
+      `ต้องการลบ ${displayName} ออกจากระบบหรือไม่?\n\nระบบจะลบข้อมูลผู้ใช้, สถานะแผน, คำขอแผน, state รายวิชา/นักเรียน/คะแนน/เช็คชื่อที่ผูกกับผู้ใช้นี้ และเอาผู้ใช้นี้ออกจากรายวิชาที่ถูกแชร์\n\nผู้ใช้นี้จะถูกบล็อกไม่ให้เข้าใช้งานอีก`,
+      async function(){ await executeDeleteSystemUserCompletely(uid, userKey); }
+    );
+  };
+
+  window.executeDeleteSystemUserCompletely = async function(uid, userKey){
+    try{
+      if (typeof toggleLoader === 'function') toggleLoader(true);
+      const fromMap = (window.__adminUsersByUid && (window.__adminUsersByUid[uid] || window.__adminUsersByUid[userKey])) || {};
+      let u = Object.assign({}, fromMap);
+      let docId = u.__docId || uid;
+      try{
+        if ((!u.uid && uid) || !u.email) {
+          const publicSnap = await getDoc(doc(db, getPublicPath(), uid));
+          if (publicSnap.exists()) u = Object.assign({__docId: uid}, publicSnap.data() || {}, u);
+        }
+      }catch(e){}
+      if (shDelIsAdmin(u)) throw new Error('ไม่สามารถลบบัญชี Admin ได้');
+
+      const keys = shDelKeyList(u, uid, userKey);
+      const lowerKeys = new Set(keys.map(x => String(x).toLowerCase()));
+      const publicDocIds = Array.from(new Set([docId, uid, u.uid, u.__docId].map(x => String(x || '').trim()).filter(Boolean)));
+      const now = Date.now();
+      const deletedBy = (currentUser && (currentUser.email || currentUser.displayName || currentUser.uid)) || 'admin';
+      const tombstone = { status:'deleted', blocked:true, deleted:true, deletedAt:now, deletedBy, updatedAt:now, uid: u.uid || uid || '', email: u.email || '', userKey: u.userKey || userKey || '' };
+
+      const jobs = [];
+
+      // ลบข้อมูลหลักที่แสดงในหน้าจัดการสิทธิ์
+      publicDocIds.forEach(id => { if(id && String(id).indexOf('status_') !== 0) jobs.push(deleteDoc(doc(db, getPublicPath(), id))); });
+
+      // ลบ state และ user_stats ของ key ที่เกี่ยวข้องทั้งหมด
+      keys.forEach(k => {
+        jobs.push(deleteDoc(doc(db, getPrivatePath(k), 'state')));
+        jobs.push(deleteDoc(doc(db, 'user_stats', k)));
+      });
+
+      // ลบคำขอสมัครแผนที่เกี่ยวข้อง
+      try{
+        const reqSnap = await getDocs(collection(db, 'subscription_requests'));
+        reqSnap.forEach(d => {
+          const r = d.data() || {};
+          const vals = [d.id, r.uid, r.userKey, r.email, r.name].map(x => String(x || '').toLowerCase());
+          if(vals.some(v => lowerKeys.has(v) || (uid && v === String(uid).toLowerCase()))) jobs.push(deleteDoc(doc(db, 'subscription_requests', d.id)));
+        });
+      }catch(e){ console.warn('delete subscription requests failed:', e); }
+
+      // เอาออกจาก sharedTeachers ใน state ของเจ้าของรายวิชาคนอื่น เพื่อให้หยุดเห็น/หยุดทำงานทันที
+      try{
+        const publicSnap = await getDocs(collection(db, getPublicPath()));
+        for (const d of publicSnap.docs) {
+          const owner = d.data() || {};
+          const ownerKey = owner.userKey || owner.email || owner.uid || d.id;
+          if(!ownerKey || lowerKeys.has(String(ownerKey).toLowerCase())) continue;
+          try{
+            const stRef = doc(db, getPrivatePath(ownerKey), 'state');
+            const stSnap = await getDoc(stRef);
+            if(!stSnap.exists()) continue;
+            const ownerState = stSnap.data() || {};
+            let changed = false;
+            if(Array.isArray(ownerState.courses)){
+              ownerState.courses = ownerState.courses.map(c => {
+                if(!c) return c;
+                const original = c.sharedTeachers;
+                if(Array.isArray(original)){
+                  const filtered = original.filter(x => !lowerKeys.has(String((x && x.email) || '').toLowerCase()));
+                  if(filtered.length !== original.length){ changed = true; return Object.assign({}, c, {sharedTeachers: filtered}); }
+                } else if(original && typeof original === 'object'){
+                  const next = {};
+                  Object.keys(original).forEach(k => { if(!lowerKeys.has(String(k).toLowerCase())) next[k] = original[k]; else changed = true; });
+                  if(changed) return Object.assign({}, c, {sharedTeachers: next});
+                }
+                return c;
+              });
+            }
+            if(changed) jobs.push(setDoc(stRef, ownerState, {merge:false}));
+          }catch(e){ console.warn('remove shared teacher failed:', e); }
+        }
+      }catch(e){ console.warn('scan owners for sharedTeachers failed:', e); }
+
+      await Promise.allSettled(jobs);
+
+      // เก็บ tombstone ขั้นต่ำไว้ใน users_status เพื่อกันผู้ใช้นี้กลับมาเข้าใช้งานอีก แต่ไม่แสดงในหน้าจัดการสิทธิ์หลัก
+      const statusKeys = Array.from(new Set([u.email, u.userKey, userKey, uid].map(x => String(x || '').trim()).filter(Boolean)));
+      await Promise.allSettled(statusKeys.map(k => setDoc(doc(db, 'users_status', k), Object.assign({}, tombstone, {userKey:k}), {merge:true})));
+
+      if(typeof loadPlanRequests === 'function') { try{ await loadPlanRequests(); }catch(e){} }
+      if(typeof loadAdminData === 'function') await loadAdminData();
+      if(typeof renderBlockedUsersList === 'function') { try{ await renderBlockedUsersList(); }catch(e){} }
+      showCustomAlert('ลบผู้ใช้แล้ว','ลบข้อมูลที่เกี่ยวข้องออกจากระบบแล้ว และบล็อกไม่ให้ผู้ใช้นี้เข้าใช้งานอีก');
+    }catch(e){
+      showCustomAlert('ลบผู้ใช้ไม่ได้', (typeof getFirebaseErrorText === 'function' ? getFirebaseErrorText(e) : (e.message || String(e))), true);
+    }finally{
+      if (typeof toggleLoader === 'function') toggleLoader(false);
+    }
+  };
+
+  // Render หน้า จัดการสิทธิ์ ใหม่ให้มีปุ่มลบผู้ใช้ถาวรคู่กับปุ่มบล็อก/ปลดบล็อก
+  window.loadAdminData = async function(){
+    const tbody = document.getElementById('admin-user-list');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูลผู้ใช้...</td></tr>';
+    try{
+      if (!Array.isArray(adminPlanRequests) || adminPlanRequests.length === 0) { try { await window.loadPlanRequests(); } catch(e){} }
+      const querySnapshot = await getDocs(collection(db, getPublicPath()));
+      let rows = '';
+      window.__adminUsersByUid = {};
+      querySnapshot.forEach((d)=>{
+        const u = d.data() || {};
+        const uid = u.uid || d.id;
+        const record = Object.assign({}, u, {uid, __docId:d.id});
+        window.__adminUsersByUid[uid] = record;
+        window.__adminUsersByUid[d.id] = record;
+        const isBlocked = ['blocked','deleted'].includes(String(u.status || '').toLowerCase()) || u.blocked === true;
+        const displayKey = u.userKey || u.email || uid;
+        const safeUid = shDelArg(uid);
+        const safeKey = shDelArg(displayKey);
+        const userRequests = typeof getRequestsForUser === 'function' ? getRequestsForUser(u, uid) : [];
+        const pendingRequests = userRequests.filter(r => r.status === 'pending');
+        const roleBadge = u.role === 'admin'
+          ? '<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">Admin</span>'
+          : (isBlocked ? '<span class="bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs">บล็อก</span>' : (pendingRequests.length ? '<span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">มีคำขอแผน</span>' : '<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">User</span>'));
+        let planBadge = '';
+        if (u.role === 'admin') planBadge = '<span class="text-xs text-slate-400">-</span>';
+        else if (pendingRequests.length) {
+          const latest = pendingRequests[0];
+          planBadge = `<button onclick="openPlanRequestPopup('${safeUid}')" class="clickable-plan-cell inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-black border border-amber-200"><i class="fas fa-bell animate-pulse"></i> ${shDelEsc(latest.planName || 'คำขอแผน')}</button>`;
+        } else if (userRequests.length) {
+          const latest = userRequests[0];
+          const cls = latest.status === 'approved' ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200';
+          planBadge = `<button onclick="openPlanRequestPopup('${safeUid}')" class="clickable-plan-cell inline-flex items-center gap-2 ${cls} px-3 py-1.5 rounded-full text-xs font-bold border">${shDelEsc(u.planName || latest.planName || 'ดูประวัติแผน')}</button>`;
+        } else if (u.planName) planBadge = `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">${shDelEsc(u.planName)}</span>`;
+        else if (u.requestedPlanName) planBadge = `<button onclick="openPlanRequestPopup('${safeUid}')" class="clickable-plan-cell inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-200">ขอ ${shDelEsc(u.requestedPlanName)}</button>`;
+        else planBadge = '<span class="text-xs text-slate-400">ยังไม่กำหนด</span>';
+
+        const actionBtn = u.role === 'admin' ? '' : `<div class="flex flex-wrap justify-end gap-2"><button onclick="updateUserStatus('${safeUid}', '${safeKey}', '${isBlocked ? 'active' : 'blocked'}')" class="${isBlocked ? 'text-emerald-500 bg-emerald-50' : 'text-rose-500 bg-rose-50'} px-3 py-1 rounded-lg text-sm font-bold border"><i class="fas ${isBlocked ? 'fa-check' : 'fa-ban'}"></i> ${isBlocked ? 'ปลดบล็อก' : 'บล็อก'}</button><button onclick="deleteSystemUserCompletely('${safeUid}', '${safeKey}')" class="text-slate-700 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 px-3 py-1 rounded-lg text-sm font-bold border border-slate-200"><i class="fas fa-trash"></i> ลบผู้ใช้</button></div>`;
+        const noEmailNote = (!u.email && !String(displayKey).includes('@')) ? '<div class="text-[11px] text-amber-600 font-bold mt-1">ไม่มีอีเมล / อาจเป็นข้อมูลค้าง</div>' : '';
+        rows += `<tr><td class="font-bold text-slate-700">${shDelEsc(u.name || 'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${shDelEsc(displayKey)}</span>${noEmailNote}</td><td class="text-center">${planBadge}</td><td class="text-center">${roleBadge}</td><td class="text-right">${actionBtn}</td></tr>`;
+      });
+      tbody.innerHTML = rows || '<tr><td colspan="4" class="text-center p-8 text-slate-400">ยังไม่มีข้อมูลผู้ใช้ใน public_users_directory</td></tr>';
+    }catch(e){
+      const msg = e && e.message ? e.message : String(e || 'ไม่ทราบสาเหตุ');
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-rose-500"><i class="fas fa-triangle-exclamation text-3xl mb-3"></i><br>โหลดข้อมูลผู้ใช้ไม่ได้<br><span class="text-xs text-slate-500">${shDelEsc(msg)}</span></td></tr>`;
+    }finally{
+      try{ setTimeout(updateSmartScrollbars,80); }catch(e){}
+    }
+  };
+})();
+
+</script>
+
 </body>
 </html>
