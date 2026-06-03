@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3309,7 +3310,7 @@ document.addEventListener('click',function(){
     </div>
 
     <!-- Plan Modal -->
-    <div id="plan-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center fade-in p-4">
+    <div id="plan-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center fade-in p-4 schoolhub-score-plan-modal">
         <div class="bg-white rounded-[2rem] w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
                 <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-list-ul text-primary mr-2"></i> แผนคะแนน <span id="plan-modal-title" class="text-slate-500 text-base font-normal ml-2"></span></h3>
@@ -3707,32 +3708,58 @@ document.addEventListener('click',function(){
 
         function clearSchoolHubLoginState() {
             try {
-                const keepPrefixes = [
-                    'schoolhub_announcement_closed_',
-                    'schoolhub_announcement_seen_'
-                ];
-                const keepKeys = new Set([
-                    ANNOUNCEMENT_CACHE_KEY,
-                    PLANS_CACHE_KEY
-                ]);
-                const removeKeys = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (!key) continue;
-                    const shouldKeep = keepKeys.has(key) || keepPrefixes.some(prefix => key.startsWith(prefix));
-                    if (!shouldKeep && (key.startsWith('schoolhub_') || key === SCHOOLHUB_SESSION_KEY)) {
-                        removeKeys.push(key);
-                    }
-                }
-                removeKeys.forEach(key => localStorage.removeItem(key));
+                [
+                    SCHOOLHUB_SESSION_KEY,
+                    'schoolhub_session_active',
+                    'schoolhub_admin_bypass',
+                    'schoolhub_admin_active',
+                    'schoolhub_logout_intent',
+                    'currentUser',
+                    'authUser',
+                    'loginSession',
+                    'userEmail',
+                    'userKey',
+                    'schoolhub_current_user',
+                    'schoolhub_auth_user',
+                    'schoolhub_login_session',
+                    'schoolhub_user_email',
+                    'schoolhub_user_key'
+                ].forEach(key => localStorage.removeItem(key));
                 localStorage.setItem('schoolhub_logout_intent', String(Date.now()));
             } catch(e) {}
-            try { sessionStorage.clear(); } catch(e) {}
+            try {
+                [
+                    'currentUser',
+                    'authUser',
+                    'loginSession',
+                    'userEmail',
+                    'userKey',
+                    'schoolhub_current_user',
+                    'schoolhub_auth_user',
+                    'schoolhub_login_session',
+                    'schoolhub_user_email',
+                    'schoolhub_user_key'
+                ].forEach(key => sessionStorage.removeItem(key));
+            } catch(e) {}
             currentUser = null;
             isAdmin = false;
             window.__currentUserDir = null;
             window.__schoolhubPlanLocked = false;
             window.__schoolhubPendingInvites = [];
+        }
+
+        async function loadSchoolHubDataAfterAuth(userForDir) {
+            await loadStateFromDB();
+            try {
+                const u = userForDir || currentUser || (auth && auth.currentUser);
+                if (u && u.uid && u.uid !== 'admin-bypass') {
+                    const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), u.uid)), 6000, 'loadAuthUserDir');
+                    window.__currentUserDir = dirSnap.exists() ? (dirSnap.data() || {}) : {};
+                }
+            } catch(e) { console.warn('load auth user dir failed:', e); }
+            try { await refreshCurrentUserPlanLock(); } catch(e) { console.warn('refresh plan after auth failed:', e); }
+            try { await loadPublicPlans(); } catch(e) { console.warn('load plans after auth failed:', e); }
+            updateGlobalViews();
         }
 
         async function forceSchoolHubLogout(options = {}) {
@@ -3778,12 +3805,7 @@ document.addEventListener('click',function(){
                 document.getElementById('user-display-email').textContent = getUserKey(currentUser);
                 document.getElementById('user-avatar-initial').textContent = dName.charAt(0).toUpperCase();
                 setAdminNavigationMode(false);
-                await loadStateFromDB();
-                try {
-                    const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), currentUser.uid)), 6000, 'restoreUserDir');
-                    if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
-                } catch(e) { console.warn('restore user dir failed:', e); }
-                await refreshCurrentUserPlanLock();
+                await loadSchoolHubDataAfterAuth(currentUser);
                 window.goToHome();
                 return true;
             } catch(e) {
@@ -5248,13 +5270,7 @@ async function submitPlanRequest(planId){
 
                     setAdminNavigationMode(false);
 
-                    await loadStateFromDB();
-                    // sync current user directory
-                    try {
-                        const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), user.uid)), 6000, 'syncUserDir');
-                        if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
-                    } catch(e) { console.warn('syncUserDir failed:', e); }
-                    await refreshCurrentUserPlanLock();
+                    await loadSchoolHubDataAfterAuth(user);
                     const planFlow = await processPendingPlanRequestAfterLogin();
                     if(!planFlow) {
                         window.goToHome();
@@ -5586,7 +5602,8 @@ ${resetUrl.toString()}
             window.activeCourseRoomFilter = window.activeCourseRoomFilter || {};
             if (!window.activeCourseRoomFilter[courseId] || !rooms.includes(window.activeCourseRoomFilter[courseId])) window.activeCourseRoomFilter[courseId] = rooms[0];
             box.classList.remove('hidden');
-            box.innerHTML = `<label class="block text-sm font-black text-slate-800 mb-2"><i class="fas fa-door-open text-primary mr-1"></i> เลือกห้อง/ชั้นสำหรับรายการนี้</label><select class="w-full bg-white border border-indigo-100 rounded-xl p-3 font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" onchange="window.activeCourseRoomFilter=window.activeCourseRoomFilter||{}; window.activeCourseRoomFilter['${courseId}']=this.value; if('${target}'==='attendance-area') renderAttendanceList(); else renderScoreList();">${rooms.map(r=>`<option value="${escapeHTML(r)}" ${window.activeCourseRoomFilter[courseId]===r?'selected':''}>${escapeHTML(r)}</option>`).join('')}</select><p class="text-xs text-slate-500 mt-2">รายวิชานี้เลือกไว้หลายห้อง จึงต้องเลือกห้องก่อนเช็คชื่อหรือบันทึกคะแนน</p>`;
+            const filterHTML = `<label class="block text-sm font-black text-slate-800 mb-2"><i class="fas fa-door-open text-primary mr-1"></i> เลือกห้อง/ชั้นสำหรับรายการนี้</label><select class="w-full bg-white border border-indigo-100 rounded-xl p-3 font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" onchange="window.activeCourseRoomFilter=window.activeCourseRoomFilter||{}; window.activeCourseRoomFilter['${courseId}']=this.value; if('${target}'==='attendance-area') renderAttendanceList(); else renderScoreList();">${rooms.map(r=>`<option value="${escapeHTML(r)}" ${window.activeCourseRoomFilter[courseId]===r?'selected':''}>${escapeHTML(r)}</option>`).join('')}</select><p class="text-xs text-slate-500 mt-2">รายวิชานี้เลือกไว้หลายห้อง จึงต้องเลือกห้องก่อนเช็คชื่อหรือบันทึกคะแนน</p>`;
+            if (box.dataset.schoolhubFilterHtml !== filterHTML) { box.innerHTML = filterHTML; box.dataset.schoolhubFilterHtml = filterHTML; }
         };
 
         window.getAllStudentRooms = () => {
@@ -6004,9 +6021,10 @@ ${resetUrl.toString()}
             else {
                 document.getElementById('empty-plan').classList.add('hidden');
                 const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+                const rows = [];
                 plans.sort((a,b) => a.week - b.week).forEach(p => {
                     if (isMobileCardView) {
-                        tbody.innerHTML += `<tr class="schoolhub-mobile-row${window.getStudentWithdrawnRowClass(s)}"><td colspan="4" class="schoolhub-mobile-cell">
+                        rows.push(`<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
                             <div class="schoolhub-mobile-card">
                                 <div class="schoolhub-mobile-card-head">
                                     <div class="min-w-0">
@@ -6020,11 +6038,12 @@ ${resetUrl.toString()}
                                     <button onclick="deletePlan('${id}', '${p.id}')" class="schoolhub-mobile-action-btn delete"><i class="fas fa-trash"></i> ลบ</button>
                                 </div>
                             </div>
-                        </td></tr>`;
+                        </td></tr>`);
                     } else {
-                        tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right"><button onclick="editPlan('${id}', '${p.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1"><i class="fas fa-edit"></i></button><button onclick="deletePlan('${id}', '${p.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100"><i class="fas fa-trash"></i></button></td></tr>`;
+                        rows.push(`<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right"><button onclick="editPlan('${id}', '${p.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1"><i class="fas fa-edit"></i></button><button onclick="deletePlan('${id}', '${p.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100"><i class="fas fa-trash"></i></button></td></tr>`);
                     }
                 });
+                tbody.innerHTML = rows.join('');
             }
         };
 
@@ -6058,7 +6077,7 @@ ${resetUrl.toString()}
 
         window.populateHiddenCourseDropdowns = () => {
             const opts = '<option value="">-- เลือกวิชา --</option>' + state.courses.map(c => `<option value="${c.id}">${c.code}</option>`).join('');
-            ['att-course-select', 'score-course-select'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = opts; });
+            ['att-course-select', 'score-course-select'].forEach(id => { const el = document.getElementById(id); if(el && el.dataset.schoolhubOptionsHtml !== opts) { el.innerHTML = opts; el.dataset.schoolhubOptionsHtml = opts; } });
         };
 
         // Attendance Logic
@@ -6253,7 +6272,8 @@ ${resetUrl.toString()}
             const plans = (state.coursePlans[cid] || []).filter(p => p.week === week);
             if (plans.length > 0) {
                 inf.classList.add('hidden'); sel.classList.remove('hidden');
-                sel.innerHTML = '<option value="">-- เลือกงานตามแผน --</option>' + plans.map(p => `<option value="${p.title}" data-max="${p.maxScore}">${p.title}</option>`).join('') + '<option value="__custom__">+ เพิ่มงานใหม่ (นอกแผน)</option>';
+                const planOptionsHTML = '<option value="">-- เลือกงานตามแผน --</option>' + plans.map(p => `<option value="${p.title}" data-max="${p.maxScore}">${p.title}</option>`).join('') + '<option value="__custom__">+ เพิ่มงานใหม่ (นอกแผน)</option>';
+                if (sel.dataset.schoolhubOptionsHtml !== planOptionsHTML) { sel.innerHTML = planOptionsHTML; sel.dataset.schoolhubOptionsHtml = planOptionsHTML; }
 
                 sel.value = plans[0].title;
                 window.handleScoreTitleSelection();
@@ -15196,9 +15216,8 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 (function(){
 document.addEventListener('DOMContentLoaded',function(){
   const _signOutAndRedirect=async function(){
-    try{ if(window.localStorage) localStorage.clear(); }catch(e){}
-    try{ if(window.sessionStorage) sessionStorage.clear(); }catch(e){}
-    try{ if(window.auth && window.firebase && firebase.auth){ await firebase.auth().signOut(); }catch(e){}
+    try{ if(typeof clearSchoolHubLoginState === 'function') clearSchoolHubLoginState(); }catch(e){}
+    try{ if(window.auth && window.firebase && firebase.auth){ await firebase.auth().signOut(); } }catch(e){}
   };
 });
 if(window.sendEmailVerification){
@@ -15206,7 +15225,7 @@ if(window.sendEmailVerification){
  window.sendEmailVerification=async function(){
    const r=await __old.apply(this,arguments);
    try{
-     localStorage.clear();sessionStorage.clear();
+     if(typeof clearSchoolHubLoginState === 'function') clearSchoolHubLoginState();
      if(window.auth?.signOut) await window.auth.signOut();
      location.reload();
    }catch(e){}
@@ -15223,5 +15242,101 @@ window.allowTeam=function(){
 }
 })();
 </script>
+
+
+<style id="schoolhub-plan-score-modal-mobile-only-fix">
+@media (max-width: 767px) {
+    #plan-modal.schoolhub-score-plan-modal {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        padding: calc(env(safe-area-inset-top) + 0.75rem) 0.75rem calc(env(safe-area-inset-bottom) + 0.75rem) !important;
+        background: rgba(15, 23, 42, 0.72) !important;
+        backdrop-filter: blur(6px) !important;
+        overflow: hidden !important;
+    }
+    #plan-modal.schoolhub-score-plan-modal.hidden {
+        display: none !important;
+        pointer-events: none !important;
+    }
+    #plan-modal.schoolhub-score-plan-modal:not(.hidden) {
+        pointer-events: auto !important;
+    }
+    #plan-modal.schoolhub-score-plan-modal > div {
+        width: min(100%, 42rem) !important;
+        max-width: 100% !important;
+        max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+        overflow: hidden !important;
+        border-radius: 1.35rem !important;
+        position: relative !important;
+        z-index: 2147483647 !important;
+    }
+    #plan-modal.schoolhub-score-plan-modal > div > .overflow-y-auto,
+    #plan-modal.schoolhub-score-plan-modal > div > div:nth-child(2) {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-height: calc(100dvh - 7.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    }
+}
+</style>
+<script id="schoolhub-plan-score-modal-mobile-only-fix-script">
+(function(){
+    if (window.__schoolhubPlanScoreModalMobileOnlyFix) return;
+    window.__schoolhubPlanScoreModalMobileOnlyFix = true;
+    function isMobile(){ return window.matchMedia && window.matchMedia('(max-width: 767px)').matches; }
+    function movePlanModalToBody(){
+        var modal = document.getElementById('plan-modal');
+        if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+        return modal;
+    }
+    function makePlanModalTopLayer(){
+        var modal = movePlanModalToBody();
+        if (!modal) return;
+        modal.classList.add('schoolhub-score-plan-modal');
+        if (isMobile() && !modal.classList.contains('hidden')) {
+            modal.style.zIndex = '2147483647';
+            modal.style.position = 'fixed';
+            modal.style.inset = '0';
+        }
+    }
+    var oldOpenPlan = window.openPlanModalForCurrentCourse;
+    if (typeof oldOpenPlan === 'function' && !oldOpenPlan.__schoolhubPlanScoreModalMobileOnlyFixWrapped) {
+        var wrappedOpenPlan = function(){
+            movePlanModalToBody();
+            var result = oldOpenPlan.apply(this, arguments);
+            makePlanModalTopLayer();
+            setTimeout(makePlanModalTopLayer, 0);
+            setTimeout(makePlanModalTopLayer, 80);
+            return result;
+        };
+        wrappedOpenPlan.__schoolhubPlanScoreModalMobileOnlyFixWrapped = true;
+        window.openPlanModalForCurrentCourse = wrappedOpenPlan;
+    }
+    var oldOpenModal = window.openModal;
+    if (typeof oldOpenModal === 'function' && !oldOpenModal.__schoolhubPlanScoreModalMobileOnlyFixWrapped) {
+        var wrappedOpenModal = function(id){
+            if (id === 'plan-modal') movePlanModalToBody();
+            var result = oldOpenModal.apply(this, arguments);
+            if (id === 'plan-modal') makePlanModalTopLayer();
+            return result;
+        };
+        wrappedOpenModal.__schoolhubPlanScoreModalMobileOnlyFixWrapped = true;
+        window.openModal = wrappedOpenModal;
+    }
+    document.addEventListener('click', function(e){
+        var modal = document.getElementById('plan-modal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        if (e.target === modal) {
+            if (typeof window.closePlanModal === 'function') window.closePlanModal();
+            else modal.classList.add('hidden');
+        }
+    }, true);
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(movePlanModalToBody, 100); });
+})();
+</script>
+
 </body>
 </html>
