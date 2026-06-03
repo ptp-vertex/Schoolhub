@@ -3576,7 +3576,7 @@ document.addEventListener('click',function(){
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
   apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
@@ -3746,6 +3746,7 @@ document.addEventListener('click',function(){
         }
 
         function clearSchoolHubLoginState() {
+            try { if (typeof clearSchoolHubRealtimeListeners === 'function') clearSchoolHubRealtimeListeners(); } catch(e) {}
             try {
                 [
                     SCHOOLHUB_SESSION_KEY,
@@ -3789,6 +3790,7 @@ document.addEventListener('click',function(){
 
         async function loadSchoolHubDataAfterAuth(userForDir) {
             await loadStateFromDB();
+            try { await startSchoolHubRealtimeListeners(); } catch(e) { console.warn('start realtime listeners failed:', e); }
             try {
                 const u = userForDir || currentUser || (auth && auth.currentUser);
                 if (u && u.uid && u.uid !== 'admin-bypass') {
@@ -3876,6 +3878,214 @@ document.addEventListener('click',function(){
         let isAdmin = false;
         let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
         window.state = state;
+
+
+        /* SchoolHub full realtime state patch
+           - listener กลางชุดเดียว ไม่ผูกซ้ำตอนเปลี่ยนหน้า/dropdown/render
+           - ฟัง state เจ้าของบัญชี + state รายวิชาที่ถูกแชร์และตอบรับแล้ว
+           - render เฉพาะหน้าที่เปิดอยู่หลัง snapshot เปลี่ยน */
+        let schoolhubRealtimeUnsubs = [];
+        let schoolhubRealtimeOwnerUnsubs = {};
+        let schoolhubRealtimeStartedFor = '';
+        let schoolhubRealtimeOwnState = null;
+        let schoolhubRealtimeOwnerStates = {};
+        let schoolhubRealtimePublicUsers = [];
+        let schoolhubRealtimeRenderTimer = null;
+
+        function addSchoolHubRealtimeUnsub(unsub){
+            if(typeof unsub === 'function') schoolhubRealtimeUnsubs.push(unsub);
+        }
+
+        function clearSchoolHubRealtimeListeners(){
+            try { Object.keys(schoolhubRealtimeOwnerUnsubs || {}).forEach(k => { try { schoolhubRealtimeOwnerUnsubs[k](); } catch(e){} }); } catch(e) {}
+            schoolhubRealtimeOwnerUnsubs = {};
+            try { (schoolhubRealtimeUnsubs || []).forEach(unsub => { try { unsub(); } catch(e){} }); } catch(e) {}
+            schoolhubRealtimeUnsubs = [];
+            schoolhubRealtimeStartedFor = '';
+            schoolhubRealtimeOwnState = null;
+            schoolhubRealtimeOwnerStates = {};
+            schoolhubRealtimePublicUsers = [];
+        }
+        window.clearSchoolHubRealtimeListeners = clearSchoolHubRealtimeListeners;
+
+        function schoolhubStateFromData(data){
+            return {
+                courses: Array.isArray(data && data.courses) ? schoolhubCloneClean(data.courses) : [],
+                students: Array.isArray(data && data.students) ? schoolhubCloneClean(data.students) : [],
+                scores: Array.isArray(data && data.scores) ? schoolhubCloneClean(data.scores) : [],
+                attendance: schoolhubCloneClean((data && data.attendance) || {}),
+                coursePlans: schoolhubCloneClean((data && data.coursePlans) || {}),
+                courseGrades: schoolhubCloneClean((data && data.courseGrades) || {})
+            };
+        }
+
+        function schoolhubRebuildStateFromRealtime(){
+            const base = schoolhubStateFromData(schoolhubRealtimeOwnState || schoolhubOwnStateOnly());
+            state.courses = base.courses;
+            state.students = base.students;
+            state.scores = base.scores;
+            state.attendance = base.attendance;
+            state.coursePlans = base.coursePlans;
+            state.courseGrades = base.courseGrades;
+            window.state = state;
+            window.__schoolhubIncomingSharedCourses = [];
+
+            const myEmail = schoolhubGetCurrentEmail();
+            const myKey = currentUser ? getUserKey(currentUser) : '';
+            if(myEmail){
+                const seen = new Set((state.courses || []).map(c => schoolhubSharedCourseKey(myKey, c.id)));
+                (schoolhubRealtimePublicUsers || []).forEach(u => {
+                    const ownerKey = u.userKey || u.email || u.uid;
+                    if(!ownerKey || String(ownerKey) === String(myKey) || schoolhubNormEmail(u.email) === myEmail) return;
+                    const ownerState = schoolhubRealtimeOwnerStates[ownerKey];
+                    if(!ownerState || !Array.isArray(ownerState.courses)) return;
+                    ownerState.courses.forEach(c => {
+                        const share = schoolhubGetShareEntries(c).find(x => x.email === myEmail);
+                        if(!share || share.status === 'declined' || share.status === 'removed') return;
+                        const key = schoolhubSharedCourseKey(ownerKey, c.id);
+                        if(seen.has(key)) return;
+                        const item = { ownerKey, ownerName: u.name || u.email || ownerKey, courseId: c.id, courseName: c.name || '', courseCode: c.code || '', permission: share.permission === 'edit' ? 'edit' : 'view', status: share.status || 'pending' };
+                        if(item.status === 'accepted'){
+                            schoolhubMergeAcceptedSharedCourse(ownerKey, item.ownerName, ownerState, c, share);
+                            seen.add(key);
+                        }else{
+                            window.__schoolhubIncomingSharedCourses.push(item);
+                        }
+                    });
+                });
+            }
+        }
+
+        function schoolhubVisible(id){
+            const el = document.getElementById(id);
+            return !!(el && !el.classList.contains('hidden'));
+        }
+
+        function schoolhubRenderCurrentViewFromRealtime(){
+            try {
+                const mainApp = document.getElementById('main-app');
+                if(!mainApp || mainApp.classList.contains('hidden')) return;
+                if(schoolhubVisible('view-dashboard')){
+                    updateGlobalViews();
+                    try { schoolhubRenderIncomingShares(); } catch(e) {}
+                    return;
+                }
+                if(schoolhubVisible('view-students-master')){
+                    try { renderStudentsMaster(); } catch(e) {}
+                    return;
+                }
+                if(schoolhubVisible('view-course-detail')){
+                    if(currentActiveCourseId && !(state.courses || []).some(c => String(c.id) === String(currentActiveCourseId))){
+                        window.goToHome();
+                        return;
+                    }
+                    const c = (state.courses || []).find(x => String(x.id) === String(currentActiveCourseId));
+                    if(c){
+                        const title = document.getElementById('page-title');
+                        const subtitle = document.getElementById('page-subtitle');
+                        const sidebarName = document.getElementById('sidebar-course-name');
+                        const mobileCourseName = document.getElementById('mobile-course-name');
+                        if(title) title.textContent = c.name || '';
+                        if(subtitle) subtitle.innerHTML = `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs font-bold mr-2">${escapeHTML(c.code || '')}</span> จัดการข้อมูลรายวิชานี้`;
+                        if(sidebarName) sidebarName.textContent = `วิชา: ${c.code || ''}`;
+                        if(mobileCourseName) mobileCourseName.textContent = `เมนูประจำรายวิชา: ${c.code || ''} ${c.name || ''}`;
+                    }
+                    try { populateHiddenCourseDropdowns(); } catch(e) {}
+                    if(schoolhubVisible('course-tab-overview')){ try { renderCourseOverview(); } catch(e) {} }
+                    if(schoolhubVisible('course-tab-attendance')){
+                        try { window.initCalendar && window.initCalendar(); } catch(e) {}
+                        try { if(document.getElementById('attendance-area') && !document.getElementById('attendance-area').classList.contains('hidden')) renderAttendanceList(); } catch(e) {}
+                    }
+                    if(schoolhubVisible('course-tab-scores')){
+                        try { if(document.getElementById('score-area') && !document.getElementById('score-area').classList.contains('hidden')) renderScoreList(); } catch(e) {}
+                        try { if(document.getElementById('plan-modal') && !document.getElementById('plan-modal').classList.contains('hidden')) renderPlanList(currentActiveCourseId); } catch(e) {}
+                    }
+                    try { schoolhubEnsureCourseTeacherButton(); } catch(e) {}
+                    try { schoolhubApplyReadonlyUI(); } catch(e) {}
+                }
+            } catch(e) { console.warn('realtime render current view failed:', e); }
+        }
+
+        function schoolhubScheduleRealtimeRender(){
+            if(schoolhubRealtimeRenderTimer) clearTimeout(schoolhubRealtimeRenderTimer);
+            schoolhubRealtimeRenderTimer = setTimeout(() => {
+                schoolhubRealtimeRenderTimer = null;
+                schoolhubRenderCurrentViewFromRealtime();
+            }, 80);
+        }
+
+        function schoolhubStartOwnerStateListener(ownerKey){
+            if(!ownerKey || schoolhubRealtimeOwnerUnsubs[ownerKey]) return;
+            try {
+                const unsub = onSnapshot(doc(db, getPrivatePath(ownerKey), 'state'), (snap) => {
+                    if(snap.exists()) schoolhubRealtimeOwnerStates[ownerKey] = snap.data() || {};
+                    else delete schoolhubRealtimeOwnerStates[ownerKey];
+                    schoolhubRebuildStateFromRealtime();
+                    schoolhubScheduleRealtimeRender();
+                }, (err) => console.warn('shared owner realtime failed:', ownerKey, err));
+                schoolhubRealtimeOwnerUnsubs[ownerKey] = unsub;
+            } catch(e) { console.warn('start shared owner realtime failed:', ownerKey, e); }
+        }
+
+        function schoolhubSyncOwnerRealtimeListeners(){
+            const myEmail = schoolhubGetCurrentEmail();
+            const myKey = currentUser ? getUserKey(currentUser) : '';
+            const needed = new Set();
+            (schoolhubRealtimePublicUsers || []).forEach(u => {
+                const ownerKey = u.userKey || u.email || u.uid;
+                if(!ownerKey || String(ownerKey) === String(myKey) || schoolhubNormEmail(u.email) === myEmail) return;
+                needed.add(String(ownerKey));
+                schoolhubStartOwnerStateListener(String(ownerKey));
+            });
+            Object.keys(schoolhubRealtimeOwnerUnsubs || {}).forEach(k => {
+                if(!needed.has(k)){
+                    try { schoolhubRealtimeOwnerUnsubs[k](); } catch(e) {}
+                    delete schoolhubRealtimeOwnerUnsubs[k];
+                    delete schoolhubRealtimeOwnerStates[k];
+                }
+            });
+        }
+
+        function startSchoolHubRealtimeListeners(){
+            return new Promise((resolve) => {
+                if(!currentUser || currentUser.uid === 'admin-bypass'){ resolve(false); return; }
+                const userKey = getUserKey(currentUser);
+                if(schoolhubRealtimeStartedFor === userKey){ resolve(true); return; }
+                clearSchoolHubRealtimeListeners();
+                schoolhubRealtimeStartedFor = userKey;
+                let resolved = false;
+                const finishOnce = (v) => { if(!resolved){ resolved = true; resolve(v); } };
+                try {
+                    const ownUnsub = onSnapshot(doc(db, getPrivatePath(userKey), 'state'), async (snap) => {
+                        if(snap.exists()){
+                            schoolhubRealtimeOwnState = snap.data() || {};
+                        }else{
+                            schoolhubRealtimeOwnState = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                            try { await setDoc(doc(db, getPrivatePath(userKey), 'state'), schoolhubRealtimeOwnState); } catch(e) { console.warn('create realtime state failed:', e); }
+                        }
+                        schoolhubRebuildStateFromRealtime();
+                        schoolhubScheduleRealtimeRender();
+                        finishOnce(true);
+                    }, (err) => { console.warn('own realtime failed:', err); finishOnce(false); });
+                    addSchoolHubRealtimeUnsub(ownUnsub);
+                } catch(e) { console.warn('start own realtime failed:', e); finishOnce(false); }
+
+                try {
+                    const publicUnsub = onSnapshot(collection(db, getPublicPath()), (snap) => {
+                        const users = [];
+                        snap.forEach(d => users.push(d.data() || {}));
+                        schoolhubRealtimePublicUsers = users;
+                        schoolhubSyncOwnerRealtimeListeners();
+                        schoolhubRebuildStateFromRealtime();
+                        schoolhubScheduleRealtimeRender();
+                    }, (err) => console.warn('public users realtime failed:', err));
+                    addSchoolHubRealtimeUnsub(publicUnsub);
+                } catch(e) { console.warn('start public users realtime failed:', e); }
+
+                setTimeout(() => finishOnce(true), 1200);
+            });
+        }
+        window.startSchoolHubRealtimeListeners = startSchoolHubRealtimeListeners;
 
         window.isStudentWithdrawn = (student) => !!(student && (student.withdrawn === true || student.status === 'ลาออก' || student.status === 'withdrawn'));
         window.getStudentWithdrawnClass = (student) => window.isStudentWithdrawn(student) ? ' schoolhub-withdrawn-text' : '';
@@ -5022,110 +5232,318 @@ async function submitPlanRequest(planId){
         window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 
 
-        // SchoolHub shared-course-teachers core patch (เฉพาะรายวิชา)
-        let schoolhubSharedOwnerStates = {};
-        let schoolhubSharedCourseIds = new Set();
-        const schoolhubNormalizeEmail = (v) => String(v || '').trim().toLowerCase();
-        const schoolhubGetMyEmail = () => schoolhubNormalizeEmail(currentUser?.email || window.currentUserEmail || '');
-        const schoolhubReadSharedTeachers = (course) => {
-            if (!course) return [];
-            if (Array.isArray(course.sharedTeachers)) return course.sharedTeachers.filter(Boolean);
-            if (course.sharedTeachers && typeof course.sharedTeachers === 'object') return Object.entries(course.sharedTeachers).map(([email, info]) => ({ email, ...(info || {}) }));
+        /* SchoolHub shared course accept + de-duplicate patch
+           - ใช้เฉพาะระบบแชร์ครูในรายวิชา
+           - กันข้อมูลซ้ำจากรายวิชาที่ถูกแชร์
+           - ต้องกดตอบรับก่อนจึงเห็นรายวิชา */
+        window.__schoolhubIncomingSharedCourses = [];
+        function schoolhubNormEmail(v){ return String(v || '').trim().toLowerCase(); }
+        function schoolhubNowISO(){ try { return new Date().toISOString(); } catch(e){ return String(Date.now()); } }
+        function schoolhubGetCurrentEmail(){ return schoolhubNormEmail(currentUser && currentUser.email); }
+        function schoolhubGetShareEntries(course){
+            const src = course && course.sharedTeachers;
+            if(!src) return [];
+            if(Array.isArray(src)) return src.filter(Boolean).map(x => ({...x, email: schoolhubNormEmail(x.email)})).filter(x => x.email);
+            if(typeof src === 'object') return Object.keys(src).map(email => ({...(src[email] || {}), email: schoolhubNormEmail(email)})).filter(x => x.email);
             return [];
-        };
-        const schoolhubWriteSharedTeachers = (course, list) => {
-            if (!course) return;
-            course.sharedTeachers = (list || []).map(t => ({ email: schoolhubNormalizeEmail(t.email), permission: t.permission === 'edit' ? 'edit' : 'view', addedAt: t.addedAt || new Date().toISOString(), addedBy: t.addedBy || schoolhubGetMyEmail() })).filter(t => t.email);
-        };
-        const schoolhubGetShareInfo = (courseId) => {
-            const course = (state.courses || []).find(c => String(c.id) === String(courseId));
-            if (!course) return { isShared:false, isOwner:true, permission:'owner', canEdit:true, canManage:true };
-            if (course.__sharedCourse) return { isShared:true, isOwner:false, permission:course.__sharedPermission || 'view', canEdit:course.__sharedPermission === 'edit', canManage:false, ownerKey:course.__sharedOwnerKey };
-            return { isShared:false, isOwner:true, permission:'owner', canEdit:true, canManage:true, ownerKey:getUserKey(currentUser) };
-        };
-        window.schoolhubCanEditCourse = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId).canEdit;
-        window.schoolhubCanManageCourseTeachers = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId).canManage;
-        window.schoolhubGetCourseShareInfo = (courseId = currentActiveCourseId) => schoolhubGetShareInfo(courseId);
-        const schoolhubOwnStateOnly = () => {
-            const sharedIds = schoolhubSharedCourseIds || new Set();
-            const own = { ...(state || {}), courses: (state.courses || []).filter(c => !c.__sharedCourse).map(c => { const x = { ...c }; delete x.__sharedCourse; delete x.__sharedOwnerKey; delete x.__sharedPermission; return x; }), students: (state.students || []).filter(st => !st.__sharedOwnerKey).map(st => { const x = { ...st }; delete x.__sharedOwnerKey; return x; }), scores: (state.scores || []).filter(sc => !sharedIds.has(String(sc.courseId))), attendance: {}, coursePlans: {}, courseGrades: {} };
-            Object.keys(state.attendance || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.attendance[cid] = state.attendance[cid]; });
-            Object.keys(state.coursePlans || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.coursePlans[cid] = state.coursePlans[cid]; });
-            Object.keys(state.courseGrades || {}).forEach(cid => { if (!sharedIds.has(String(cid))) own.courseGrades[cid] = state.courseGrades[cid]; });
-            return own;
-        };
-        async function schoolhubLoadSharedCoursesForCurrentUser() {
-            schoolhubSharedOwnerStates = {}; schoolhubSharedCourseIds = new Set();
-            const myEmail = schoolhubGetMyEmail();
-            if (!myEmail || !currentUser || currentUser.uid === 'admin-bypass') return;
-            try {
-                const usersSnap = await withTimeout(getDocs(collection(db, getPublicPath())), 8000, 'loadSharedCourseUsers');
-                const myKey = getUserKey(currentUser);
-                const sharedCourses = [], sharedStudents = [], sharedScores = [];
-                const sharedAttendance = {}, sharedPlans = {}, sharedGrades = {};
-                for (const udoc of usersSnap.docs) {
-                    const u = udoc.data() || {}; const ownerKey = u.userKey || u.email || udoc.id;
-                    if (!ownerKey || String(ownerKey) === String(myKey)) continue;
-                    try {
-                        const snap = await withTimeout(getDoc(doc(db, getPrivatePath(ownerKey), 'state')), 5000, 'loadSharedOwnerState');
-                        if (!snap.exists()) continue;
-                        const ownerData = snap.data() || {};
-                        const matched = (ownerData.courses || []).filter(c => schoolhubReadSharedTeachers(c).some(t => schoolhubNormalizeEmail(t.email) === myEmail));
-                        if (!matched.length) continue;
-                        schoolhubSharedOwnerStates[ownerKey] = ownerData;
-                        matched.forEach(c => {
-                            const share = schoolhubReadSharedTeachers(c).find(t => schoolhubNormalizeEmail(t.email) === myEmail) || {};
-                            const cid = String(c.id); schoolhubSharedCourseIds.add(cid);
-                            sharedCourses.push({ ...c, __sharedCourse:true, __sharedOwnerKey:ownerKey, __sharedPermission:share.permission === 'edit' ? 'edit' : 'view' });
-                            if (ownerData.coursePlans && ownerData.coursePlans[cid]) sharedPlans[cid] = ownerData.coursePlans[cid];
-                            if (ownerData.attendance && ownerData.attendance[cid]) sharedAttendance[cid] = ownerData.attendance[cid];
-                            if (ownerData.courseGrades && ownerData.courseGrades[cid]) sharedGrades[cid] = ownerData.courseGrades[cid];
-                            (ownerData.scores || []).filter(sc => String(sc.courseId) === cid).forEach(sc => sharedScores.push(sc));
-                        });
-                        (ownerData.students || []).forEach(st => sharedStudents.push({ ...st, __sharedOwnerKey:ownerKey }));
-                    } catch(e) { console.warn('load shared owner skipped:', ownerKey, e); }
-                }
-                if (sharedCourses.length) {
-                    const sharedIdSet = new Set(sharedCourses.map(c => String(c.id)));
-                    state.courses = (state.courses || []).filter(c => !sharedIdSet.has(String(c.id))).concat(sharedCourses);
-                    state.students = (state.students || []).filter(st => !st.__sharedOwnerKey).concat(sharedStudents);
-                    state.scores = (state.scores || []).filter(sc => !sharedIdSet.has(String(sc.courseId))).concat(sharedScores);
-                    state.attendance = { ...(state.attendance || {}), ...sharedAttendance };
-                    state.coursePlans = { ...(state.coursePlans || {}), ...sharedPlans };
-                    state.courseGrades = { ...(state.courseGrades || {}), ...sharedGrades };
-                    window.state = state;
-                }
-            } catch(e) { console.warn('schoolhubLoadSharedCoursesForCurrentUser failed:', e); }
         }
-        async function schoolhubSaveSharedOwnerStatesFromMergedState() {
-            for (const [ownerKey, ownerData] of Object.entries(schoolhubSharedOwnerStates || {})) {
-                const courseIds = (state.courses || []).filter(c => c.__sharedCourse && c.__sharedOwnerKey === ownerKey && c.__sharedPermission === 'edit').map(c => String(c.id));
-                if (!courseIds.length) continue;
-                const next = { ...(ownerData || {}), courses: (ownerData.courses || []).map(c => { const found = (state.courses || []).find(x => String(x.id) === String(c.id) && x.__sharedOwnerKey === ownerKey); if (!found) return c; const clean = { ...found }; delete clean.__sharedCourse; delete clean.__sharedOwnerKey; delete clean.__sharedPermission; return clean; }), scores: (ownerData.scores || []).filter(sc => !courseIds.includes(String(sc.courseId))).concat((state.scores || []).filter(sc => courseIds.includes(String(sc.courseId)))), attendance: { ...(ownerData.attendance || {}) }, coursePlans: { ...(ownerData.coursePlans || {}) }, courseGrades: { ...(ownerData.courseGrades || {}) }, students: (ownerData.students || []).map(st => { const found = (state.students || []).find(x => x.__sharedOwnerKey === ownerKey && String(x.id) === String(st.id)); if (!found) return st; const clean = { ...found }; delete clean.__sharedOwnerKey; return clean; }) };
-                courseIds.forEach(cid => { next.attendance[cid] = state.attendance?.[cid] || {}; next.coursePlans[cid] = state.coursePlans?.[cid] || []; if (state.courseGrades && state.courseGrades[cid]) next.courseGrades[cid] = state.courseGrades[cid]; });
-                await withTimeout(setDoc(doc(db, getPrivatePath(ownerKey), 'state'), next), 8000, 'saveSharedOwnerState');
-                schoolhubSharedOwnerStates[ownerKey] = next;
+        function schoolhubSetShareEntries(course, entries){
+            course.sharedTeachers = (entries || []).filter(x => x && x.email).map(x => ({
+                email: schoolhubNormEmail(x.email),
+                permission: x.permission === 'edit' ? 'edit' : 'view',
+                status: x.status || 'pending',
+                addedAt: x.addedAt || schoolhubNowISO(),
+                addedBy: x.addedBy || (currentUser?.email || ''),
+                respondedAt: x.respondedAt || null
+            }));
+        }
+        function schoolhubShareForCurrentUser(course){
+            const email = schoolhubGetCurrentEmail();
+            if(!email) return null;
+            return schoolhubGetShareEntries(course).find(x => schoolhubNormEmail(x.email) === email) || null;
+        }
+        function schoolhubIsSharedCourse(course){ return !!(course && course.__sharedOwnerKey); }
+        function schoolhubSharedCourseKey(ownerKey, courseId){ return String(ownerKey || '') + '::' + String(courseId || ''); }
+        function schoolhubCloneClean(obj){ return JSON.parse(JSON.stringify(obj || {})); }
+        function schoolhubOwnStateOnly(){
+            const clean = {
+                courses: (state.courses || []).filter(c => !schoolhubIsSharedCourse(c)).map(c => {
+                    const cc = schoolhubCloneClean(c);
+                    delete cc.__sharedOwnerKey; delete cc.__sharedOwnerName; delete cc.__sharedPermission; delete cc.__sharedStatus;
+                    return cc;
+                }),
+                students: (state.students || []).filter(s => !s.__sharedOwnerKey).map(s => { const ss=schoolhubCloneClean(s); delete ss.__sharedOwnerKey; return ss; }),
+                scores: (state.scores || []).filter(sc => !sc.__sharedOwnerKey).map(sc => { const x=schoolhubCloneClean(sc); delete x.__sharedOwnerKey; return x; }),
+                attendance: {},
+                coursePlans: {},
+                courseGrades: {}
+            };
+            const ownCourseIds = new Set(clean.courses.map(c => String(c.id)));
+            Object.keys(state.attendance || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.attendance[cid] = schoolhubCloneClean(state.attendance[cid]); });
+            Object.keys(state.coursePlans || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.coursePlans[cid] = schoolhubCloneClean(state.coursePlans[cid]); });
+            Object.keys(state.courseGrades || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.courseGrades[cid] = schoolhubCloneClean(state.courseGrades[cid]); });
+            return clean;
+        }
+        function schoolhubRemoveSharedMergedData(){
+            state.courses = (state.courses || []).filter(c => !schoolhubIsSharedCourse(c));
+            state.students = (state.students || []).filter(s => !s.__sharedOwnerKey);
+            state.scores = (state.scores || []).filter(s => !s.__sharedOwnerKey);
+            Object.keys(state.attendance || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.attendance[cid];
+            });
+            Object.keys(state.coursePlans || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.coursePlans[cid];
+            });
+            Object.keys(state.courseGrades || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.courseGrades[cid];
+            });
+        }
+        async function schoolhubReadOwnerState(ownerKey){
+            if(!ownerKey) return null;
+            try{
+                const snap = await withTimeout(getDoc(doc(db, getPrivatePath(ownerKey), 'state')), 7000, 'readSharedOwnerState');
+                return snap.exists() ? (snap.data() || {}) : null;
+            }catch(e){ console.warn('read shared owner failed', ownerKey, e); return null; }
+        }
+        async function schoolhubWriteOwnerState(ownerKey, ownerState){
+            if(!ownerKey || !ownerState) return;
+            await withTimeout(setDoc(doc(db, getPrivatePath(ownerKey), 'state'), ownerState), 8000, 'writeSharedOwnerState');
+        }
+        function schoolhubMergeAcceptedSharedCourse(ownerKey, ownerName, ownerState, course, share){
+            const cid = String(course.id);
+            state.courses = (state.courses || []).filter(c => !(schoolhubIsSharedCourse(c) && String(c.id) === cid && String(c.__sharedOwnerKey || '') === String(ownerKey || '')));
+            const sharedCourse = schoolhubCloneClean(course);
+            sharedCourse.__sharedOwnerKey = ownerKey;
+            sharedCourse.__sharedOwnerName = ownerName || ownerKey;
+            sharedCourse.__sharedPermission = share.permission === 'edit' ? 'edit' : 'view';
+            sharedCourse.__sharedStatus = 'accepted';
+            state.courses.push(sharedCourse);
+            const courseRooms = Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+            const extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
+            const existingStudentIds = new Set((state.students || []).map(s => String(s.id)));
+            (ownerState.students || []).forEach(st => {
+                const room = String(st.room || st.grade || st.classroom || '').trim();
+                if(courseRooms.includes(room) || extraIds.includes(st.id)){
+                    if(!existingStudentIds.has(String(st.id))){
+                        const ss = schoolhubCloneClean(st); ss.__sharedOwnerKey = ownerKey; state.students.push(ss); existingStudentIds.add(String(st.id));
+                    }
+                }
+            });
+            state.scores = (state.scores || []).filter(sc => String(sc.courseId) !== cid);
+            (ownerState.scores || []).filter(sc => String(sc.courseId) === cid).forEach(sc => { const x=schoolhubCloneClean(sc); x.__sharedOwnerKey=ownerKey; state.scores.push(x); });
+            if(!state.attendance) state.attendance = {};
+            if(!state.coursePlans) state.coursePlans = {};
+            if(!state.courseGrades) state.courseGrades = {};
+            state.attendance[cid] = schoolhubCloneClean((ownerState.attendance || {})[cid] || {});
+            state.coursePlans[cid] = schoolhubCloneClean((ownerState.coursePlans || {})[cid] || []);
+            state.courseGrades[cid] = schoolhubCloneClean((ownerState.courseGrades || {})[cid] || null);
+        }
+        async function schoolhubLoadSharedCoursesForCurrentUser(){
+            window.__schoolhubIncomingSharedCourses = [];
+            if(!currentUser || currentUser.uid === 'admin-bypass') return;
+            const myEmail = schoolhubGetCurrentEmail();
+            if(!myEmail) return;
+            schoolhubRemoveSharedMergedData();
+            const seen = new Set((state.courses || []).map(c => schoolhubSharedCourseKey(getUserKey(currentUser), c.id)));
+            let users = [];
+            try{
+                const qs = await withTimeout(getDocs(collection(db, getPublicPath())), 8000, 'loadShareUsers');
+                qs.forEach(d => users.push(d.data() || {}));
+            }catch(e){ console.warn('load shared users failed', e); return; }
+            for(const u of users){
+                const ownerKey = u.userKey || u.email || u.uid;
+                if(!ownerKey || String(ownerKey) === String(getUserKey(currentUser)) || schoolhubNormEmail(u.email) === myEmail) continue;
+                const ownerState = await schoolhubReadOwnerState(ownerKey);
+                if(!ownerState || !Array.isArray(ownerState.courses)) continue;
+                for(const c of ownerState.courses){
+                    const share = schoolhubGetShareEntries(c).find(x => x.email === myEmail);
+                    if(!share || share.status === 'declined' || share.status === 'removed') continue;
+                    const key = schoolhubSharedCourseKey(ownerKey, c.id);
+                    if(seen.has(key)) continue;
+                    const item = { ownerKey, ownerName: u.name || u.email || ownerKey, courseId: c.id, courseName: c.name || '', courseCode: c.code || '', permission: share.permission === 'edit' ? 'edit' : 'view', status: share.status || 'pending' };
+                    if(item.status === 'accepted'){
+                        schoolhubMergeAcceptedSharedCourse(ownerKey, item.ownerName, ownerState, c, share);
+                        seen.add(key);
+                    }else{
+                        window.__schoolhubIncomingSharedCourses.push(item);
+                    }
+                }
+            }
+            setTimeout(schoolhubRenderIncomingShares, 80);
+        }
+        async function schoolhubSetSharedTeacherStatus(ownerKey, courseId, status){
+            if(!currentUser) return;
+            toggleLoader(true);
+            try{
+                const ownerState = await schoolhubReadOwnerState(ownerKey);
+                if(!ownerState) throw new Error('ไม่พบข้อมูลเจ้าของรายวิชา');
+                const course = (ownerState.courses || []).find(c => String(c.id) === String(courseId));
+                if(!course) throw new Error('ไม่พบรายวิชาที่แชร์');
+                const myEmail = schoolhubGetCurrentEmail();
+                const entries = schoolhubGetShareEntries(course);
+                const idx = entries.findIndex(x => x.email === myEmail);
+                if(idx < 0) throw new Error('ไม่พบคำเชิญแชร์รายวิชานี้');
+                entries[idx].status = status === 'accepted' ? 'accepted' : 'declined';
+                entries[idx].respondedAt = schoolhubNowISO();
+                schoolhubSetShareEntries(course, entries);
+                await schoolhubWriteOwnerState(ownerKey, ownerState);
+                await schoolhubLoadSharedCoursesForCurrentUser();
+                updateGlobalViews();
+                showCustomAlert(status === 'accepted' ? 'ตอบรับแล้ว' : 'ปฏิเสธแล้ว', status === 'accepted' ? 'เพิ่มรายวิชาที่แชร์เข้าหน้าหลักแล้ว' : 'ซ่อนคำเชิญนี้แล้ว');
+            }catch(e){ showCustomAlert('ดำเนินการไม่ได้', getFirebaseErrorText(e) || e.message || String(e), true); }
+            toggleLoader(false);
+        }
+        window.acceptSharedCourseInvite = (ownerKey, courseId) => schoolhubSetSharedTeacherStatus(ownerKey, courseId, 'accepted');
+        window.declineSharedCourseInvite = (ownerKey, courseId) => schoolhubSetSharedTeacherStatus(ownerKey, courseId, 'declined');
+        function schoolhubRenderIncomingShares(){
+            const grid = document.getElementById('course-grid');
+            if(!grid) return;
+            let box = document.getElementById('schoolhub-incoming-course-shares');
+            const items = window.__schoolhubIncomingSharedCourses || [];
+            if(!items.length){ if(box) box.remove(); return; }
+            if(!box){
+                box = document.createElement('div');
+                box.id = 'schoolhub-incoming-course-shares';
+                box.className = 'mb-5 bg-amber-50 border border-amber-200 rounded-[1.5rem] p-4 md:p-5';
+                grid.parentElement.insertBefore(box, grid);
+            }
+            box.innerHTML = `<div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fas fa-user-clock"></i></div><div><h3 class="font-black text-slate-800">คำเชิญแชร์รายวิชา</h3><p class="text-xs text-slate-500">กดตอบรับก่อน รายวิชาจึงจะแสดงในหน้าหลัก</p></div></div>` + items.map(it => `<div class="bg-white border border-amber-100 rounded-2xl p-4 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-3"><div><div class="font-black text-slate-800">${escapeHTML(it.courseCode)} ${escapeHTML(it.courseName)}</div><div class="text-xs text-slate-500 mt-1">แชร์โดย ${escapeHTML(it.ownerName)} • สิทธิ์: ${it.permission === 'edit' ? 'แก้ไขได้' : 'ดูอย่างเดียว'}</div></div><div class="flex gap-2"><button type="button" onclick="acceptSharedCourseInvite('${String(it.ownerKey).replace(/'/g,'\\\'')}','${String(it.courseId).replace(/'/g,'\\\'')}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-check mr-1"></i>ตอบรับ</button><button type="button" onclick="declineSharedCourseInvite('${String(it.ownerKey).replace(/'/g,'\\\'')}','${String(it.courseId).replace(/'/g,'\\\'')}')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-times mr-1"></i>ปฏิเสธ</button></div></div>`).join('');
+        }
+        function schoolhubCurrentCourse(){ return (state.courses || []).find(c => String(c.id) === String(currentActiveCourseId)); }
+        function schoolhubCurrentCourseRole(){
+            const c = schoolhubCurrentCourse();
+            if(!c) return 'owner';
+            if(!schoolhubIsSharedCourse(c)) return 'owner';
+            return c.__sharedPermission === 'edit' ? 'edit' : 'view';
+        }
+        function schoolhubCanManageTeachers(){ return schoolhubCurrentCourseRole() === 'owner'; }
+        function schoolhubCanEditCurrentCourse(){ const r = schoolhubCurrentCourseRole(); return r === 'owner' || r === 'edit'; }
+        function schoolhubApplyReadonlyUI(){
+            const c = schoolhubCurrentCourse();
+            const detail = document.getElementById('view-course-detail');
+            if(!detail || !c) return;
+            const isView = schoolhubCurrentCourseRole() === 'view';
+            const teacherBtn = document.getElementById('course-teachers-manage-btn');
+            if(teacherBtn) teacherBtn.classList.toggle('hidden', !schoolhubCanManageTeachers());
+            detail.querySelectorAll('input, textarea, select, button').forEach(el => {
+                if(el.id === 'course-back-btn' || el.classList.contains('course-tab-btn') || el.classList.contains('mobile-course-tab-btn')) return;
+                if(el.id === 'course-teachers-manage-btn') return;
+                if(isView){ el.disabled = true; el.classList.add('opacity-60','pointer-events-none'); }
+                else { el.disabled = false; el.classList.remove('opacity-60','pointer-events-none'); }
+            });
+            const noteId = 'schoolhub-readonly-note';
+            let note = document.getElementById(noteId);
+            if(isView){
+                if(!note){ note = document.createElement('div'); note.id = noteId; note.className = 'mb-4 bg-sky-50 border border-sky-100 text-sky-700 rounded-2xl p-3 text-sm font-bold'; detail.prepend(note); }
+                note.innerHTML = '<i class="fas fa-eye mr-1"></i> รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงแก้ไขข้อมูลไม่ได้';
+            }else if(note){ note.remove(); }
+        }
+        function schoolhubEnsureCourseTeacherButton(){
+            const actions = document.getElementById('header-actions');
+            if(!actions || document.getElementById('course-teachers-manage-btn')) return;
+            if(!schoolhubCanManageTeachers()) return;
+            const btn = document.createElement('button');
+            btn.id = 'course-teachers-manage-btn';
+            btn.type = 'button';
+            btn.onclick = window.openCourseTeachersModal;
+            btn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2';
+            btn.innerHTML = '<i class="fas fa-chalkboard-user"></i> <span>จัดการครูในรายวิชา</span>';
+            actions.appendChild(btn);
+        }
+        window.openCourseTeachersModal = function(){
+            const c = schoolhubCurrentCourse();
+            if(!c) return;
+            if(!schoolhubCanManageTeachers()) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้นที่จัดการครูได้', true);
+            const email = document.getElementById('course-teacher-email');
+            const perm = document.getElementById('course-teacher-permission');
+            if(email) email.value = '';
+            if(perm) perm.value = 'view';
+            window.renderCourseTeachersList();
+            window.openModal('course-teachers-modal');
+        };
+        window.closeCourseTeachersModal = function(){ window.closeModal('course-teachers-modal'); };
+        window.renderCourseTeachersList = function(){
+            const c = schoolhubCurrentCourse();
+            const list = document.getElementById('course-teachers-list');
+            const count = document.getElementById('course-teachers-count');
+            if(!list || !c) return;
+            const entries = schoolhubGetShareEntries(c).filter(x => x.status !== 'removed');
+            if(count) count.textContent = entries.length ? `${entries.length} คน` : 'ยังไม่มี';
+            if(!entries.length){ list.innerHTML = '<div class="text-center text-slate-400 p-6 bg-slate-50 rounded-2xl">ยังไม่ได้เพิ่มครูในรายวิชานี้</div>'; return; }
+            list.innerHTML = entries.map(x => `<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"><div><div class="font-black text-slate-800">${escapeHTML(x.email)}</div><div class="text-xs text-slate-500 mt-1">สิทธิ์: <b>${x.permission === 'edit' ? 'แก้ไขได้' : 'ดูอย่างเดียว'}</b> • สถานะ: <b>${x.status === 'accepted' ? 'ตอบรับแล้ว' : (x.status === 'declined' ? 'ปฏิเสธแล้ว' : 'รอตอบรับ')}</b></div></div><div class="flex flex-wrap gap-2"><button type="button" onclick="changeCourseTeacherPermission('${String(x.email).replace(/'/g,'\\\'')}')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold"><i class="fas fa-repeat mr-1"></i>เปลี่ยนสิทธิ์</button><button type="button" onclick="removeCourseTeacher('${String(x.email).replace(/'/g,'\\\'')}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold"><i class="fas fa-trash mr-1"></i>ลบ</button></div></div>`).join('');
+        };
+        window.addCourseTeacher = async function(){
+            const c = schoolhubCurrentCourse();
+            if(!c) return;
+            if(!schoolhubCanManageTeachers()) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้นที่เพิ่มครูได้', true);
+            const email = schoolhubNormEmail(document.getElementById('course-teacher-email')?.value);
+            const permission = document.getElementById('course-teacher-permission')?.value === 'edit' ? 'edit' : 'view';
+            if(!email || !email.includes('@')) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลครูให้ถูกต้อง', true);
+            if(email === schoolhubGetCurrentEmail()) return showCustomAlert('เพิ่มไม่ได้', 'ไม่ต้องแชร์รายวิชาให้ตัวเอง', true);
+            const entries = schoolhubGetShareEntries(c).filter(x => x.email !== email);
+            entries.push({ email, permission, status:'pending', addedAt: schoolhubNowISO(), addedBy: currentUser?.email || '' });
+            schoolhubSetShareEntries(c, entries);
+            await saveStateToDB();
+            window.renderCourseTeachersList();
+            showCustomAlert('ส่งคำเชิญแล้ว', 'ครูปลายทางจะเห็นปุ่มตอบรับการแชร์เมื่อเข้าสู่ระบบด้วยอีเมลนี้');
+        };
+        window.changeCourseTeacherPermission = async function(email){
+            const c = schoolhubCurrentCourse(); if(!c) return;
+            if(!schoolhubCanManageTeachers()) return;
+            const entries = schoolhubGetShareEntries(c);
+            const idx = entries.findIndex(x => x.email === schoolhubNormEmail(email));
+            if(idx < 0) return;
+            entries[idx].permission = entries[idx].permission === 'edit' ? 'view' : 'edit';
+            schoolhubSetShareEntries(c, entries);
+            await saveStateToDB();
+            window.renderCourseTeachersList();
+        };
+        window.removeCourseTeacher = async function(email){
+            const c = schoolhubCurrentCourse(); if(!c) return;
+            if(!schoolhubCanManageTeachers()) return;
+            window.showCustomConfirm('ลบครูออกจากรายวิชา', 'ยืนยันลบครูคนนี้ออกจากรายวิชา?', async () => {
+                const entries = schoolhubGetShareEntries(c).filter(x => x.email !== schoolhubNormEmail(email));
+                schoolhubSetShareEntries(c, entries);
+                await saveStateToDB();
+                window.renderCourseTeachersList();
+                showCustomAlert('ลบแล้ว','ลบครูออกจากรายวิชาแล้ว');
+            });
+        };
+        async function schoolhubSaveSharedOwnerStatesFromMergedState(){
+            if(!currentUser || currentUser.uid === 'admin-bypass') return;
+            const sharedCourses = (state.courses || []).filter(c => schoolhubIsSharedCourse(c) && c.__sharedPermission === 'edit');
+            const owners = [...new Set(sharedCourses.map(c => c.__sharedOwnerKey).filter(Boolean))];
+            for(const ownerKey of owners){
+                const ownerState = await schoolhubReadOwnerState(ownerKey);
+                if(!ownerState) continue;
+                sharedCourses.filter(c => c.__sharedOwnerKey === ownerKey).forEach(c => {
+                    const cid = String(c.id);
+                    const idx = (ownerState.courses || []).findIndex(x => String(x.id) === cid);
+                    if(idx >= 0){
+                        const keepShares = ownerState.courses[idx].sharedTeachers;
+                        const cleanCourse = schoolhubCloneClean(c);
+                        delete cleanCourse.__sharedOwnerKey; delete cleanCourse.__sharedOwnerName; delete cleanCourse.__sharedPermission; delete cleanCourse.__sharedStatus;
+                        cleanCourse.sharedTeachers = keepShares;
+                        ownerState.courses[idx] = cleanCourse;
+                    }
+                    ownerState.scores = (ownerState.scores || []).filter(sc => String(sc.courseId) !== cid).concat((state.scores || []).filter(sc => String(sc.courseId) === cid).map(sc => { const x=schoolhubCloneClean(sc); delete x.__sharedOwnerKey; return x; }));
+                    ownerState.attendance = ownerState.attendance || {}; ownerState.attendance[cid] = schoolhubCloneClean((state.attendance || {})[cid] || {});
+                    ownerState.coursePlans = ownerState.coursePlans || {}; ownerState.coursePlans[cid] = schoolhubCloneClean((state.coursePlans || {})[cid] || []);
+                    ownerState.courseGrades = ownerState.courseGrades || {}; ownerState.courseGrades[cid] = schoolhubCloneClean((state.courseGrades || {})[cid] || null);
+                    const currentById = new Map((ownerState.students || []).map(st => [String(st.id), st]));
+                    (state.students || []).filter(st => !st.__sharedOwnerKey || st.__sharedOwnerKey === ownerKey).forEach(st => {
+                        if(currentById.has(String(st.id))){ const cleanSt=schoolhubCloneClean(st); delete cleanSt.__sharedOwnerKey; currentById.set(String(st.id), cleanSt); }
+                    });
+                    ownerState.students = Array.from(currentById.values());
+                });
+                await schoolhubWriteOwnerState(ownerKey, ownerState);
             }
         }
-        function schoolhubAssertCanEditCourse(courseId, actionText='แก้ไขข้อมูล') { if (!schoolhubGetShareInfo(courseId).canEdit) { showCustomAlert('ดูได้อย่างเดียว', 'รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถ' + actionText + 'ได้', true); return false; } return true; }
-        function schoolhubEnsureCourseTeacherButton() {
-            const box = document.getElementById('header-actions'); if (!box || !currentActiveCourseId) return;
-            const old = document.getElementById('course-teachers-btn'); const info = schoolhubGetShareInfo(currentActiveCourseId);
-            if (!info.canManage) { if (old) old.remove(); return; } if (old) return;
-            const btn = document.createElement('button'); btn.id = 'course-teachers-btn'; btn.type = 'button'; btn.onclick = () => window.openCourseTeachersModal(); btn.className = 'bg-indigo-50 border border-indigo-100 text-primary px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-100 transition shadow-sm'; btn.innerHTML = '<i class="fas fa-chalkboard-user"></i> <span>จัดการครูในรายวิชา</span>'; box.insertBefore(btn, box.firstChild);
-        }
-        function schoolhubApplyReadonlyUI() {
-            if (!currentActiveCourseId) return; const canEdit = schoolhubGetShareInfo(currentActiveCourseId).canEdit;
-            ['#course-tab-attendance button[onclick="saveAttendance()"]','#btn-delete-attendance','#course-tab-scores button[onclick="saveScores()"]','#btn-delete-scores','#score-list input','#attendance-list input','#score-max','#score-title-input','#score-title-select'].forEach(sel => document.querySelectorAll(sel).forEach(el => { el.disabled = !canEdit; el.classList.toggle('opacity-50', !canEdit); el.classList.toggle('pointer-events-none', !canEdit); }));
-            document.querySelectorAll('#plan-list button, #plan-modal input, #plan-modal select, #plan-submit-btn, #plan-cancel-edit-btn').forEach(el => { if (el.closest('#plan-modal') && el.closest('.p-6.border-b')) return; el.disabled = !canEdit; el.classList.toggle('opacity-50', !canEdit); el.classList.toggle('pointer-events-none', !canEdit); });
-            schoolhubEnsureCourseTeacherButton();
-        }
-        window.openCourseTeachersModal = () => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้นที่จัดการครูในรายวิชาได้', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); if (!course) return; const sub = document.getElementById('course-teachers-modal-subtitle'); if (sub) sub.textContent = `${course.code || ''} ${course.name || ''}`.trim(); document.getElementById('course-teacher-email').value = ''; document.getElementById('course-teacher-permission').value = 'view'; window.renderCourseTeachersList(); window.openModal('course-teachers-modal'); };
-        window.closeCourseTeachersModal = () => window.closeModal('course-teachers-modal');
-        window.renderCourseTeachersList = () => { const box = document.getElementById('course-teachers-list'); const count = document.getElementById('course-teachers-count'); if (!box || !currentActiveCourseId) return; const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const items = schoolhubReadSharedTeachers(course); if (count) count.textContent = `${items.length} คน`; if (!items.length) { box.innerHTML = '<div class="text-center text-slate-400 border border-dashed rounded-2xl p-8">ยังไม่มีครูที่ถูกเพิ่มในรายวิชานี้</div>'; return; } box.innerHTML = items.map(t => { const email = escapeHTML(t.email || ''); const perm = t.permission === 'edit' ? 'edit' : 'view'; return `<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"><div class="min-w-0"><div class="font-black text-slate-800 truncate">${email}</div><div class="text-xs text-slate-400 mt-1">สิทธิ์ปัจจุบัน: ${perm === 'edit' ? 'แก้ไขได้' : 'ดูอย่างเดียว'}</div></div><div class="flex flex-col sm:flex-row gap-2"><select onchange="changeCourseTeacherPermission('${email}', this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold"><option value="view" ${perm==='view'?'selected':''}>ดูอย่างเดียว</option><option value="edit" ${perm==='edit'?'selected':''}>แก้ไขได้</option></select><button type="button" onclick="removeCourseTeacher('${email}')" class="bg-rose-50 text-rose-600 border border-rose-100 px-4 py-2 rounded-xl text-sm font-bold hover:bg-rose-100"><i class="fas fa-trash"></i> ลบ</button></div></div>`; }).join(''); };
-        window.addCourseTeacher = async () => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const email = schoolhubNormalizeEmail(document.getElementById('course-teacher-email')?.value); const permission = document.getElementById('course-teacher-permission')?.value === 'edit' ? 'edit' : 'view'; if (!email || !email.includes('@')) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลครูให้ถูกต้อง', true); if (email === schoolhubGetMyEmail()) return showCustomAlert('เพิ่มไม่ได้', 'ไม่ต้องเพิ่มอีเมลเจ้าของรายวิชา', true); const list = schoolhubReadSharedTeachers(course).filter(t => schoolhubNormalizeEmail(t.email) !== email); list.push({ email, permission, addedAt:new Date().toISOString(), addedBy:schoolhubGetMyEmail() }); schoolhubWriteSharedTeachers(course, list); await saveStateToDB(); window.renderCourseTeachersList(); showCustomAlert('สำเร็จ', 'เพิ่มครูในรายวิชาแล้ว'); };
-        window.changeCourseTeacherPermission = async (email, permission) => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); const target = schoolhubNormalizeEmail(email); schoolhubWriteSharedTeachers(course, schoolhubReadSharedTeachers(course).map(t => schoolhubNormalizeEmail(t.email) === target ? { ...t, permission: permission === 'edit' ? 'edit' : 'view' } : t)); await saveStateToDB(); window.renderCourseTeachersList(); };
-        window.removeCourseTeacher = async (email) => { if (!currentActiveCourseId || !schoolhubGetShareInfo(currentActiveCourseId).canManage) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะเจ้าของรายวิชาเท่านั้น', true); window.showCustomConfirm('ลบครูออกจากรายวิชา', 'ต้องการลบครูคนนี้ออกจากรายวิชาหรือไม่?', async () => { const course = state.courses.find(c => String(c.id) === String(currentActiveCourseId)); schoolhubWriteSharedTeachers(course, schoolhubReadSharedTeachers(course).filter(t => schoolhubNormalizeEmail(t.email) !== schoolhubNormalizeEmail(email))); await saveStateToDB(); window.renderCourseTeachersList(); }); };
+        window.schoolhubApplyReadonlyUI = schoolhubApplyReadonlyUI;
+        window.schoolhubEnsureCourseTeacherButton = schoolhubEnsureCourseTeacherButton;
 
         async function saveStateToDB() {
             if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return; }
@@ -5865,6 +6283,18 @@ ${resetUrl.toString()}
                 });
             }
         };
+
+
+        if (window.renderCourseGrid && !window.renderCourseGrid.__schoolhubSharedInviteWrapped) {
+            const __oldRenderCourseGridSharedInvite = window.renderCourseGrid;
+            window.renderCourseGrid = function(){
+                const result = __oldRenderCourseGridSharedInvite.apply(this, arguments);
+                setTimeout(schoolhubRenderIncomingShares, 0);
+                setTimeout(schoolhubApplyReadonlyUI, 0);
+                return result;
+            };
+            window.renderCourseGrid.__schoolhubSharedInviteWrapped = true;
+        }
 
         window.editCourse = (id) => {
             const c = state.courses.find(x => x.id === id); if(!c) return;
