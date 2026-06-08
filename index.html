@@ -3848,7 +3848,7 @@ document.addEventListener('click',function(){
             try {
                 const u = userForDir || currentUser || (auth && auth.currentUser);
                 if (u && u.uid && u.uid !== 'admin-bypass') {
-                    const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), u.uid)), 6000, 'loadAuthUserDir');
+                    const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), getUserKey(u))), 6000, 'loadAuthUserDir');
                     window.__currentUserDir = dirSnap.exists() ? (dirSnap.data() || {}) : {};
                 }
             } catch(e) { console.warn('load auth user dir failed:', e); }
@@ -4555,7 +4555,7 @@ document.addEventListener('click',function(){
             // โหลดข้อมูล user ล่าสุดจาก Firestore เพื่อแสดงแผนปัจจุบันถูกต้อง
             if(currentUser && currentUser.uid !== 'admin-bypass'){
                 try {
-                    const snap = await withTimeout(getDoc(doc(db, getPublicPath(), currentUser.uid)), 6000, 'loadUserDir');
+                    const snap = await withTimeout(getDoc(doc(db, getPublicPath(), getUserKey(currentUser))), 6000, 'loadUserDir');
                     if(snap.exists()) window.__currentUserDir = snap.data() || {};
                 } catch(e) { console.warn('loadUserDir failed:', e); }
             }
@@ -4921,7 +4921,7 @@ document.addEventListener('click',function(){
                 paymentReference:verification.reference,
                 slipReference:verification.reference
             },{merge:true});
-            await setDoc(doc(db,getPublicPath(),payload.uid),{
+            await setDoc(doc(db,getPublicPath(),normalizeSchoolHubEmail(payload.email||payload.userKey)),{
                 uid:payload.uid,email:payload.email||'',userKey:normalizeSchoolHubEmail(payload.email||payload.userKey),
                 name:payload.name||payload.email||'',role:'user',status:'active',
                 planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
@@ -5078,7 +5078,7 @@ document.addEventListener('click',function(){
                 await setDoc(getPlanRequestDocRef(reqId),payload,{merge:true});
                 if(verification?.autoApproved){
                     await autoApproveVerifiedPlanRequest(reqId,payload,verification);
-                    await setDoc(doc(db,getPublicPath(),currentUser.uid),{
+                    await setDoc(doc(db,getPublicPath(),userKey),{
                         uid:currentUser.uid,email:currentUser.email||'',userKey,
                         name:currentUser.displayName||userKey,role:'user',
                         status:'active',
@@ -5086,7 +5086,7 @@ document.addEventListener('click',function(){
                         requestedPlanAt:null
                     },{merge:true});
                 }else{
-                    await setDoc(doc(db,getPublicPath(),currentUser.uid),{
+                    await setDoc(doc(db,getPublicPath(),userKey),{
                         uid:currentUser.uid,email:currentUser.email||'',userKey,
                         name:currentUser.displayName||userKey,role:'user',
                         status:'pending_plan',
@@ -5118,7 +5118,7 @@ async function submitPlanRequest(planId){
             toggleLoader(true);
             try{
                 await setDoc(getPlanRequestDocRef(reqId),payload,{merge:true});
-                await setDoc(doc(db,getPublicPath(),currentUser.uid),{uid:currentUser.uid,email:currentUser.email||'',userKey,name:currentUser.displayName||userKey,role:'user',status:'pending_plan',requestedPlanId:plan.id,requestedPlanName:plan.name||'',requestedPlanAt:Date.now()},{merge:true});
+                await setDoc(doc(db,getPublicPath(),userKey),{uid:currentUser.uid,email:currentUser.email||'',userKey,name:currentUser.displayName||userKey,role:'user',status:'pending_plan',requestedPlanId:plan.id,requestedPlanName:plan.name||'',requestedPlanAt:Date.now()},{merge:true});
                 localStorage.removeItem(PENDING_PLAN_KEY);
                 showCustomAlert('ส่งคำขอแล้ว',`ส่งคำขอสมัครแผน ${plan.name} ให้แอดมินตรวจสอบแล้ว\nเมื่อแอดมินอนุมัติ สิทธิ์ของคุณจะเปลี่ยนตามแผนที่สมัคร`);
             }catch(e){showCustomAlert('ส่งคำขอไม่ได้',getFirebaseErrorText(e)+'\nโปรดตรวจสอบ Firestore Rules ของ subscription_requests',true);}
@@ -5154,7 +5154,7 @@ async function submitPlanRequest(planId){
                     autoApproved:true
                 },{merge:true});
                 // อัปเดต directory
-                await setDoc(doc(db,getPublicPath(),currentUser.uid),{
+                await setDoc(doc(db,getPublicPath(),userKey),{
                     uid:currentUser.uid, email:currentUser.email||'', userKey,
                     name:currentUser.displayName||userKey, role:'user', status:'active',
                     planId:plan.id, planName:plan.name||'', planPrice:plan.price||'0 บาท',
@@ -5673,7 +5673,7 @@ async function submitPlanRequest(planId){
             }
             const now = new Date().toISOString();
             try {
-                await withTimeout(setDoc(doc(db, getPublicPath(), user.uid), {
+                await withTimeout(setDoc(doc(db, getPublicPath(), email), {
                     uid: user.uid,
                     email: email,
                     userKey: email,
@@ -7300,7 +7300,7 @@ ${resetUrl.toString()}
                 const now=Date.now();
                 try{
                     await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now},{merge:true});
-                    await setDoc(doc(db,getPublicPath(),r.uid),{
+                    await setDoc(doc(db,getPublicPath(),normalizeSchoolHubEmail(r.email||r.userKey)),{
                         uid:r.uid,email:r.email||'',userKey:normalizeSchoolHubEmail(r.email||r.userKey),
                         name:r.name||r.email||'',role:'user',status:'active',
                         planId:r.planId,planName:r.planName,planPrice:r.planPrice,
@@ -7333,7 +7333,7 @@ ${resetUrl.toString()}
                 toggleLoader(true);
                 try{
                     await setDoc(getPlanRequestDocRef(id),{status:'rejected',rejectedAt:Date.now(),rejectedBy:currentUser?.email||'admin',updatedAt:Date.now()},{merge:true});
-                    if(r.uid) await setDoc(doc(db,getPublicPath(),r.uid),{status:'active',requestedPlanId:null,requestedPlanName:null},{merge:true});
+                    if(r.uid) await setDoc(doc(db,getPublicPath(),normalizeSchoolHubEmail(r.email||r.userKey)),{status:'active',requestedPlanId:null,requestedPlanName:null},{merge:true});
                     sendMailViaWebApp({
                         to: r.email || r.userKey,
                         name: r.name || '',
@@ -7405,8 +7405,9 @@ ${resetUrl.toString()}
         }
         async function refreshCurrentUserPlanLock(){
             if(!currentUser || currentUser.uid==='admin-bypass' || isAdmin) return false;
+            const userKey = getUserKey(currentUser);
             try{
-                const snap=await withTimeout(getDoc(doc(db,getPublicPath(),currentUser.uid)),6000,'refreshPlanLock');
+                const snap=await withTimeout(getDoc(doc(db,getPublicPath(),getUserKey(currentUser))),6000,'refreshPlanLock');
                 if(snap.exists()) window.__currentUserDir=snap.data()||{};
             }catch(e){}
             const dir=window.__currentUserDir||{};
@@ -7419,7 +7420,7 @@ ${resetUrl.toString()}
             window.__schoolhubPlanLockReason=reason;
             localStorage.setItem(PLAN_LOCK_CACHE_KEY,JSON.stringify({locked,reason,checkedAt:now}));
             if(locked){
-                try{ await setDoc(doc(db,getPublicPath(),currentUser.uid),{status:dir.status==='pending_plan'?'pending_plan':'plan_locked',planLockedAt:now,planLockReason:reason},{merge:true}); }catch(e){}
+                try{ await setDoc(doc(db,getPublicPath(),userKey),{status:dir.status==='pending_plan'?'pending_plan':'plan_locked',planLockedAt:now,planLockReason:reason},{merge:true}); }catch(e){}
                 /* ไม่เด้งเตือนเลือกแผนทันที: บังคับเฉพาะตอนกดใช้งานจริง */
             }
             return locked;
@@ -7586,12 +7587,12 @@ ${resetUrl.toString()}
         };
         activateFreePlan = async function(plan){
             if(!currentUser)return; if(await hasPendingPlanRequestForCurrentUser())return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','ไม่สามารถขอแผนซ้ำได้',true); toggleLoader(true);
-            try{ const userKey=getUserKey(currentUser); const now=Date.now(); const reqId=`${currentUser.uid}_${plan.id}_${now}`; const cycle=plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:currentUser.uid,email:currentUser.email||'',userKey,name:currentUser.displayName||userKey,role:'user'}); await setDoc(getPlanRequestDocRef(reqId),{id:reqId,uid:currentUser.uid,userKey,email:currentUser.email||'',name:currentUser.displayName||userKey,planId:plan.id,planName:plan.name||'',planPrice:planDisplayPrice(plan),planAmount:0,planBillingCycle:cycle,status:'approved',createdAt:now,approvedAt:now,updatedAt:now,autoApproved:true},{merge:true}); await setDoc(doc(db,getPublicPath(),currentUser.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',userKey),planPayload,{merge:true}); window.__currentUserDir=Object.assign(window.__currentUserDir||{},planPayload); window.__schoolhubPlanLocked=false; localStorage.removeItem(PENDING_PLAN_KEY); showCustomAlert('เปิดใช้งานแล้ว',`แผน ${plan.name} เปิดใช้งานแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`); renderUserPlans(); }catch(e){showCustomAlert('เกิดข้อผิดพลาด',getFirebaseErrorText(e),true);} toggleLoader(false);
+            try{ const userKey=getUserKey(currentUser); const now=Date.now(); const reqId=`${currentUser.uid}_${plan.id}_${now}`; const cycle=plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:currentUser.uid,email:currentUser.email||'',userKey,name:currentUser.displayName||userKey,role:'user'}); await setDoc(getPlanRequestDocRef(reqId),{id:reqId,uid:currentUser.uid,userKey,email:currentUser.email||'',name:currentUser.displayName||userKey,planId:plan.id,planName:plan.name||'',planPrice:planDisplayPrice(plan),planAmount:0,planBillingCycle:cycle,status:'approved',createdAt:now,approvedAt:now,updatedAt:now,autoApproved:true},{merge:true}); await setDoc(doc(db,getPublicPath(),userKey),planPayload,{merge:true}); await setDoc(doc(db,'users_status',userKey),planPayload,{merge:true}); window.__currentUserDir=Object.assign(window.__currentUserDir||{},planPayload); window.__schoolhubPlanLocked=false; localStorage.removeItem(PENDING_PLAN_KEY); showCustomAlert('เปิดใช้งานแล้ว',`แผน ${plan.name} เปิดใช้งานแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`); renderUserPlans(); }catch(e){showCustomAlert('เกิดข้อผิดพลาด',getFirebaseErrorText(e),true);} toggleLoader(false);
         };
         const __oldSubmitPlanPaymentForm = window.submitPlanPaymentForm;
         // submitPlanPaymentForm เดิมยังใช้ OCR/สลิปเดิม แต่หลังบันทึกจะได้รอบชำระจากแผนที่เลือกผ่าน extractPlanAmount
         approvePlanRequest = window.approvePlanRequest = async function(id){
-            const snap=await getDoc(getPlanRequestDocRef(id)); if(!snap.exists())return showCustomAlert('ไม่พบคำขอ','คำขอนี้อาจถูกลบไปแล้ว',true); const r=snap.data(); const plan=getPlanById(r.planId)||r; window.showCustomConfirm('อนุมัติแผน',`อนุมัติให้ ${r.name||r.email} ใช้แผน ${r.planName} หรือไม่?`,async()=>{ toggleLoader(true); const now=Date.now(); const cycle=r.planBillingCycle||plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:r.uid,email:r.email||'',userKey:normalizeSchoolHubEmail(r.email||r.userKey),name:r.name||r.email||'',role:'user'}); try{ await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now,planNextBillingAt:planPayload.planNextBillingAt,planExpiresAt:planPayload.planExpiresAt,courseLimit:planPayload.courseLimit},{merge:true}); await setDoc(doc(db,getPublicPath(),r.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',normalizeSchoolHubEmail(r.email||r.userKey)),planPayload,{merge:true}); sendMailViaWebApp({to:r.email||r.userKey,name:r.name||'',type:'plan_approved',subject:`อนุมัติแผน ${r.planName||''} แล้ว`,message:`สวัสดี ${r.name||r.email||''}\n\nคำขอสมัครแผน ${r.planName||''} ได้รับการอนุมัติแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}\n\nขอบคุณที่ใช้ SchoolHub`,extra:{planName:r.planName||'',planPrice:r.planPrice||'',requestId:id}}); await loadPlanRequests();await loadAdminData();window.closePlanRequestPopup(); showCustomAlert('อนุมัติแล้ว',`เปลี่ยนสิทธิ์ผู้ใช้เป็นแผน ${r.planName}\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`);}catch(e){showCustomAlert('อนุมัติไม่ได้',getFirebaseErrorText(e),true);} toggleLoader(false); });
+            const snap=await getDoc(getPlanRequestDocRef(id)); if(!snap.exists())return showCustomAlert('ไม่พบคำขอ','คำขอนี้อาจถูกลบไปแล้ว',true); const r=snap.data(); const plan=getPlanById(r.planId)||r; window.showCustomConfirm('อนุมัติแผน',`อนุมัติให้ ${r.name||r.email} ใช้แผน ${r.planName} หรือไม่?`,async()=>{ toggleLoader(true); const now=Date.now(); const cycle=r.planBillingCycle||plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:r.uid,email:r.email||'',userKey:normalizeSchoolHubEmail(r.email||r.userKey),name:r.name||r.email||'',role:'user'}); try{ await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now,planNextBillingAt:planPayload.planNextBillingAt,planExpiresAt:planPayload.planExpiresAt,courseLimit:planPayload.courseLimit},{merge:true}); await setDoc(doc(db,getPublicPath(),normalizeSchoolHubEmail(r.email||r.userKey)),planPayload,{merge:true}); await setDoc(doc(db,'users_status',normalizeSchoolHubEmail(r.email||r.userKey)),planPayload,{merge:true}); sendMailViaWebApp({to:r.email||r.userKey,name:r.name||'',type:'plan_approved',subject:`อนุมัติแผน ${r.planName||''} แล้ว`,message:`สวัสดี ${r.name||r.email||''}\n\nคำขอสมัครแผน ${r.planName||''} ได้รับการอนุมัติแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}\n\nขอบคุณที่ใช้ SchoolHub`,extra:{planName:r.planName||'',planPrice:r.planPrice||'',requestId:id}}); await loadPlanRequests();await loadAdminData();window.closePlanRequestPopup(); showCustomAlert('อนุมัติแล้ว',`เปลี่ยนสิทธิ์ผู้ใช้เป็นแผน ${r.planName}\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`);}catch(e){showCustomAlert('อนุมัติไม่ได้',getFirebaseErrorText(e),true);} toggleLoader(false); });
         };
         const __oldOpenUserPlanSelector = window.openUserPlanSelector;
         window.openUserPlanSelector = async function(){ await loadPublicPlans(); if(currentUser&&currentUser.uid!=='admin-bypass') await refreshCurrentUserPlanLock(); return __oldOpenUserPlanSelector(); };
@@ -7710,8 +7711,11 @@ ${resetUrl.toString()}
                 const payload = makeBlocked
                     ? { status: 'blocked', blocked: true, blockedAt: Date.now(), deletedAt: null, updatedAt: Date.now() }
                     : { status: 'active', blocked: false, blockedAt: null, deletedAt: null, unblockedAt: Date.now(), updatedAt: Date.now() };
-                if (uid && String(uid).indexOf('status_') !== 0) await setDoc(doc(db, getPublicPath(), uid), payload, { merge: true });
-                if (userKey) await setDoc(doc(db, `users_status`, userKey), payload, { merge: true });
+                const emailKey = isSchoolHubValidEmail(userKey) ? normalizeSchoolHubEmail(userKey) : (isSchoolHubValidEmail(uid) ? normalizeSchoolHubEmail(uid) : '');
+                if (emailKey) {
+                    await setDoc(doc(db, getPublicPath(), emailKey), payload, { merge: true });
+                    await setDoc(doc(db, `users_status`, emailKey), payload, { merge: true });
+                }
                 await Promise.allSettled([loadAdminData(), (typeof renderBlockedUsersList === 'function' ? renderBlockedUsersList() : Promise.resolve())]);
                 showCustomAlert(makeBlocked ? 'บล็อกแล้ว' : 'ปลดบล็อกแล้ว', makeBlocked ? 'บล็อกเฉพาะการใช้งานแล้ว ข้อมูลผู้ใช้ยังอยู่ครบ' : 'ผู้ใช้กลับมาใช้งานได้แล้ว');
             } catch(e) { showCustomAlert('เปลี่ยนสถานะไม่ได้', getFirebaseErrorText(e), true); }
@@ -8131,8 +8135,9 @@ ${resetUrl.toString()}
       toggleLoader(true);
       const blocked = status === 'blocked' || status === 'deleted';
       const payload = blocked ? {status:'blocked', blocked:true, blockedAt:Date.now(), deletedAt:null} : {status:'active', blocked:false, blockedAt:null, deletedAt:null};
-      await setDoc(doc(db, getPublicPath(), uid), payload, { merge:true });
-      await setDoc(doc(db, 'users_status', userKey), payload, { merge:true });
+      const emailKey = isSchoolHubValidEmail(userKey) ? normalizeSchoolHubEmail(userKey) : (isSchoolHubValidEmail(uid) ? normalizeSchoolHubEmail(uid) : '');
+      if(emailKey) await setDoc(doc(db, getPublicPath(), emailKey), payload, { merge:true });
+      if(emailKey) await setDoc(doc(db, 'users_status', emailKey), payload, { merge:true });
       await loadAdminData();
       showCustomAlert(blocked?'บล็อกแล้ว':'ปลดบล็อกแล้ว', blocked?'ผู้ใช้นี้ยังอยู่ในรายชื่อ ข้อมูลไม่ถูกลบ และจะเข้าใช้งานไม่ได้':'ผู้ใช้นี้กลับมาใช้งานได้แล้ว');
     }catch(e){ showCustomAlert('เปลี่ยนสถานะไม่ได้', getFirebaseErrorText(e), true); }
@@ -8216,11 +8221,10 @@ ${resetUrl.toString()}
         : { status:'active', blocked:false, blockedAt:null, deletedAt:null, unblockedAt:now, updatedAt:now };
 
       // สำคัญ: ไม่ใช้ deleteDoc ในการบล็อกอีกต่อไป ข้อมูลรายวิชา/นักเรียน/คะแนนไม่หาย
-      if(uid && String(uid).indexOf('status_') !== 0) {
-        await setDoc(doc(db, getPublicPath(), uid), payload, { merge:true });
-      }
-      if(userKey) {
-        await setDoc(doc(db, 'users_status', userKey), payload, { merge:true });
+      const emailKey = isSchoolHubValidEmail(userKey) ? normalizeSchoolHubEmail(userKey) : (isSchoolHubValidEmail(uid) ? normalizeSchoolHubEmail(uid) : '');
+      if(emailKey) {
+        await setDoc(doc(db, getPublicPath(), emailKey), payload, { merge:true });
+        await setDoc(doc(db, 'users_status', emailKey), payload, { merge:true });
       }
 
       await Promise.allSettled([
@@ -8376,8 +8380,11 @@ ${resetUrl.toString()}
       const payload = makeBlocked
         ? { status:'blocked', blocked:true, blockedAt:now, deletedAt:null, updatedAt:now }
         : { status:'active', blocked:false, blockedAt:null, deletedAt:null, unblockedAt:now, updatedAt:now };
-      if(uid && String(uid).indexOf('status_') !== 0) await setDoc(doc(db, getPublicPath(), uid), payload, {merge:true});
-      if(userKey) await setDoc(doc(db, 'users_status', userKey), payload, {merge:true});
+      const emailKey = isSchoolHubValidEmail(userKey) ? normalizeSchoolHubEmail(userKey) : (isSchoolHubValidEmail(uid) ? normalizeSchoolHubEmail(uid) : '');
+      if(emailKey){
+        await setDoc(doc(db, getPublicPath(), emailKey), payload, {merge:true});
+        await setDoc(doc(db, 'users_status', emailKey), payload, {merge:true});
+      }
       await Promise.allSettled([
         typeof loadAdminData==='function' ? loadAdminData() : Promise.resolve(),
         typeof renderBlockedUsersList==='function' ? renderBlockedUsersList() : Promise.resolve()
@@ -16793,12 +16800,12 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 
       /* สำคัญ: หลังระบบรวมผู้ใช้ซ้ำแล้ว doc ที่แสดงจริงมักเป็น public_users_directory/{email}
          ดังนั้นต้องอัปเดตทั้ง uid เดิม และ email doc ไม่อย่างนั้นกดแล้วขึ้นสำเร็จแต่ตารางยังเหมือนเดิม */
-      const publicTargets = Array.from(new Set([uid, email, u.uid, u.userKey, u.email]
-        .map(x => String(x || '').trim())
-        .filter(Boolean)));
+      const publicTargets = Array.from(new Set([email, u.userKey, u.email, userKey, uid]
+        .map(x => norm(x))
+        .filter(x => isEmail(x))));
       const statusTargets = Array.from(new Set([email, userKey, uid]
-        .map(x => String(x || '').trim())
-        .filter(Boolean)));
+        .map(x => norm(x))
+        .filter(x => isEmail(x))));
 
       await Promise.allSettled(publicTargets.map(id => setDoc(doc(db, publicPath(), id), payload, {merge:true})));
       await Promise.allSettled(statusTargets.map(id => setDoc(doc(db, 'users_status', id), payload, {merge:true})));
