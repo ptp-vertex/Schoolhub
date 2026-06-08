@@ -2214,6 +2214,71 @@ document.addEventListener('click',function(){
 .schoolhub-withdrawn-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:800; color:#be123c; background:#fff1f2; border:1px solid #fecdd3; border-radius:9999px; padding:.18rem .5rem; margin-left:.35rem; white-space:nowrap; }
 .schoolhub-withdrawn-control { opacity:.55 !important; pointer-events:none !important; cursor:not-allowed !important; }
 </style>
+
+<style id="schoolhub-thai-course-card-text-fix">
+/* แก้สระ/วรรณยุกต์ภาษาไทยถูกตัดในกล่องรายวิชา และเพิ่มพื้นที่ด้านล่างให้ข้อความไทย */
+#course-grid > div {
+    min-height: 330px !important;
+    overflow: visible !important;
+}
+#course-grid h3,
+#course-grid h4,
+#course-grid .schoolhub-course-room-preview,
+#course-grid .schoolhub-course-room-preview span,
+#course-grid .text-sm {
+    line-height: 1.48 !important;
+    overflow: visible !important;
+    padding-top: 0.08em !important;
+    padding-bottom: 0.14em !important;
+}
+#course-grid h3 {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    min-height: 4.45rem !important;
+    margin-bottom: 0.85rem !important;
+}
+#course-grid .line-clamp-2 {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+}
+#course-grid .schoolhub-course-room-preview span {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+}
+#course-grid > div > .text-sm.mt-auto {
+    margin-top: auto !important;
+    padding-top: 1rem !important;
+    min-height: 4.25rem !important;
+    align-items: flex-end !important;
+    gap: 0.75rem !important;
+}
+#course-grid > div > .text-sm.mt-auto > span:first-child {
+    white-space: normal !important;
+    line-height: 1.5 !important;
+}
+@media (max-width: 767px) {
+    #course-grid > div {
+        min-height: 320px !important;
+        padding-bottom: 1.25rem !important;
+    }
+    #course-grid h3 {
+        font-size: 1.18rem !important;
+        line-height: 1.55 !important;
+        min-height: auto !important;
+        margin-bottom: 1rem !important;
+    }
+    #course-grid > div > .text-sm.mt-auto {
+        min-height: 4.5rem !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
