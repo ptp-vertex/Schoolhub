@@ -1141,8 +1141,23 @@
     overflow: hidden !important;
 }
 </style>
+<style id="mobile-icon-only-buttons">
 
+@media (max-width:767px){
+#course-back-btn .mobile-hide-text,
+#course-teachers-btn .mobile-hide-text{
+display:none !important;
+}
+#course-back-btn,
+#course-teachers-btn{
+width:42px !important;
+min-width:42px !important;
+padding:0 !important;
+justify-content:center !important;
+}
+}
 
+</style>
 
 <style>
 /* SchoolHub Email Only UserStats Strict Final */
@@ -3464,7 +3479,7 @@ document.addEventListener('click',function(){
         <div class="bg-white rounded-[2rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
             <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start gap-4 shrink-0">
                 <div>
-                    <h3 class="text-xl font-black text-slate-800"><i class="fas fa-chalkboard-user text-primary mr-2"></i>จัดการครูในรายวิชา</h3>
+                    <h3 class="text-xl font-black text-slate-800"><i class="fas fa-chalkboard-user text-primary mr-2"></i><span class="mobile-hide-text">จัดการครูในรายวิชา</span></h3>
                     <p id="course-teachers-modal-subtitle" class="text-sm text-slate-500 mt-1">เพิ่มครูด้วยอีเมลและกำหนดสิทธิ์เฉพาะรายวิชานี้</p>
                 </div>
                 <button type="button" onclick="closeCourseTeachersModal()" class="w-10 h-10 rounded-full bg-white border text-slate-500 hover:bg-slate-100 shrink-0"><i class="fas fa-times"></i></button>
@@ -5501,7 +5516,7 @@ async function submitPlanRequest(planId){
             btn.type = 'button';
             btn.onclick = window.openCourseTeachersModal;
             btn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2';
-            btn.innerHTML = '<i class="fas fa-chalkboard-user"></i> <span>จัดการครูในรายวิชา</span>';
+            btn.innerHTML = '<i class="fas fa-chalkboard-user"></i> <span><span class="mobile-hide-text">จัดการครูในรายวิชา</span></span>';
             actions.appendChild(btn);
         }
         window.openCourseTeachersModal = function(){
@@ -6170,7 +6185,7 @@ ${resetUrl.toString()}
 
             document.getElementById('header-actions').innerHTML = `
                 <button id="course-back-btn" onclick="goToHome()" class="bg-white border text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
-                    <i class="fas fa-arrow-left"></i> <span>กลับหน้าหลัก</span>
+                    <i class="fas fa-arrow-left"></i> <span><span class="mobile-hide-text">กลับหน้าหลัก</span></span>
                 </button>
             `;
             schoolhubEnsureCourseTeacherButton();
@@ -7107,8 +7122,33 @@ ${resetUrl.toString()}
         // Export Logics
         window.downloadExcelMultiSheet = (sheetsDataObj, fileName) => {
             const wb = XLSX.utils.book_new();
-            for (const sheetName in sheetsDataObj) { const data = sheetsDataObj[sheetName]; const ws = Array.isArray(data[0]) ? XLSX.utils.aoa_to_sheet(data) : XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb, ws, sheetName); }
-            XLSX.writeFile(wb, fileName + ".xlsx");
+            for (const sheetName in sheetsDataObj) {
+                const data = sheetsDataObj[sheetName];
+                const ws = Array.isArray(data[0]) ? XLSX.utils.aoa_to_sheet(data) : XLSX.utils.json_to_sheet(data);
+
+                const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+                for(let R=0; R<=range.e.r; R++){
+                    for(let C=0; C<=range.e.c; C++){
+                        const ref = XLSX.utils.encode_cell({r:R,c:C});
+                        const cell = ws[ref];
+                        if(!cell) continue;
+                        const v = String(cell.v || '').trim();
+
+                        if(v === 'ส่งแล้ว' || v === 'มา'){
+                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'DCFCE7'}}};
+                        }else if(v === 'สาย'){
+                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FEF9C3'}}};
+                        }else if(v === 'ขาด'){
+                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FEE2E2'}}};
+                        }else if(v.includes('ขาดส่ง') || v === 'ยังไม่ส่ง'){
+                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FECACA'}}};
+                        }
+                    }
+                }
+
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            }
+            XLSX.writeFile(wb, fileName + '.xlsx');
         };
         window.exportStudentsToExcel = () => {
             if(state.students.length===0) return showCustomAlert("ผิดพลาด", "ไม่มีข้อมูล", true);
