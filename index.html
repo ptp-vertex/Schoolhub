@@ -2215,66 +2215,33 @@ document.addEventListener('click',function(){
 .schoolhub-withdrawn-control { opacity:.55 !important; pointer-events:none !important; cursor:not-allowed !important; }
 </style>
 
-<style id="schoolhub-thai-course-card-text-fix">
-/* แก้สระ/วรรณยุกต์ภาษาไทยถูกตัดในกล่องรายวิชา และเพิ่มพื้นที่ด้านล่างให้ข้อความไทย */
-#course-grid > div {
-    min-height: 330px !important;
-    overflow: visible !important;
-}
-#course-grid h3,
-#course-grid h4,
-#course-grid .schoolhub-course-room-preview,
-#course-grid .schoolhub-course-room-preview span,
-#course-grid .text-sm {
-    line-height: 1.48 !important;
-    overflow: visible !important;
-    padding-top: 0.08em !important;
-    padding-bottom: 0.14em !important;
-}
+
+<style id="schoolhub-thai-tone-only-fix">
+/* แก้เฉพาะวรรณยุกต์ภาษาไทยในชื่อรายวิชาไม่ให้โดนตัด โดยไม่เพิ่มความสูงการ์ด */
 #course-grid h3 {
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    -webkit-box-orient: initial !important;
-    white-space: normal !important;
+    line-height: 1.36 !important;
+    padding-top: 0.08em !important;
+    padding-bottom: 0.02em !important;
+    margin-bottom: 0.5rem !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
-    min-height: 4.45rem !important;
-    margin-bottom: 0.85rem !important;
 }
-#course-grid .line-clamp-2 {
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
+#course-grid h4 {
+    line-height: 1.35 !important;
 }
-#course-grid .schoolhub-course-room-preview span {
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    -webkit-box-orient: initial !important;
-}
-#course-grid > div > .text-sm.mt-auto {
-    margin-top: auto !important;
+#course-grid .text-sm.mt-auto {
     padding-top: 1rem !important;
-    min-height: 4.25rem !important;
-    align-items: flex-end !important;
-    gap: 0.75rem !important;
-}
-#course-grid > div > .text-sm.mt-auto > span:first-child {
-    white-space: normal !important;
-    line-height: 1.5 !important;
 }
 @media (max-width: 767px) {
-    #course-grid > div {
-        min-height: 320px !important;
-        padding-bottom: 1.25rem !important;
-    }
     #course-grid h3 {
-        font-size: 1.18rem !important;
-        line-height: 1.55 !important;
-        min-height: auto !important;
-        margin-bottom: 1rem !important;
-    }
-    #course-grid > div > .text-sm.mt-auto {
-        min-height: 4.5rem !important;
+        line-height: 1.38 !important;
+        padding-top: 0.08em !important;
+        padding-bottom: 0.02em !important;
+        margin-bottom: 0.5rem !important;
     }
 }
 </style>
