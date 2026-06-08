@@ -5915,7 +5915,8 @@ async function submitPlanRequest(planId){
                 if (restored) return;
             }
             if (user) {
-                if (window.isSocialAuthenticating) return;
+                // Google login fix: ห้าม return ระหว่าง signInWithPopup เพราะบางครั้ง Auth state ยิงก่อนปิด flag แล้วค้างหน้าเปล่า/ต้องรีเฟรช
+                if (window.isSocialAuthenticating) { window.isSocialAuthenticating = false; }
                 try {
                     toggleLoader(true);
                     currentUser = user; isAdmin = false;
