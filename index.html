@@ -5704,13 +5704,16 @@ async function submitPlanRequest(planId){
 
         window.handleLogin = async (e) => {
             e.preventDefault();
-            const email = normalizeSchoolHubEmail(document.getElementById('login-email').value);
+            const rawLoginValue = String(document.getElementById('login-email').value || '').trim();
+            const email = normalizeSchoolHubEmail(rawLoginValue);
             const pass = document.getElementById('login-pass').value;
 
             // Admin shortcut: ใช้จาก Firebase เท่านั้น
             // admin_settings/credentials = { username, email, password }
+            // สำคัญ: ห้ามใช้ค่า email ที่ normalize แล้วไปเทียบ username Admin
+            // เพราะ Admin ไม่ใช่อีเมล และเดิมถูกแปลงเป็น admin ทำให้ไม่ตรงกับ Admin ใน Firebase
             {
-                const loginValue = email.trim();
+                const loginValue = rawLoginValue;
                 const loginLower = loginValue.toLowerCase();
 
                 try {
@@ -5750,7 +5753,7 @@ async function submitPlanRequest(planId){
                     const adminPassword = String(adminData.password || 'Admin123').trim();
 
                     const matchedAdmin =
-                        loginValue === adminUsername ||
+                        loginLower === adminUsername.toLowerCase() ||
                         (adminEmail && loginLower === adminEmail);
 
                     if (matchedAdmin) {
