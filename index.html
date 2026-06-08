@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -5427,6 +5428,18 @@ async function submitPlanRequest(planId){
         }
         function schoolhubCanManageTeachers(){ return schoolhubCurrentCourseRole() === 'owner'; }
         function schoolhubCanEditCurrentCourse(){ const r = schoolhubCurrentCourseRole(); return r === 'owner' || r === 'edit'; }
+        function schoolhubAssertCanEditCourse(courseId, actionName){
+            const c = (state.courses || []).find(x => String(x.id) === String(courseId || currentActiveCourseId));
+            if(!c) return true;
+            if(!schoolhubIsSharedCourse(c)) return true;
+            if(c.__sharedPermission === 'edit') return true;
+            const action = actionName || 'แก้ไขข้อมูล';
+            if(typeof showCustomAlert === 'function') showCustomAlert('ดูอย่างเดียว', `รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถ${action}ได้`, true);
+            else alert(`รายวิชานี้ถูกแชร์แบบดูอย่างเดียว จึงไม่สามารถ${action}ได้`);
+            return false;
+        }
+        window.schoolhubCanEditCurrentCourse = schoolhubCanEditCurrentCourse;
+        window.schoolhubAssertCanEditCourse = schoolhubAssertCanEditCourse;
         function schoolhubApplyReadonlyUI(){
             const c = schoolhubCurrentCourse();
             const detail = document.getElementById('view-course-detail');
@@ -8570,9 +8583,10 @@ ${resetUrl.toString()}
     if (typeof window.__schoolhubGlobalStatsRefresh === 'function') {
         return window.__schoolhubGlobalStatsRefresh();
     }
-}
+  }
 
-
+  window.loadGlobalSiteStats = loadGlobalSiteStats;
+})();
 </script>
 
 
