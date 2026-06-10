@@ -17850,13 +17850,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 <style id="schoolhub-custom-menu-system-style">
     #schoolhub-custom-menu-admin-view .shcm-field{width:100%;border:1px solid #e2e8f0;border-radius:1rem;padding:.85rem 1rem;outline:none;background:white;}
     #schoolhub-custom-menu-admin-view .shcm-field:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
-    #shcm-icon-preview i{line-height:1;}
-
-    #schoolhub-custom-menu-user-view{overflow:visible!important;}
-    #schoolhub-custom-menu-user-view .bg-white{overflow:visible!important;}
-    #shcm-user-content{overflow:visible!important;}
-    #schoolhub-custom-menu-user-view iframe.shcm-auto-frame{width:100%;height:auto;min-height:720px;border:0;border-radius:1.5rem;background:white;display:block;overflow:hidden!important;}
-    @media(max-width:767px){#schoolhub-custom-menu-user-view iframe.shcm-auto-frame{min-height:760px;border-radius:1rem;}#schoolhub-custom-menu-admin-view .shcm-admin-grid{grid-template-columns:1fr!important;}}
+    #schoolhub-custom-menu-user-view iframe{width:100%;height:calc(100dvh - 190px);min-height:520px;border:0;border-radius:1.5rem;background:white;}
+    @media(max-width:767px){#schoolhub-custom-menu-user-view iframe{height:calc(100dvh - 145px);min-height:420px;border-radius:1rem;}#schoolhub-custom-menu-admin-view .shcm-admin-grid{grid-template-columns:1fr!important;}}
 </style>
 <script type="module" id="schoolhub-custom-menu-system-script">
 (function(){
@@ -17907,52 +17902,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
                   <h4 id="shcm-form-title" class="font-black text-slate-800 mb-3">เพิ่มเมนูใหม่</h4>
                   <div class="space-y-3">
                     <div><label class="text-xs font-bold text-slate-500">ชื่อเมนู</label><input id="shcm-title" class="shcm-field" placeholder="เช่น ระบบทะเบียน / คู่มือ / แบบฟอร์ม"></div>
-                    <div>
-                      <label class="text-xs font-bold text-slate-500">ไอคอน Font Awesome</label>
-                      <div class="grid grid-cols-[64px_1fr] gap-2 items-center">
-                        <div id="shcm-icon-preview" class="h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-primary flex items-center justify-center text-2xl"><i class="fas fa-link"></i></div>
-                        <select id="shcm-icon-select" class="shcm-field">
-                          <option value="fas fa-link">🔗 ลิงก์ / Link</option>
-                          <option value="fas fa-globe">🌐 เว็บไซต์ / Website</option>
-                          <option value="fas fa-book">📘 คู่มือ / Book</option>
-                          <option value="fas fa-file-lines">📄 เอกสาร / Document</option>
-                          <option value="fas fa-file-pen">📝 แบบฟอร์ม / Form</option>
-                          <option value="fas fa-clipboard-list">📋 รายการ / Checklist</option>
-                          <option value="fas fa-chart-line">📈 รายงาน / Report</option>
-                          <option value="fas fa-graduation-cap">🎓 การศึกษา / Education</option>
-                          <option value="fas fa-school">🏫 โรงเรียน / School</option>
-                          <option value="fas fa-chalkboard-user">👨‍🏫 ครูผู้สอน / Teacher</option>
-                          <option value="fas fa-users">👥 ผู้ใช้งาน / Users</option>
-                          <option value="fas fa-user-graduate">🧑‍🎓 นักเรียน / Student</option>
-                          <option value="fas fa-calendar-days">📅 ปฏิทิน / Calendar</option>
-                          <option value="fas fa-clock">⏰ เวลา / Time</option>
-                          <option value="fas fa-star">⭐ คะแนน / Score</option>
-                          <option value="fas fa-medal">🏅 เกณฑ์เกรด / Grade</option>
-                          <option value="fas fa-download">⬇️ ดาวน์โหลด / Download</option>
-                          <option value="fas fa-upload">⬆️ อัปโหลด / Upload</option>
-                          <option value="fas fa-folder-open">📂 ไฟล์ / Folder</option>
-                          <option value="fas fa-image">🖼️ รูปภาพ / Image</option>
-                          <option value="fas fa-video">🎥 วิดีโอ / Video</option>
-                          <option value="fas fa-bullhorn">📢 ประกาศ / Announcement</option>
-                          <option value="fas fa-comments">💬 ติดต่อ / Chat</option>
-                          <option value="fas fa-envelope">✉️ อีเมล / Email</option>
-                          <option value="fas fa-phone">☎️ โทรศัพท์ / Phone</option>
-                          <option value="fas fa-location-dot">📍 สถานที่ / Location</option>
-                          <option value="fas fa-truck-fast">🚚 โลจิสติกส์ / Logistics</option>
-                          <option value="fas fa-route">🛣️ เส้นทาง / Route</option>
-                          <option value="fas fa-suitcase-rolling">🧳 ท่องเที่ยว / Tourism</option>
-                          <option value="fas fa-passport">🛂 เอกสารเดินทาง / Passport</option>
-                          <option value="fas fa-language">🌏 ภาษา / Language</option>
-                          <option value="fas fa-handshake">🤝 ความร่วมมือ / Cooperation</option>
-                          <option value="fas fa-gear">⚙️ ตั้งค่า / Settings</option>
-                          <option value="fas fa-shield-halved">🛡️ สิทธิ์ / Permission</option>
-                          <option value="fas fa-lock">🔒 ล็อก / Lock</option>
-                          <option value="fas fa-qrcode">▦ QR Code</option>
-                          <option value="custom">กำหนดเอง...</option>
-                        </select>
-                      </div>
-                      <input id="shcm-icon" class="shcm-field mt-2" placeholder="หรือพิมพ์เอง เช่น fas fa-globe" value="fas fa-link">
-                    </div>
+                    <div><label class="text-xs font-bold text-slate-500">ไอคอน Font Awesome</label><input id="shcm-icon" class="shcm-field" placeholder="เช่น fas fa-globe" value="fas fa-link"></div>
                     <div class="grid grid-cols-2 gap-3">
                       <div><label class="text-xs font-bold text-slate-500">ประเภทการฝัง</label><select id="shcm-type" class="shcm-field"><option value="url">ฝังเป็นเว็บ URL</option><option value="html">ฝังเป็นโค้ด HTML</option></select></div>
                       <div><label class="text-xs font-bold text-slate-500">ลำดับ</label><input id="shcm-order" type="number" class="shcm-field" value="99"></div>
@@ -17997,8 +17947,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
         document.getElementById('shcm-reset-btn')?.addEventListener('click', resetForm);
         document.getElementById('shcm-save-btn')?.addEventListener('click', saveMenu);
         document.getElementById('shcm-type')?.addEventListener('change', syncFormType);
-        document.getElementById('shcm-icon-select')?.addEventListener('change', setIconFromPicker);
-        document.getElementById('shcm-icon')?.addEventListener('input', syncIconPicker);
       }
       if(!document.getElementById('nav-admin-custom-menus')){
         const adminPlans = document.getElementById('nav-admin-plans');
@@ -18061,26 +18009,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       document.getElementById('shcm-url')?.closest('div')?.classList.toggle('hidden', type !== 'url');
       document.getElementById('shcm-html')?.closest('div')?.classList.toggle('hidden', type !== 'html');
     }
-    function syncIconPicker(){
-      const input=document.getElementById('shcm-icon');
-      const select=document.getElementById('shcm-icon-select');
-      const preview=document.getElementById('shcm-icon-preview');
-      const val=(input?.value||'fas fa-link').trim() || 'fas fa-link';
-      if(preview) preview.innerHTML = `<i class="${esc(val)}"></i>`;
-      if(select){
-        const found=[...select.options].some(o=>o.value===val);
-        select.value = found ? val : 'custom';
-      }
-    }
-    function setIconFromPicker(){
-      const select=document.getElementById('shcm-icon-select');
-      const input=document.getElementById('shcm-icon');
-      if(!select || !input) return;
-      if(select.value !== 'custom') input.value = select.value;
-      input.classList.toggle('hidden', select.value !== 'custom');
-      syncIconPicker();
-      if(select.value === 'custom') input.focus();
-    }
     function resetForm(){
       editingMenuId=null;
       const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v;};
@@ -18088,7 +18016,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const active=document.getElementById('shcm-active'); if(active) active.checked=true;
       const show=document.getElementById('shcm-show-users'); if(show) show.checked=true;
       const t=document.getElementById('shcm-form-title'); if(t) t.textContent='เพิ่มเมนูใหม่';
-      renderPlanChecks([]); syncFormType(); syncIconPicker(); setIconFromPicker();
+      renderPlanChecks([]); syncFormType();
     }
     async function saveAll(){ await fs.setDoc(menuDoc, {items:customMenus, updatedAt:Date.now()}, {merge:true}); }
     async function saveMenu(){
@@ -18122,315 +18050,12 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const active=document.getElementById('shcm-active'); if(active) active.checked=m.active!==false;
       const show=document.getElementById('shcm-show-users'); if(show) show.checked=m.showToUsers!==false;
       const t=document.getElementById('shcm-form-title'); if(t) t.textContent='แก้ไขเมนู';
-      renderPlanChecks(m.allowedPlanIds||[]); syncFormType(); syncIconPicker(); setIconFromPicker(); document.getElementById('shcm-title')?.focus();
+      renderPlanChecks(m.allowedPlanIds||[]); syncFormType(); document.getElementById('shcm-title')?.focus();
     };
     window.deleteCustomMenu = function(id){
       const run=async()=>{ customMenus=customMenus.filter(x=>x.id!==id); try{ await saveAll(); renderAdmin(); renderUserMenuButtons(); alertBox('ลบแล้ว','ลบเมนูเรียบร้อย'); }catch(e){ alertBox('ลบไม่ได้', e.message || String(e), true); } };
       if(window.showCustomConfirm) window.showCustomConfirm('ลบเมนู','ยืนยันลบเมนูนี้หรือไม่?',run); else if(confirm('ยืนยันลบเมนูนี้หรือไม่?')) run();
     };
-    function shcmAutoSizeFrame(frame){
-      if(!frame) return;
-      const setH = h => {
-        h = Math.max(760, Number(h||0) + 24);
-        frame.style.height = h + 'px';
-        frame.style.overflow = 'hidden';
-      };
-      frame.addEventListener('load', ()=>{
-        try{
-          const d = frame.contentDocument || frame.contentWindow.document;
-          if(d){
-            const apply = ()=>{
-              const b=d.body, e=d.documentElement;
-              if(!b || !e) return;
-              b.style.overflow = 'hidden';
-              e.style.overflow = 'hidden';
-              b.style.minHeight = '0';
-              setH(Math.max(
-                b.scrollHeight, e.scrollHeight,
-                b.offsetHeight, e.offsetHeight,
-                b.clientHeight, e.clientHeight
-              ));
-            };
-            apply();
-            try{ new ResizeObserver(apply).observe(d.body); }catch(_){}
-            setTimeout(apply, 300); setTimeout(apply, 1000); setTimeout(apply, 2000);
-          }
-        }catch(e){
-          /* URL ข้ามโดเมนอ่านความสูงจริงไม่ได้ จึงใช้ความสูงยาวพิเศษเพื่อให้เลื่อนด้านนอกแทน */
-          setH(Math.max(window.innerHeight * 2.2, 1400));
-        }
-      });
-    }
-    window.addEventListener('message', ev=>{
-      if(!ev || !ev.data || ev.data.type !== 'SHCM_FRAME_HEIGHT') return;
-      const frame=document.querySelector('#shcm-user-content iframe.shcm-auto-frame');
-      if(frame) frame.style.height = Math.max(760, Number(ev.data.height||0)+24) + 'px';
-    });
-    function makeSrcDoc(rawHtml){
-      const autoScript = `<script>(function(){function h(){var b=document.body,e=document.documentElement;var v=Math.max(b?b.scrollHeight:0,e?e.scrollHeight:0,b?b.offsetHeight:0,e?e.offsetHeight:0,b?b.clientHeight:0,e?e.clientHeight:0);parent.postMessage({type:'SHCM_FRAME_HEIGHT',height:v},'*');}document.documentElement.style.overflow='hidden';document.addEventListener('DOMContentLoaded',h);window.addEventListener('load',h);window.addEventListener('resize',h);setInterval(h,600);try{new ResizeObserver(h).observe(document.body);}catch(e){}})();<\/script>`;
-      const htmlText = String(rawHtml || '');
-      if(/<\/body>/i.test(htmlText)) return htmlText.replace(/<\/body>/i, autoScript + '
-<!-- =========================================================
-     SchoolHub score plan mobile click final fix
-     - แก้ปุ่ม "แผนคะแนน" มือถือ และ "จัดการแผนเก็บคะแนน" บนหน้าคะแนนให้กดติด
-     - กัน overlay / patch อื่นทับ event
-     - เปิด popup แผนคะแนนตรง ๆ และยก popup ขึ้นหน้าสุด
-     ========================================================= -->
-<style id="schoolhub-score-plan-mobile-click-final-fix-style">
-@media (max-width:767px){
-  button[onclick*="openPlanModalForCurrentCourse"],
-  #course-tab-scores button[onclick*="openPlanModalForCurrentCourse"],
-  .mobile-course-tab-btn + button[onclick*="openPlanModalForCurrentCourse"]{
-    pointer-events:auto!important;
-    position:relative!important;
-    z-index:50!important;
-    touch-action:manipulation!important;
-    -webkit-tap-highlight-color:rgba(79,70,229,.16)!important;
-  }
-  #plan-modal{
-    z-index:2147483647!important;
-  }
-  #plan-modal:not(.hidden){
-    display:flex!important;
-    pointer-events:auto!important;
-  }
-  #plan-modal > div{
-    pointer-events:auto!important;
-  }
-}
-</style>
-<script id="schoolhub-score-plan-mobile-click-final-fix-script">
-(function(){
-  if(window.__schoolhubScorePlanMobileClickFinalFix) return;
-  window.__schoolhubScorePlanMobileClickFinalFix = true;
-
-  function isMobile(){
-    return window.matchMedia && window.matchMedia('(max-width:767px)').matches;
-  }
-
-  function getActiveCourseId(){
-    try{
-      if(window.currentActiveCourseId) return window.currentActiveCourseId;
-      if(typeof currentActiveCourseId !== 'undefined' && currentActiveCourseId) return currentActiveCourseId;
-    }catch(e){}
-    try{
-      var visible = document.querySelector('#view-course-detail:not(.hidden)');
-      if(visible){
-        var input = document.getElementById('plan-course-id');
-        if(input && input.value) return input.value;
-      }
-    }catch(e){}
-    return null;
-  }
-
-  function directOpenPlanModal(){
-    var courseId = getActiveCourseId();
-    if(!courseId){
-      if(window.showCustomAlert) window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
-      return false;
-    }
-
-    try{
-      if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(courseId, 'จัดการแผนคะแนน')) return false;
-    }catch(e){}
-
-    var modal = document.getElementById('plan-modal');
-    if(!modal) return false;
-
-    try{
-      if(modal.parentElement !== document.body) document.body.appendChild(modal);
-    }catch(e){}
-
-    try{
-      var c = (window.state && Array.isArray(window.state.courses)) ? window.state.courses.find(function(x){return x.id === courseId;}) : null;
-      var title = document.getElementById('plan-modal-title');
-      if(title) title.textContent = c && c.code ? '(' + c.code + ')' : '';
-    }catch(e){}
-
-    try{
-      var courseInput = document.getElementById('plan-course-id');
-      if(courseInput) courseInput.value = courseId;
-    }catch(e){}
-
-    try{ if(typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); }catch(e){}
-    try{ if(typeof window.renderPlanList === 'function') window.renderPlanList(courseId); }catch(e){}
-
-    modal.classList.add('schoolhub-score-plan-modal');
-    modal.classList.remove('hidden');
-    modal.style.position = 'fixed';
-    modal.style.inset = '0';
-    modal.style.zIndex = '2147483647';
-    modal.style.display = 'flex';
-    modal.style.pointerEvents = 'auto';
-
-    try{
-      var panel = modal.querySelector(':scope > div') || modal.firstElementChild;
-      if(panel){
-        panel.style.pointerEvents = 'auto';
-        panel.style.position = 'relative';
-        panel.style.zIndex = '2147483647';
-      }
-    }catch(e){}
-
-    setTimeout(function(){
-      try{
-        var first = document.getElementById('plan-week') || modal.querySelector('input,select,button');
-        if(first && first.focus) first.focus({preventScroll:true});
-      }catch(e){}
-    },80);
-
-    return false;
-  }
-
-  var oldOpen = window.openPlanModalForCurrentCourse;
-  window.openPlanModalForCurrentCourse = function(){
-    if(isMobile()) return directOpenPlanModal();
-    if(typeof oldOpen === 'function') return oldOpen.apply(this, arguments);
-    return directOpenPlanModal();
-  };
-
-  document.addEventListener('click', function(e){
-    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
-    if(!btn || !isMobile()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    directOpenPlanModal();
-    return false;
-  }, true);
-
-  document.addEventListener('touchend', function(e){
-    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
-    if(!btn || !isMobile()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    directOpenPlanModal();
-    return false;
-  }, true);
-
-  document.addEventListener('click', function(e){
-    var modal = document.getElementById('plan-modal');
-    if(!modal || modal.classList.contains('hidden')) return;
-    if(e.target === modal){
-      e.preventDefault();
-      e.stopPropagation();
-      if(typeof window.closePlanModal === 'function') window.closePlanModal();
-      else modal.classList.add('hidden');
-    }
-  }, true);
-})();
-</script>
-
-
-<!-- =========================================================
-     SchoolHub custom embedded web menu admin nav restore
-     - กันปุ่ม "จัดการเว็บฝัง / เมนูหลักเพิ่มเติม" หายเมื่อเมนูแอดมินถูก render ใหม่
-     ========================================================= -->
-<style id="schoolhub-custom-menu-admin-nav-restore-style">
-#nav-admin-custom-menus,
-#mobile-nav-admin-custom-menus{
-  display:flex!important;
-  visibility:visible!important;
-  opacity:1!important;
-  pointer-events:auto!important;
-}
-</style>
-<script id="schoolhub-custom-menu-admin-nav-restore-script">
-(function(){
-  if(window.__schoolhubCustomMenuAdminNavRestore) return;
-  window.__schoolhubCustomMenuAdminNavRestore = true;
-
-  function isAdminLike(){
-    try{
-      if(window.isAdmin === true) return true;
-      if(document.getElementById('nav-admin-plans')) return true;
-      if(document.querySelector('[data-target="admin-plans"]')) return true;
-      if(document.querySelector('#mobile-menu [onclick*="admin-plans"]')) return true;
-    }catch(e){}
-    return false;
-  }
-
-  function openAdminCustomMenus(){
-    if(typeof window.openCustomMenuAdmin === 'function'){
-      window.openCustomMenuAdmin();
-      return;
-    }
-    if(typeof window.showCustomAlert === 'function'){
-      window.showCustomAlert('ระบบยังโหลดไม่เสร็จ','กรุณากดอีกครั้งหลังจากข้อมูลโหลดเสร็จ',true);
-    }else{
-      alert('ระบบยังโหลดไม่เสร็จ กรุณากดอีกครั้ง');
-    }
-  }
-  window.schoolhubOpenCustomMenuAdminSafe = openAdminCustomMenus;
-
-  function makeDesktopButton(){
-    return '<button id="nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-fuchsia-600 hover:bg-fuchsia-50 mt-2" data-target="custom-menus"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
-  }
-
-  function makeMobileButton(){
-    return '<button id="mobile-nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-fuchsia-600 bg-fuchsia-50 font-medium"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
-  }
-
-  function restoreAdminCustomMenuButton(){
-    if(!isAdminLike()) return;
-
-    var desktopBtn = document.getElementById('nav-admin-custom-menus');
-    if(!desktopBtn){
-      var anchor = document.getElementById('nav-admin-plans') ||
-                   document.querySelector('[data-target="admin-plans"]') ||
-                   document.getElementById('nav-admin-announcements') ||
-                   document.querySelector('nav .text-emerald-600, nav .text-indigo-600, nav .text-rose-600');
-      if(anchor && anchor.insertAdjacentHTML){
-        anchor.insertAdjacentHTML('afterend', makeDesktopButton());
-      }else{
-        var nav = document.querySelector('aside nav div.space-y-2') || document.querySelector('aside nav') || document.querySelector('nav');
-        if(nav && nav.insertAdjacentHTML) nav.insertAdjacentHTML('beforeend', makeDesktopButton());
-      }
-    }else{
-      desktopBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
-      desktopBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe()');
-      desktopBtn.classList.remove('hidden');
-      desktopBtn.style.display = 'flex';
-    }
-
-    var mobileBtn = document.getElementById('mobile-nav-admin-custom-menus');
-    if(!mobileBtn){
-      var mobileAnchor = document.querySelector('#mobile-menu [onclick*="admin-plans"]') ||
-                         document.querySelector('#mobile-menu .text-emerald-600') ||
-                         document.querySelector('#mobile-menu .text-rose-600');
-      if(mobileAnchor && mobileAnchor.insertAdjacentHTML){
-        mobileAnchor.insertAdjacentHTML('afterend', makeMobileButton());
-      }else{
-        var mobileBox = document.querySelector('#mobile-menu .space-y-2') || document.querySelector('#mobile-menu div');
-        if(mobileBox && mobileBox.insertAdjacentHTML) mobileBox.insertAdjacentHTML('beforeend', makeMobileButton());
-      }
-    }else{
-      mobileBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
-      mobileBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}');
-      mobileBtn.classList.remove('hidden');
-      mobileBtn.style.display = 'flex';
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    restoreAdminCustomMenuButton();
-    setTimeout(restoreAdminCustomMenuButton, 300);
-    setTimeout(restoreAdminCustomMenuButton, 1000);
-    setTimeout(restoreAdminCustomMenuButton, 2500);
-  });
-
-  document.addEventListener('click', function(){
-    setTimeout(restoreAdminCustomMenuButton, 120);
-  }, true);
-
-  setInterval(restoreAdminCustomMenuButton, 1200);
-})();
-</script>
-
-</body>');
-      return htmlText + autoScript;
-    }
     window.openCustomMenuUser = function(id){
       const m=customMenus.find(x=>x.id===id);
       if(!m || !canSeeMenu(m)) return alertBox('ไม่มีสิทธิ์เข้าเมนูนี้','แผนปัจจุบันของคุณไม่รองรับเมนูนี้',true);
@@ -18441,17 +18066,15 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const ps=document.getElementById('page-subtitle'); if(ps) ps.textContent='เมนูที่ผู้ดูแลระบบเพิ่มให้';
       const title=document.getElementById('shcm-user-title'); if(title) title.textContent=m.title||'เมนูเพิ่มเติม';
       const box=document.getElementById('shcm-user-content'); if(!box) return;
-      if(m.type==='html') box.innerHTML = `<iframe class="shcm-auto-frame" scrolling="no" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" srcdoc="${esc(makeSrcDoc(m.html||''))}"></iframe>`;
-      else box.innerHTML = `<iframe class="shcm-auto-frame" scrolling="no" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" src="${esc(m.url||'about:blank')}"></iframe>`;
-      shcmAutoSizeFrame(box.querySelector('iframe'));
-      setTimeout(()=>{ const sc=document.querySelector('main > div.flex-1.overflow-y-auto'); if(sc) sc.scrollTop=0; },50);
+      if(m.type==='html') box.innerHTML = `<iframe sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" srcdoc="${esc(m.html||'')}"></iframe>`;
+      else box.innerHTML = `<iframe sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" src="${esc(m.url||'about:blank')}"></iframe>`;
     };
 
     async function loadPlansOnce(){
       try{ const s=await fs.getDoc(plansDoc); if(s.exists()) customPlans = Array.isArray(s.data().items) ? s.data().items : []; }catch(e){ console.warn('custom menu load plans failed',e); }
     }
     function start(){
-      ensureViews(); resetForm(); setTimeout(syncIconPicker,100);
+      ensureViews(); resetForm();
       fs.onSnapshot(menuDoc, snap=>{ customMenus = snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : []; ensureViews(); renderUserMenuButtons(); renderAdmin(); }, err=>console.warn('custom menu snapshot failed',err));
       fs.onSnapshot(plansDoc, snap=>{ customPlans = snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : []; renderPlanChecks(editingMenuId ? (customMenus.find(x=>x.id===editingMenuId)?.allowedPlanIds||[]) : []); renderAdmin(); renderUserMenuButtons(); }, err=>console.warn('custom menu plans snapshot failed',err));
       setInterval(renderUserMenuButtons, 3000);
@@ -18463,260 +18086,327 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 
 
 <!-- =========================================================
-     SchoolHub score plan mobile click final fix
-     - แก้ปุ่ม "แผนคะแนน" มือถือ และ "จัดการแผนเก็บคะแนน" บนหน้าคะแนนให้กดติด
-     - กัน overlay / patch อื่นทับ event
-     - เปิด popup แผนคะแนนตรง ๆ และยก popup ขึ้นหน้าสุด
+     SchoolHub Custom Menu SAFE Icon Picker + Frame Height Patch
+     - ไม่ทับฟังก์ชัน openCustomMenuAdmin เดิม
+     - เพิ่ม dropdown icon หลังหน้าเมนูเปิดแล้ว
+     - แก้ iframe ให้ยืดสูงแบบปลอดภัยเฉพาะตอนเปิดเมนูผู้ใช้
      ========================================================= -->
-<style id="schoolhub-score-plan-mobile-click-final-fix-style">
-@media (max-width:767px){
-  button[onclick*="openPlanModalForCurrentCourse"],
-  #course-tab-scores button[onclick*="openPlanModalForCurrentCourse"],
-  .mobile-course-tab-btn + button[onclick*="openPlanModalForCurrentCourse"]{
-    pointer-events:auto!important;
-    position:relative!important;
-    z-index:50!important;
-    touch-action:manipulation!important;
-    -webkit-tap-highlight-color:rgba(79,70,229,.16)!important;
-  }
-  #plan-modal{
-    z-index:2147483647!important;
-  }
-  #plan-modal:not(.hidden){
-    display:flex!important;
-    pointer-events:auto!important;
-  }
-  #plan-modal > div{
-    pointer-events:auto!important;
-  }
+<style id="schoolhub-custom-menu-safe-icon-frame-style">
+#shcm-icon-preview-safe i{line-height:1;}
+@media(max-width:767px){
+  #schoolhub-custom-menu-admin-view .shcm-icon-picker-safe-grid{grid-template-columns:56px 1fr!important;}
+}
+#schoolhub-custom-menu-user-view{overflow:visible!important;}
+#schoolhub-custom-menu-user-view .bg-white{overflow:visible!important;}
+#shcm-user-content{overflow:visible!important;}
+#shcm-user-content iframe{
+  width:100%!important;
+  min-height:760px!important;
+  border:0!important;
+  border-radius:1.5rem!important;
+  background:white!important;
+  display:block!important;
+}
+@media(max-width:767px){
+  #shcm-user-content iframe{min-height:820px!important;border-radius:1rem!important;}
 }
 </style>
-<script id="schoolhub-score-plan-mobile-click-final-fix-script">
+<script id="schoolhub-custom-menu-safe-icon-frame-script">
 (function(){
-  if(window.__schoolhubScorePlanMobileClickFinalFix) return;
-  window.__schoolhubScorePlanMobileClickFinalFix = true;
+  if(window.__schoolhubCustomMenuSafeIconFramePatch) return;
+  window.__schoolhubCustomMenuSafeIconFramePatch = true;
 
-  function isMobile(){
-    return window.matchMedia && window.matchMedia('(max-width:767px)').matches;
+  var ICONS = [
+    ['fas fa-link','🔗 ลิงก์ / Link'],
+    ['fas fa-globe','🌐 เว็บไซต์ / Website'],
+    ['fas fa-book','📘 คู่มือ / Book'],
+    ['fas fa-file-lines','📄 เอกสาร / Document'],
+    ['fas fa-file-pen','📝 แบบฟอร์ม / Form'],
+    ['fas fa-clipboard-list','📋 รายการ / Checklist'],
+    ['fas fa-chart-line','📈 รายงาน / Report'],
+    ['fas fa-graduation-cap','🎓 การศึกษา / Education'],
+    ['fas fa-school','🏫 โรงเรียน / School'],
+    ['fas fa-chalkboard-user','👨‍🏫 ครูผู้สอน / Teacher'],
+    ['fas fa-users','👥 ผู้ใช้งาน / Users'],
+    ['fas fa-user-graduate','🧑‍🎓 นักเรียน / Student'],
+    ['fas fa-calendar-days','📅 ปฏิทิน / Calendar'],
+    ['fas fa-clock','⏰ เวลา / Time'],
+    ['fas fa-star','⭐ คะแนน / Score'],
+    ['fas fa-medal','🏅 เกณฑ์เกรด / Grade'],
+    ['fas fa-download','⬇️ ดาวน์โหลด / Download'],
+    ['fas fa-upload','⬆️ อัปโหลด / Upload'],
+    ['fas fa-folder-open','📂 ไฟล์ / Folder'],
+    ['fas fa-image','🖼️ รูปภาพ / Image'],
+    ['fas fa-video','🎥 วิดีโอ / Video'],
+    ['fas fa-bullhorn','📢 ประกาศ / Announcement'],
+    ['fas fa-comments','💬 ติดต่อ / Chat'],
+    ['fas fa-envelope','✉️ อีเมล / Email'],
+    ['fas fa-phone','☎️ โทรศัพท์ / Phone'],
+    ['fas fa-location-dot','📍 สถานที่ / Location'],
+    ['fas fa-truck-fast','🚚 โลจิสติกส์ / Logistics'],
+    ['fas fa-route','🛣️ เส้นทาง / Route'],
+    ['fas fa-suitcase-rolling','🧳 ท่องเที่ยว / Tourism'],
+    ['fas fa-language','🌏 ภาษา / Language'],
+    ['fas fa-handshake','🤝 ความร่วมมือ / Cooperation'],
+    ['fas fa-gear','⚙️ ตั้งค่า / Settings'],
+    ['fas fa-shield-halved','🛡️ สิทธิ์ / Permission'],
+    ['fas fa-lock','🔒 ล็อก / Lock'],
+    ['fas fa-qrcode','▦ QR Code'],
+    ['custom','กำหนดเอง...']
+  ];
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});
   }
 
-  function getActiveCourseId(){
-    try{
-      if(window.currentActiveCourseId) return window.currentActiveCourseId;
-      if(typeof currentActiveCourseId !== 'undefined' && currentActiveCourseId) return currentActiveCourseId;
-    }catch(e){}
-    try{
-      var visible = document.querySelector('#view-course-detail:not(.hidden)');
-      if(visible){
-        var input = document.getElementById('plan-course-id');
-        if(input && input.value) return input.value;
+  function enhanceIconPicker(){
+    var input = document.getElementById('shcm-icon');
+    if(!input || input.dataset.safeIconEnhanced === '1') return;
+    input.dataset.safeIconEnhanced = '1';
+
+    var oldWrap = input.closest('div');
+    if(!oldWrap) return;
+
+    var current = input.value || 'fas fa-link';
+    var html = '<label class="text-xs font-bold text-slate-500">ไอคอน Font Awesome</label>' +
+      '<div class="shcm-icon-picker-safe-grid grid grid-cols-[64px_1fr] gap-2 items-center">' +
+      '<div id="shcm-icon-preview-safe" class="h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-primary flex items-center justify-center text-2xl"><i class="'+esc(current)+'"></i></div>' +
+      '<select id="shcm-icon-select-safe" class="shcm-field">' +
+      ICONS.map(function(it){return '<option value="'+esc(it[0])+'">'+esc(it[1])+'</option>';}).join('') +
+      '</select></div>';
+
+    oldWrap.insertAdjacentHTML('afterbegin', html);
+    input.classList.add('mt-2');
+
+    var select = document.getElementById('shcm-icon-select-safe');
+    var preview = document.getElementById('shcm-icon-preview-safe');
+
+    function syncFromInput(){
+      var val = (input.value || 'fas fa-link').trim() || 'fas fa-link';
+      if(preview) preview.innerHTML = '<i class="'+esc(val)+'"></i>';
+      if(select){
+        var found = false;
+        Array.prototype.forEach.call(select.options, function(o){ if(o.value === val) found = true; });
+        select.value = found ? val : 'custom';
       }
-    }catch(e){}
-    return null;
-  }
-
-  function directOpenPlanModal(){
-    var courseId = getActiveCourseId();
-    if(!courseId){
-      if(window.showCustomAlert) window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
-      return false;
+      input.classList.toggle('hidden', select && select.value !== 'custom');
     }
 
-    try{
-      if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(courseId, 'จัดการแผนคะแนน')) return false;
-    }catch(e){}
+    if(select){
+      select.addEventListener('change', function(){
+        if(select.value !== 'custom') input.value = select.value;
+        input.classList.toggle('hidden', select.value !== 'custom');
+        syncFromInput();
+        if(select.value === 'custom') input.focus();
+      });
+    }
+    input.addEventListener('input', syncFromInput);
+    syncFromInput();
+  }
 
-    var modal = document.getElementById('plan-modal');
-    if(!modal) return false;
+  function autosizeCurrentFrame(){
+    var frame = document.querySelector('#shcm-user-content iframe');
+    if(!frame || frame.dataset.safeAutoHeight === '1') return;
+    frame.dataset.safeAutoHeight = '1';
+    frame.setAttribute('scrolling','no');
+    frame.style.overflow = 'hidden';
 
-    try{
-      if(modal.parentElement !== document.body) document.body.appendChild(modal);
-    }catch(e){}
+    function setH(h){
+      h = Math.max(820, Number(h || 0) + 24);
+      frame.style.height = h + 'px';
+    }
 
-    try{
-      var c = (window.state && Array.isArray(window.state.courses)) ? window.state.courses.find(function(x){return x.id === courseId;}) : null;
-      var title = document.getElementById('plan-modal-title');
-      if(title) title.textContent = c && c.code ? '(' + c.code + ')' : '';
-    }catch(e){}
-
-    try{
-      var courseInput = document.getElementById('plan-course-id');
-      if(courseInput) courseInput.value = courseId;
-    }catch(e){}
-
-    try{ if(typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); }catch(e){}
-    try{ if(typeof window.renderPlanList === 'function') window.renderPlanList(courseId); }catch(e){}
-
-    modal.classList.add('schoolhub-score-plan-modal');
-    modal.classList.remove('hidden');
-    modal.style.position = 'fixed';
-    modal.style.inset = '0';
-    modal.style.zIndex = '2147483647';
-    modal.style.display = 'flex';
-    modal.style.pointerEvents = 'auto';
-
-    try{
-      var panel = modal.querySelector(':scope > div') || modal.firstElementChild;
-      if(panel){
-        panel.style.pointerEvents = 'auto';
-        panel.style.position = 'relative';
-        panel.style.zIndex = '2147483647';
-      }
-    }catch(e){}
-
-    setTimeout(function(){
+    frame.addEventListener('load', function(){
       try{
-        var first = document.getElementById('plan-week') || modal.querySelector('input,select,button');
-        if(first && first.focus) first.focus({preventScroll:true});
+        var d = frame.contentDocument || frame.contentWindow.document;
+        if(d){
+          var apply = function(){
+            var b=d.body, e=d.documentElement;
+            if(!b || !e) return;
+            b.style.overflow = 'hidden';
+            e.style.overflow = 'hidden';
+            setH(Math.max(b.scrollHeight,e.scrollHeight,b.offsetHeight,e.offsetHeight,b.clientHeight,e.clientHeight));
+          };
+          apply();
+          try{ new ResizeObserver(apply).observe(d.body); }catch(_){}
+          setTimeout(apply,300); setTimeout(apply,1000); setTimeout(apply,2000);
+          return;
+        }
       }catch(e){}
-    },80);
-
-    return false;
+      setH(Math.max(window.innerHeight * 2.2, 1500));
+    });
   }
 
-  var oldOpen = window.openPlanModalForCurrentCourse;
-  window.openPlanModalForCurrentCourse = function(){
-    if(isMobile()) return directOpenPlanModal();
-    if(typeof oldOpen === 'function') return oldOpen.apply(this, arguments);
-    return directOpenPlanModal();
-  };
+  window.addEventListener('message', function(ev){
+    if(!ev || !ev.data || ev.data.type !== 'SHCM_FRAME_HEIGHT') return;
+    var frame = document.querySelector('#shcm-user-content iframe');
+    if(frame) frame.style.height = Math.max(820, Number(ev.data.height || 0) + 24) + 'px';
+  });
 
-  document.addEventListener('click', function(e){
-    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
-    if(!btn || !isMobile()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    directOpenPlanModal();
-    return false;
-  }, true);
+  // Wrap after original functions exist, but do not replace if missing.
+  function wrapOriginals(){
+    enhanceIconPicker();
 
-  document.addEventListener('touchend', function(e){
-    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
-    if(!btn || !isMobile()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    directOpenPlanModal();
-    return false;
-  }, true);
-
-  document.addEventListener('click', function(e){
-    var modal = document.getElementById('plan-modal');
-    if(!modal || modal.classList.contains('hidden')) return;
-    if(e.target === modal){
-      e.preventDefault();
-      e.stopPropagation();
-      if(typeof window.closePlanModal === 'function') window.closePlanModal();
-      else modal.classList.add('hidden');
+    if(typeof window.openCustomMenuAdmin === 'function' && !window.openCustomMenuAdmin.__safeIconPatchWrapped){
+      var oldAdmin = window.openCustomMenuAdmin;
+      var newAdmin = function(){
+        var r = oldAdmin.apply(this, arguments);
+        setTimeout(enhanceIconPicker, 50);
+        setTimeout(enhanceIconPicker, 300);
+        return r;
+      };
+      newAdmin.__safeIconPatchWrapped = true;
+      window.openCustomMenuAdmin = newAdmin;
     }
+
+    if(typeof window.editCustomMenu === 'function' && !window.editCustomMenu.__safeIconPatchWrapped){
+      var oldEdit = window.editCustomMenu;
+      var newEdit = function(){
+        var r = oldEdit.apply(this, arguments);
+        setTimeout(enhanceIconPicker, 50);
+        setTimeout(function(){
+          var input=document.getElementById('shcm-icon');
+          if(input) input.dispatchEvent(new Event('input'));
+        },120);
+        return r;
+      };
+      newEdit.__safeIconPatchWrapped = true;
+      window.editCustomMenu = newEdit;
+    }
+
+    if(typeof window.openCustomMenuUser === 'function' && !window.openCustomMenuUser.__safeFramePatchWrapped){
+      var oldUser = window.openCustomMenuUser;
+      var newUser = function(){
+        var r = oldUser.apply(this, arguments);
+        setTimeout(autosizeCurrentFrame, 50);
+        setTimeout(autosizeCurrentFrame, 300);
+        return r;
+      };
+      newUser.__safeFramePatchWrapped = true;
+      window.openCustomMenuUser = newUser;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    wrapOriginals();
+    setTimeout(wrapOriginals,300);
+    setTimeout(wrapOriginals,1000);
+  });
+  document.addEventListener('click', function(e){
+    var adminBtn = e.target && e.target.closest && e.target.closest('#nav-admin-custom-menus,#mobile-nav-admin-custom-menus,[onclick*="openCustomMenuAdmin"]');
+    if(adminBtn) setTimeout(function(){ wrapOriginals(); enhanceIconPicker(); },120);
+    var userBtn = e.target && e.target.closest && e.target.closest('.shcm-user-nav-btn,[onclick*="openCustomMenuUser"]');
+    if(userBtn) setTimeout(autosizeCurrentFrame,120);
   }, true);
+  setInterval(wrapOriginals, 1500);
 })();
 </script>
 
 
 <!-- =========================================================
-     SchoolHub custom embedded web menu admin nav restore
-     - กันปุ่ม "จัดการเว็บฝัง / เมนูหลักเพิ่มเติม" หายเมื่อเมนูแอดมินถูก render ใหม่
+     SchoolHub Custom Menu Edit Mode Yellow Frame
+     - กดแก้ไขแล้วกรอบ "แก้ไขเมนู" เป็นสีเหลือง
+     - กดเพิ่ม/ล้างแล้วกลับเป็นโหมดเพิ่มเมนูสีเขียวอ่อน
      ========================================================= -->
-<style id="schoolhub-custom-menu-admin-nav-restore-style">
-#nav-admin-custom-menus,
-#mobile-nav-admin-custom-menus{
-  display:flex!important;
-  visibility:visible!important;
-  opacity:1!important;
-  pointer-events:auto!important;
+<style id="schoolhub-custom-menu-edit-yellow-style">
+#schoolhub-custom-menu-admin-view .shcm-form-card{
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-add{
+  border:2px solid #bbf7d0!important;
+  background:linear-gradient(180deg,#f0fdf4 0%,#ffffff 42%)!important;
+  box-shadow:0 14px 36px rgba(34,197,94,.10)!important;
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-edit{
+  border:3px solid #facc15!important;
+  background:linear-gradient(180deg,#fef9c3 0%,#ffffff 45%)!important;
+  box-shadow:0 18px 42px rgba(250,204,21,.20)!important;
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-edit #shcm-form-title{
+  color:#854d0e!important;
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-edit #shcm-form-title::before{
+  content:"✏️ ";
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-edit .shcm-field{
+  border-color:#fde68a!important;
+}
+#schoolhub-custom-menu-admin-view .shcm-form-card.shcm-mode-edit .shcm-field:focus{
+  border-color:#facc15!important;
+  box-shadow:0 0 0 4px rgba(250,204,21,.22)!important;
 }
 </style>
-<script id="schoolhub-custom-menu-admin-nav-restore-script">
+<script id="schoolhub-custom-menu-edit-yellow-script">
 (function(){
-  if(window.__schoolhubCustomMenuAdminNavRestore) return;
-  window.__schoolhubCustomMenuAdminNavRestore = true;
+  if(window.__schoolhubCustomMenuEditYellowFix) return;
+  window.__schoolhubCustomMenuEditYellowFix = true;
 
-  function isAdminLike(){
-    try{
-      if(window.isAdmin === true) return true;
-      if(document.getElementById('nav-admin-plans')) return true;
-      if(document.querySelector('[data-target="admin-plans"]')) return true;
-      if(document.querySelector('#mobile-menu [onclick*="admin-plans"]')) return true;
-    }catch(e){}
-    return false;
+  function getFormCard(){
+    var title=document.getElementById('shcm-form-title');
+    if(!title) return null;
+    var card=title.closest('.bg-slate-50') || title.closest('div');
+    if(card) card.classList.add('shcm-form-card');
+    return card;
   }
 
-  function openAdminCustomMenus(){
-    if(typeof window.openCustomMenuAdmin === 'function'){
-      window.openCustomMenuAdmin();
-      return;
-    }
-    if(typeof window.showCustomAlert === 'function'){
-      window.showCustomAlert('ระบบยังโหลดไม่เสร็จ','กรุณากดอีกครั้งหลังจากข้อมูลโหลดเสร็จ',true);
-    }else{
-      alert('ระบบยังโหลดไม่เสร็จ กรุณากดอีกครั้ง');
-    }
-  }
-  window.schoolhubOpenCustomMenuAdminSafe = openAdminCustomMenus;
-
-  function makeDesktopButton(){
-    return '<button id="nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-fuchsia-600 hover:bg-fuchsia-50 mt-2" data-target="custom-menus"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  function setMode(mode){
+    var card=getFormCard();
+    if(!card) return;
+    card.classList.remove('shcm-mode-add','shcm-mode-edit');
+    card.classList.add(mode === 'edit' ? 'shcm-mode-edit' : 'shcm-mode-add');
   }
 
-  function makeMobileButton(){
-    return '<button id="mobile-nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-fuchsia-600 bg-fuchsia-50 font-medium"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  function syncByTitle(){
+    var title=document.getElementById('shcm-form-title');
+    if(!title) return;
+    var text=(title.textContent||'').trim();
+    setMode(text.indexOf('แก้ไข') !== -1 ? 'edit' : 'add');
   }
 
-  function restoreAdminCustomMenuButton(){
-    if(!isAdminLike()) return;
-
-    var desktopBtn = document.getElementById('nav-admin-custom-menus');
-    if(!desktopBtn){
-      var anchor = document.getElementById('nav-admin-plans') ||
-                   document.querySelector('[data-target="admin-plans"]') ||
-                   document.getElementById('nav-admin-announcements') ||
-                   document.querySelector('nav .text-emerald-600, nav .text-indigo-600, nav .text-rose-600');
-      if(anchor && anchor.insertAdjacentHTML){
-        anchor.insertAdjacentHTML('afterend', makeDesktopButton());
-      }else{
-        var nav = document.querySelector('aside nav div.space-y-2') || document.querySelector('aside nav') || document.querySelector('nav');
-        if(nav && nav.insertAdjacentHTML) nav.insertAdjacentHTML('beforeend', makeDesktopButton());
-      }
-    }else{
-      desktopBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
-      desktopBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe()');
-      desktopBtn.classList.remove('hidden');
-      desktopBtn.style.display = 'flex';
+  function wrap(){
+    if(typeof window.openCustomMenuAdmin === 'function' && !window.openCustomMenuAdmin.__editYellowWrapped){
+      var oldOpen=window.openCustomMenuAdmin;
+      window.openCustomMenuAdmin=function(){
+        var r=oldOpen.apply(this,arguments);
+        setTimeout(syncByTitle,50);
+        setTimeout(syncByTitle,250);
+        return r;
+      };
+      window.openCustomMenuAdmin.__editYellowWrapped=true;
     }
 
-    var mobileBtn = document.getElementById('mobile-nav-admin-custom-menus');
-    if(!mobileBtn){
-      var mobileAnchor = document.querySelector('#mobile-menu [onclick*="admin-plans"]') ||
-                         document.querySelector('#mobile-menu .text-emerald-600') ||
-                         document.querySelector('#mobile-menu .text-rose-600');
-      if(mobileAnchor && mobileAnchor.insertAdjacentHTML){
-        mobileAnchor.insertAdjacentHTML('afterend', makeMobileButton());
-      }else{
-        var mobileBox = document.querySelector('#mobile-menu .space-y-2') || document.querySelector('#mobile-menu div');
-        if(mobileBox && mobileBox.insertAdjacentHTML) mobileBox.insertAdjacentHTML('beforeend', makeMobileButton());
-      }
-    }else{
-      mobileBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
-      mobileBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}');
-      mobileBtn.classList.remove('hidden');
-      mobileBtn.style.display = 'flex';
+    if(typeof window.editCustomMenu === 'function' && !window.editCustomMenu.__editYellowWrapped){
+      var oldEdit=window.editCustomMenu;
+      window.editCustomMenu=function(){
+        var r=oldEdit.apply(this,arguments);
+        setTimeout(function(){setMode('edit');},30);
+        setTimeout(function(){setMode('edit');},200);
+        return r;
+      };
+      window.editCustomMenu.__editYellowWrapped=true;
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function(){
-    restoreAdminCustomMenuButton();
-    setTimeout(restoreAdminCustomMenuButton, 300);
-    setTimeout(restoreAdminCustomMenuButton, 1000);
-    setTimeout(restoreAdminCustomMenuButton, 2500);
+  document.addEventListener('click',function(e){
+    var btn=e.target && e.target.closest && e.target.closest('button');
+    if(!btn) return;
+    var txt=(btn.textContent||'').trim();
+    var on=btn.getAttribute('onclick')||'';
+    if(on.indexOf('editCustomMenu') !== -1 || txt.indexOf('แก้ไข') !== -1){
+      setTimeout(function(){setMode('edit');},50);
+    }
+    if(btn.id === 'shcm-add-btn' || btn.id === 'shcm-reset-btn' || txt.indexOf('เพิ่มเมนู') !== -1 || txt.indexOf('ล้าง') !== -1){
+      setTimeout(function(){setMode('add');},50);
+    }
+  },true);
+
+  document.addEventListener('DOMContentLoaded',function(){
+    wrap();
+    setTimeout(function(){wrap(); syncByTitle();},300);
+    setTimeout(function(){wrap(); syncByTitle();},1000);
   });
 
-  document.addEventListener('click', function(){
-    setTimeout(restoreAdminCustomMenuButton, 120);
-  }, true);
-
-  setInterval(restoreAdminCustomMenuButton, 1200);
+  setInterval(function(){wrap(); syncByTitle();},1200);
 })();
 </script>
 
