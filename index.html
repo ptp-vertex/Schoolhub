@@ -2260,6 +2260,11 @@ document.addEventListener('click',function(){
 }
 </style>
 
+
+<style id="schoolhub-mobile-invite-behind-menu-and-plan-red-fix">
+#schoolhub-team-invite-alert{z-index:5!important;}
+@media(max-width:767px){#schoolhub-team-invite-alert{z-index:1!important;}#mobile-menu{z-index:40!important;}}
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -4517,7 +4522,7 @@ document.addEventListener('click',function(){
                 } else if(pendingPlanName){
                     planHtml = `<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName)}</div><div class="text-sm text-amber-700/80">คำขอของคุณอยู่ระหว่างรอตรวจสอบ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
                 } else {
-                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">ยังไม่ได้เลือกแผน</div><div class="text-sm text-indigo-700/80">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
+                    planHtml = `<div class="bg-rose-50 border-2 border-rose-300 text-rose-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-black text-rose-600"><i class="fas fa-triangle-exclamation mr-1"></i>ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">กรุณาเลือกแผนก่อนเริ่มใช้งาน</div><div class="text-sm text-rose-700/90">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-circle-exclamation text-3xl text-rose-500"></i></div>`;
                 }
                 currentBox.innerHTML = planHtml;
             }
@@ -5901,69 +5906,9 @@ async function submitPlanRequest(planId){
             if (location.protocol === 'file:') {
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
             }
-
-            // Google Login mobile fix เฉพาะจุด:
-            // แก้เคสมือถือเด้งไปหน้า firebaseapp auth handler แล้วขึ้น missing initial state
-            // โดยล้าง state เก่าก่อนเริ่ม, ใช้ popup จาก user click โดยตรง, และกันกดซ้ำ
-            if (window.__schoolhubGoogleLoginBusy) return;
-            window.__schoolhubGoogleLoginBusy = true;
-
-            const clearGoogleTempState = () => {
-                try {
-                    Object.keys(sessionStorage || {}).forEach(k => {
-                        if (/firebase|auth|google|oauth|redirect|schoolhub_google/i.test(k)) sessionStorage.removeItem(k);
-                    });
-                } catch(e) {}
-            };
-
-            clearGoogleTempState();
-
-            let provider = new GoogleAuthProvider();
-            try {
-                provider.addScope('email');
-                provider.addScope('profile');
-                provider.setCustomParameters({
-                    prompt: 'select_account'
-                });
-            } catch(e) {}
-
-            window.isSocialAuthenticating = true;
-            toggleLoader(true);
-
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const email = normalizeSchoolHubEmail(result.user && result.user.email);
-                if(!isSchoolHubValidEmail(email)){
-                    await signOut(auth);
-                    window.isSocialAuthenticating = false;
-                    window.__schoolhubGoogleLoginBusy = false;
-                    toggleLoader(false);
-                    return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true);
-                }
-
-                await addUserToDirectory(result.user, result.user.displayName || email, 'user');
-                try { saveSchoolHubSession(result.user, 'user'); } catch(e) {}
-                window.isSocialAuthenticating = false;
-                window.__schoolhubGoogleLoginBusy = false;
-                toggleLoader(false);
-            }
-            catch (error) {
-                window.isSocialAuthenticating = false;
-                window.__schoolhubGoogleLoginBusy = false;
-                toggleLoader(false);
-                clearGoogleTempState();
-
-                const msg = String((error && (error.message || error.code)) || '');
-                if (/missing initial state|sessionStorage|storage-partitioned|popup-blocked|popup-closed|cancelled-popup-request/i.test(msg)) {
-                    return showCustomAlert(
-                        'เข้าสู่ระบบ Google ไม่สำเร็จบนมือถือ',
-                        'ให้ปิดแท็บ Google ที่ค้าง แล้วกลับมากด Google อีกครั้ง หากยังเป็นอยู่ให้เปิดผ่าน Chrome/Safari แบบปกติ ไม่ใช่โหมดส่วนตัว',
-                        true
-                    );
-                }
-
-                showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true);
-            }
+            let provider = new GoogleAuthProvider(); window.isSocialAuthenticating = true; toggleLoader(true);
+            try { const result = await signInWithPopup(auth, provider); const email = normalizeSchoolHubEmail(result.user && result.user.email); if(!isSchoolHubValidEmail(email)){ await signOut(auth); window.isSocialAuthenticating = false; toggleLoader(false); return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true); } await addUserToDirectory(result.user, result.user.displayName || email, 'user'); window.isSocialAuthenticating = false; }
+            catch (error) { window.isSocialAuthenticating = false; toggleLoader(false); showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true); }
         };
 
         onAuthStateChanged(auth, async (user) => {
@@ -7523,7 +7468,7 @@ ${resetUrl.toString()}
                 let statusHtml='';
                 if(hasPending) statusHtml=`<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName||'คำขอแผน')}</div><div class="text-sm text-amber-700/80">ส่งคำขอแล้ว จึงส่งซ้ำไม่ได้จนกว่าแอดมินจะอนุมัติ/ไม่อนุมัติ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
                 else if(currentPlanId) statusHtml=`<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(dirUser.planName||'')}</div><div class="text-sm text-indigo-700/80">${escapeHTML(dirUser.planPrice||'')}</div><div class="text-xs font-bold text-slate-500 mt-2">เรียกเก็บครั้งต่อไป: ${escapeHTML(formatNextBilling(dirUser))}</div><div class="text-xs font-bold text-slate-500">เพิ่มรายวิชาได้: ${escapeHTML(dirUser.courseLimit?dirUser.courseLimit+' วิชา':'ไม่จำกัด')}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                else statusHtml=`<div class="bg-slate-50 border border-slate-200 text-slate-900 rounded-3xl p-5"><div class="text-sm font-bold text-slate-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-slate-600/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
+                else statusHtml=`<div class="bg-rose-50 border-2 border-rose-300 text-rose-900 rounded-3xl p-5"><div class="text-sm font-black text-rose-600"><i class="fas fa-triangle-exclamation mr-1"></i>ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-rose-700/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
                 currentBox.innerHTML=statusHtml;
             }
             box.innerHTML=items.map(p=>{ const active=p.id===currentPlanId&&!!currentPlanId; let btn=''; if(hasPending&&!active) btn=`<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผนที่รอตรวจสอบอยู่ ไม่สามารถส่งซ้ำได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`; else btn=`<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas ${active?'fa-rotate':'fa-paper-plane'} mr-1"></i> ${active?'ต่ออายุ/เปลี่ยนรอบ':'เลือกแผนนี้'}</button>`; return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1 mt-6">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3">เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br>${p.freeForever||p.billingCycle==='forever'?'ฟรีตลอด ไม่มีรอบเก็บเงิน':'รอบถัดไปจะแจ้งหลังอนุมัติ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>${btn}</div>`; }).join('');
@@ -15578,7 +15523,7 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-member-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #eef2f7;border-radius:18px;padding:12px;background:#f8fafc}
   .schoolhub-team-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900}
   .schoolhub-team-status.pending{background:#fef3c7;color:#92400e}.schoolhub-team-status.accepted{background:#dcfce7;color:#166534}.schoolhub-team-status.cancelled,.schoolhub-team-status.declined,.schoolhub-team-status.deleted,.schoolhub-team-status.removed{background:#fee2e2;color:#991b1b}
-  #schoolhub-team-invite-alert{position:sticky;top:0;z-index:80;margin:0 0 14px 0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:12px 14px;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 22px rgba(234,88,12,.08)}
+  #schoolhub-team-invite-alert{position:sticky;top:0;z-index:5;margin:0 0 14px 0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:12px 14px;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 22px rgba(234,88,12,.08)}
   #schoolhub-team-invite-alert button{background:#ea580c;color:white;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
   .schoolhub-team-invites-panel{margin-top:20px;margin-bottom:18px;background:#fff7ed;border:1px solid #fed7aa;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(234,88,12,.06)}
   .schoolhub-team-invite-card{border:1px solid #fed7aa;border-radius:18px;padding:12px;background:white;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
@@ -15586,7 +15531,7 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-spinner{width:16px;height:16px;border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;border-radius:50%;display:inline-block;vertical-align:-3px;animation:schoolhubTeamSpin .75s linear infinite}
   .schoolhub-team-loading-line{display:flex;align-items:center;justify-content:center;gap:8px;color:#64748b;font-weight:900;font-size:13px;padding:14px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc}
   @keyframes schoolhubTeamSpin{to{transform:rotate(360deg)}}
-  @media(max-width:768px){.schoolhub-team-member-row,.schoolhub-team-invite-card{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}#schoolhub-team-invite-alert{position:relative;top:auto;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert button{width:100%}}
+  @media(max-width:768px){.schoolhub-team-member-row,.schoolhub-team-invite-card{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}#schoolhub-team-invite-alert{position:relative;top:auto;z-index:1;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert button{width:100%}}
 </style>
 <script type="module" id="schoolhub-team-plan-current-box-patch">
 import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
