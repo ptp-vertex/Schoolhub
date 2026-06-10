@@ -17505,5 +17505,115 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 })();
 </script>
 
+
+
+<!-- =========================================================
+     SchoolHub HOTFIX: Export modal close/cancel must never trigger plan alert
+     แก้อาการกด X / ยกเลิก ในกล่องโหลด Excel แล้วเด้ง "แผนนี้ไม่รองรับ Export"
+     ========================================================= -->
+<style id="schoolhub-export-close-cancel-hotfix-style">
+  #custom-alert,#custom-confirm{z-index:2147483647!important;}
+  #custom-alert-box,#custom-confirm-box{z-index:2147483647!important;position:relative!important;}
+  .schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal{z-index:2147483000!important;}
+</style>
+<script id="schoolhub-export-close-cancel-hotfix">
+(function(){
+  if(window.__schoolhubExportCloseCancelHotfix) return;
+  window.__schoolhubExportCloseCancelHotfix = true;
+
+  var EXPORT_MODAL_SELECTOR = '.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal';
+
+  function closeExportModal(el){
+    var modal = el && el.closest ? el.closest(EXPORT_MODAL_SELECTOR) : null;
+    if(!modal) return false;
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    return true;
+  }
+
+  function isCloseOrCancelButton(btn){
+    if(!btn) return false;
+    var text = (btn.textContent || '').trim();
+    var aria = (btn.getAttribute('aria-label') || '').trim();
+    var id = btn.id || '';
+    var cls = btn.className || '';
+    var html = btn.innerHTML || '';
+    return /^(ยกเลิก|ปิด|×|x)$/i.test(text) ||
+           /cancel|close|dismiss/i.test(id + ' ' + cls + ' ' + aria) ||
+           /fa-times|fa-xmark/i.test(html);
+  }
+
+  function hasExportRight(){
+    try{
+      if(typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('export');
+      if(typeof window.schoolhubGetRealPlanRights === 'function'){
+        var r = window.schoolhubGetRealPlanRights();
+        return !!(r && r.allowExport && !r.locked);
+      }
+      var p = window.currentUserPlan || window.activePlan || window.userPlan || window.currentPlan || null;
+      if(!p && window.state && state.currentPlan) p = state.currentPlan;
+      return !p || p.allowExport !== false;
+    }catch(e){ return true; }
+  }
+
+  function showExportBlocked(){
+    if(typeof window.showCustomAlert === 'function'){
+      window.showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
+    }else{
+      alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
+    }
+  }
+
+  // สำคัญ: จับก่อน patch อื่น ๆ ถ้าเป็นปุ่ม X/ยกเลิก ให้ปิดอย่างเดียว ห้ามตรวจสิทธิ์ Export
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button,a');
+    if(!btn) return;
+    if(isCloseOrCancelButton(btn) && btn.closest(EXPORT_MODAL_SELECTOR)){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      closeExportModal(btn);
+      return false;
+    }
+  }, true);
+
+  // ปุ่มโหลดจริงเท่านั้นที่ต้องตรวจสิทธิ์ ไม่รวมปุ่มปิด/ยกเลิก
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button,a');
+    if(!btn || isCloseOrCancelButton(btn)) return;
+    var text = (btn.textContent || '').trim();
+    var oc = btn.getAttribute('onclick') || '';
+    var id = btn.id || '';
+    var cls = String(btn.className || '');
+    var isRealExport = /export|ส่งออก|โหลดตาราง|โหลด\s*Excel|downloadExcel/i.test(text + ' ' + oc + ' ' + id) || /file-excel/i.test(cls);
+    if(isRealExport && !hasExportRight()){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      // ปิด modal ดาวน์โหลดที่อาจเปิดค้างก่อน แล้วค่อยแจ้งเตือนด้านหน้า
+      document.querySelectorAll(EXPORT_MODAL_SELECTOR).forEach(function(m){ m.classList.add('hidden'); m.style.display='none'; });
+      setTimeout(showExportBlocked, 0);
+      return false;
+    }
+  }, true);
+
+  // ครอบฟังก์ชันเปิด export modal แบบเจาะจง: ไม่มีสิทธิ์ = ไม่เปิดกล่องเลือกห้องตั้งแต่แรก
+  ['exportScoresToExcel','exportAttendanceToExcel','exportStudentsToExcel'].forEach(function(name){
+    var old = window[name];
+    if(typeof old !== 'function' || old.__schoolhubNoOpenWithoutExportRight) return;
+    var fn = function(){
+      if(!hasExportRight()){
+        document.querySelectorAll(EXPORT_MODAL_SELECTOR).forEach(function(m){ m.classList.add('hidden'); m.style.display='none'; });
+        showExportBlocked();
+        return;
+      }
+      return old.apply(this, arguments);
+    };
+    fn.__schoolhubNoOpenWithoutExportRight = true;
+    window[name] = fn;
+  });
+})();
+</script>
+
 </body>
 </html>
