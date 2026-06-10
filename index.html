@@ -20542,5 +20542,194 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub Team Invite First Load + Preload Critical Data Fix
+     - เชิญเพื่อนในแผนทีมขึ้นตั้งแต่ครั้งแรก ไม่ต้องรีเฟรช
+     - แสดงกล่องเชิญเฉพาะแผนที่ใช้ร่วมกันได้ตั้งแต่ 2 คนขึ้นไป
+     - โหลดข้อมูลสำคัญของแผน/ทีม/คำเชิญหลัง login ก่อน render หน้าแผน
+     ========================================================= -->
+<style id="schoolhub-team-invite-first-load-fix-style">
+#schoolhub-critical-preload-cover.hidden{display:none!important;}
+#schoolhub-critical-preload-cover{
+  position:fixed;inset:0;z-index:2147482500;
+  background:rgba(248,250,252,.94);
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);
+}
+#schoolhub-critical-preload-cover .box{
+  background:white;border:1px solid #e2e8f0;border-radius:1.5rem;
+  padding:1.5rem;box-shadow:0 25px 80px rgba(15,23,42,.16);
+  display:flex;align-items:center;gap:1rem;color:#334155;font-weight:900;
+}
+</style>
+<script id="schoolhub-team-invite-first-load-fix-script">
+(function(){
+  if(window.__schoolhubTeamInviteFirstLoadFix) return;
+  window.__schoolhubTeamInviteFirstLoadFix = true;
+
+  function byId(id){return document.getElementById(id);}
+  function dir(){return window.__currentUserDir || {};}
+  function user(){try{return auth.currentUser || window.currentUser || null;}catch(e){return window.currentUser || null;}}
+  function plans(){
+    try{return Array.isArray(window.subscriptionPlans)?window.subscriptionPlans:JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');}
+    catch(e){return [];}
+  }
+  function plan(){
+    var d=dir();
+    return plans().find(function(p){return String(p.id||'')===String(d.planId||'');}) || {};
+  }
+  function n(v,fb){v=Number(v);return Number.isFinite(v)?v:(fb||0);}
+  function teamLimit(){
+    var d=dir(), p=plan();
+    return Math.max(1,n(d.teamMemberLimit || d.maxTeamMembers || d.teamLimit || p.teamMemberLimit || p.maxTeamMembers || p.teamLimit,1));
+  }
+  function allowTeamStrict(){
+    var d=dir(), p=plan();
+    if(d.teamStatus === 'accepted' || d.teamOwnerUid) return teamLimit() >= 2;
+    return (d.allowTeam === true || p.allowTeam === true || teamLimit() >= 2) && teamLimit() >= 2;
+  }
+  function showPreload(msg){
+    var el=byId('schoolhub-critical-preload-cover');
+    if(!el){
+      document.body.insertAdjacentHTML('beforeend','<div id="schoolhub-critical-preload-cover" class="hidden"><div class="box"><div class="loader"></div><div id="schoolhub-critical-preload-text">กำลังโหลดข้อมูลสำคัญ...</div></div></div>');
+      el=byId('schoolhub-critical-preload-cover');
+    }
+    var t=byId('schoolhub-critical-preload-text'); if(t) t.textContent=msg||'กำลังโหลดข้อมูลสำคัญ...';
+    el.classList.remove('hidden');
+  }
+  function hidePreload(){byId('schoolhub-critical-preload-cover')?.classList.add('hidden');}
+
+  async function callMaybe(name){
+    try{
+      if(typeof window[name]==='function') return await window[name]();
+    }catch(e){console.warn(name,e);}
+    return null;
+  }
+
+  async function preloadCriticalSchoolHubData(){
+    var u=user();
+    if(!u) return;
+    showPreload('กำลังโหลดแผน สิทธิ์ และคำเชิญทีม...');
+    try{
+      if(typeof window.loadSubscriptionPlans === 'function') await window.loadSubscriptionPlans();
+      if(typeof window.loadUserDirectory === 'function') await window.loadUserDirectory();
+      if(typeof window.loadPlanRequests === 'function' && window.isAdmin) await window.loadPlanRequests();
+
+      await callMaybe('refreshIncomingInvites');
+
+      // ถ้าเป็นทีมอยู่แล้ว ตรวจทีมก่อน render
+      if(dir().teamStatus==='accepted' || dir().teamOwnerUid){
+        if(typeof window.verifyMyTeamStillAccepted === 'function') await window.verifyMyTeamStillAccepted();
+      }
+
+      if(typeof window.ensureTeamBox === 'function') await window.ensureTeamBox();
+    }catch(e){
+      console.warn('preloadCriticalSchoolHubData failed', e);
+    }finally{
+      setTimeout(hidePreload,120);
+    }
+  }
+  window.schoolhubPreloadCriticalData = preloadCriticalSchoolHubData;
+
+  function ensureTeamBoxEarly(){
+    var currentBox=byId('user-current-plan-box');
+    if(!currentBox) return;
+    var oldPanel=byId('schoolhub-team-plan-box');
+
+    if(!allowTeamStrict()){
+      if(oldPanel) oldPanel.innerHTML='';
+      return;
+    }
+
+    var holder=byId('schoolhub-team-plan-box');
+    if(!holder){
+      holder=document.createElement('div');
+      holder.id='schoolhub-team-plan-box';
+      holder.style.marginTop='16px';
+      currentBox.appendChild(holder);
+    }
+    if(!holder.innerHTML.trim()){
+      holder.innerHTML='<div class="schoolhub-team-panel"><div class="text-lg font-black text-slate-900"><i class="fas fa-user-plus text-primary mr-2"></i>เชิญเพื่อนในแผนทีม</div><div class="schoolhub-team-loading-line mt-3"><span class="schoolhub-team-spinner"></span><span>กำลังโหลดข้อมูลทีม...</span></div></div>';
+    }
+    if(typeof window.loadAndRenderTeamPanel==='function'){
+      setTimeout(function(){ window.loadAndRenderTeamPanel(); }, 0);
+    }
+  }
+  window.schoolhubEnsureTeamBoxEarly = ensureTeamBoxEarly;
+
+  function patchTeamFunctions(){
+    // แทน allowTeam เก่าที่ limit=1 ก็แสดง
+    window.allowTeam = allowTeamStrict;
+
+    if(typeof window.loadAndRenderTeamPanel === 'function' && !window.loadAndRenderTeamPanel.__firstLoadTeamLimitWrapped){
+      var oldLoad=window.loadAndRenderTeamPanel;
+      window.loadAndRenderTeamPanel=async function(){
+        if(!allowTeamStrict()){
+          var box=byId('schoolhub-team-plan-box');
+          if(box) box.innerHTML='';
+          return false;
+        }
+        return await oldLoad.apply(this,arguments);
+      };
+      window.loadAndRenderTeamPanel.__firstLoadTeamLimitWrapped=true;
+    }
+
+    if(typeof window.ensureTeamBox === 'function' && !window.ensureTeamBox.__firstLoadTeamLimitWrapped){
+      var oldEnsure=window.ensureTeamBox;
+      window.ensureTeamBox=async function(){
+        if(!allowTeamStrict()){
+          var box=byId('schoolhub-team-plan-box');
+          if(box) box.innerHTML='';
+          return false;
+        }
+        return await oldEnsure.apply(this,arguments);
+      };
+      window.ensureTeamBox.__firstLoadTeamLimitWrapped=true;
+    }
+
+    if(typeof window.renderUserPlans === 'function' && !window.renderUserPlans.__teamFirstLoadWrapped){
+      var oldRender=window.renderUserPlans;
+      window.renderUserPlans=function(){
+        var r=oldRender.apply(this,arguments);
+        setTimeout(ensureTeamBoxEarly,30);
+        setTimeout(ensureTeamBoxEarly,250);
+        return r;
+      };
+      window.renderUserPlans.__teamFirstLoadWrapped=true;
+    }
+
+    if(typeof window.openUserPlanSelector === 'function' && !window.openUserPlanSelector.__teamFirstLoadWrapped){
+      var oldOpen=window.openUserPlanSelector;
+      window.openUserPlanSelector=async function(){
+        await preloadCriticalSchoolHubData();
+        var r=await oldOpen.apply(this,arguments);
+        setTimeout(ensureTeamBoxEarly,30);
+        setTimeout(ensureTeamBoxEarly,250);
+        return r;
+      };
+      window.openUserPlanSelector.__teamFirstLoadWrapped=true;
+    }
+  }
+
+  function init(){
+    patchTeamFunctions();
+    ensureTeamBoxEarly();
+  }
+
+  // หลัง auth load ข้อมูลเสร็จ ให้ preload ซ้ำแบบไม่ต้องรีเฟรช
+  document.addEventListener('DOMContentLoaded',function(){
+    init();
+    setTimeout(init,300);
+    setTimeout(function(){ init(); preloadCriticalSchoolHubData(); },1200);
+  });
+  document.addEventListener('click',function(){setTimeout(init,120);},true);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden) setTimeout(function(){init(); preloadCriticalSchoolHubData();},120);
+  });
+  setInterval(init,1800);
+})();
+</script>
+
 </body>
 </html>
