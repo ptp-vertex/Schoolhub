@@ -2260,11 +2260,6 @@ document.addEventListener('click',function(){
 }
 </style>
 
-
-<style id="schoolhub-mobile-invite-behind-menu-and-plan-red-fix">
-#schoolhub-team-invite-alert{z-index:5!important;}
-@media(max-width:767px){#schoolhub-team-invite-alert{z-index:1!important;}#mobile-menu{z-index:40!important;}}
-</style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -4522,7 +4517,7 @@ document.addEventListener('click',function(){
                 } else if(pendingPlanName){
                     planHtml = `<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName)}</div><div class="text-sm text-amber-700/80">คำขอของคุณอยู่ระหว่างรอตรวจสอบ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
                 } else {
-                    planHtml = `<div class="bg-rose-50 border-2 border-rose-300 text-rose-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-black text-rose-600"><i class="fas fa-triangle-exclamation mr-1"></i>ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">กรุณาเลือกแผนก่อนเริ่มใช้งาน</div><div class="text-sm text-rose-700/90">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-circle-exclamation text-3xl text-rose-500"></i></div>`;
+                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">ยังไม่ได้เลือกแผน</div><div class="text-sm text-indigo-700/80">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
                 }
                 currentBox.innerHTML = planHtml;
             }
@@ -7417,7 +7412,7 @@ ${resetUrl.toString()}
             const dir=window.__currentUserDir||{};
             const now=Date.now();
             let locked=false, reason='';
-            if(!dir.planId && !dir.requestedPlanId){ locked=true; reason='ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนเริ่มใช้งาน'; }
+            if(!dir.planId && !dir.requestedPlanId && !(dir.teamStatus==='accepted' || dir.teamOwnerUid)){ locked=true; reason='ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนเริ่มใช้งาน'; }
             else if(dir.status==='pending_plan' || dir.requestedPlanId){ locked=true; reason='คำขอแผนของคุณอยู่ระหว่างรอแอดมินอนุมัติ'; }
             else if(dir.planNextBillingAt && Number(dir.planNextBillingAt) <= now){ locked=true; reason='ถึงรอบเรียกเก็บเงินแล้ว หากยังไม่ชำระ ระบบจะล็อกการแก้ไข ใช้ดูข้อมูลได้เท่านั้น'; }
             window.__schoolhubPlanLocked=locked;
@@ -7468,7 +7463,7 @@ ${resetUrl.toString()}
                 let statusHtml='';
                 if(hasPending) statusHtml=`<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName||'คำขอแผน')}</div><div class="text-sm text-amber-700/80">ส่งคำขอแล้ว จึงส่งซ้ำไม่ได้จนกว่าแอดมินจะอนุมัติ/ไม่อนุมัติ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
                 else if(currentPlanId) statusHtml=`<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(dirUser.planName||'')}</div><div class="text-sm text-indigo-700/80">${escapeHTML(dirUser.planPrice||'')}</div><div class="text-xs font-bold text-slate-500 mt-2">เรียกเก็บครั้งต่อไป: ${escapeHTML(formatNextBilling(dirUser))}</div><div class="text-xs font-bold text-slate-500">เพิ่มรายวิชาได้: ${escapeHTML(dirUser.courseLimit?dirUser.courseLimit+' วิชา':'ไม่จำกัด')}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                else statusHtml=`<div class="bg-rose-50 border-2 border-rose-300 text-rose-900 rounded-3xl p-5"><div class="text-sm font-black text-rose-600"><i class="fas fa-triangle-exclamation mr-1"></i>ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-rose-700/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
+                else statusHtml=`<div class="bg-slate-50 border border-slate-200 text-slate-900 rounded-3xl p-5"><div class="text-sm font-bold text-slate-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-slate-600/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
                 currentBox.innerHTML=statusHtml;
             }
             box.innerHTML=items.map(p=>{ const active=p.id===currentPlanId&&!!currentPlanId; let btn=''; if(hasPending&&!active) btn=`<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผนที่รอตรวจสอบอยู่ ไม่สามารถส่งซ้ำได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`; else btn=`<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas ${active?'fa-rotate':'fa-paper-plane'} mr-1"></i> ${active?'ต่ออายุ/เปลี่ยนรอบ':'เลือกแผนนี้'}</button>`; return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1 mt-6">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3">เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br>${p.freeForever||p.billingCycle==='forever'?'ฟรีตลอด ไม่มีรอบเก็บเงิน':'รอบถัดไปจะแจ้งหลังอนุมัติ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>${btn}</div>`; }).join('');
@@ -15523,7 +15518,7 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-member-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #eef2f7;border-radius:18px;padding:12px;background:#f8fafc}
   .schoolhub-team-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900}
   .schoolhub-team-status.pending{background:#fef3c7;color:#92400e}.schoolhub-team-status.accepted{background:#dcfce7;color:#166534}.schoolhub-team-status.cancelled,.schoolhub-team-status.declined,.schoolhub-team-status.deleted,.schoolhub-team-status.removed{background:#fee2e2;color:#991b1b}
-  #schoolhub-team-invite-alert{position:sticky;top:0;z-index:5;margin:0 0 14px 0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:12px 14px;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 22px rgba(234,88,12,.08)}
+  #schoolhub-team-invite-alert{position:sticky;top:0;z-index:80;margin:0 0 14px 0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:12px 14px;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 22px rgba(234,88,12,.08)}
   #schoolhub-team-invite-alert button{background:#ea580c;color:white;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
   .schoolhub-team-invites-panel{margin-top:20px;margin-bottom:18px;background:#fff7ed;border:1px solid #fed7aa;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(234,88,12,.06)}
   .schoolhub-team-invite-card{border:1px solid #fed7aa;border-radius:18px;padding:12px;background:white;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
@@ -15531,7 +15526,7 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-spinner{width:16px;height:16px;border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;border-radius:50%;display:inline-block;vertical-align:-3px;animation:schoolhubTeamSpin .75s linear infinite}
   .schoolhub-team-loading-line{display:flex;align-items:center;justify-content:center;gap:8px;color:#64748b;font-weight:900;font-size:13px;padding:14px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc}
   @keyframes schoolhubTeamSpin{to{transform:rotate(360deg)}}
-  @media(max-width:768px){.schoolhub-team-member-row,.schoolhub-team-invite-card{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}#schoolhub-team-invite-alert{position:relative;top:auto;z-index:1;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert button{width:100%}}
+  @media(max-width:768px){.schoolhub-team-member-row,.schoolhub-team-invite-card{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}#schoolhub-team-invite-alert{position:relative;top:auto;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert button{width:100%}}
 </style>
 <script type="module" id="schoolhub-team-plan-current-box-patch">
 import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -16946,7 +16941,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     if (isAdminUser()) return {admin:true, active:true, plan:plan || {}, locked:false, reason:'', courseLimit:0, studentLimit:0, weekLimit:0, teamLimit:0, allowAttendance:true, allowExport:true, allowTeam:true};
     var now = Date.now();
     var locked = false, reason = '';
-    if (!dir.planId) { locked = true; reason = 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน'; }
+    if (!dir.planId && !(dir.teamStatus === 'accepted' || dir.teamOwnerUid)) { locked = true; reason = 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน'; }
     else if (dir.status === 'pending_plan' || dir.requestedPlanId) { locked = true; reason = 'คำขอแผนอยู่ระหว่างรออนุมัติ'; }
     else if (dir.status === 'blocked' || dir.status === 'deleted') { locked = true; reason = 'บัญชีนี้ถูกระงับสิทธิ์'; }
     else if ((dir.planExpiresAt && n(dir.planExpiresAt) <= now) || (dir.planNextBillingAt && n(dir.planNextBillingAt) <= now && !(plan && (plan.freeForever || plan.billingCycle === 'forever')))) { locked = true; reason = 'แผนหมดอายุหรือถึงรอบชำระเงินแล้ว'; }
@@ -17214,7 +17209,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   function lockedReason(){
     var d=dir(), p=plan(), now=Date.now();
     if(isAdmin()) return '';
-    if(!d.planId) return 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน';
+    if(!d.planId && !(d.teamStatus==='accepted' || d.teamOwnerUid)) return 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน';
     if(d.status==='pending_plan' || d.requestedPlanId) return 'คำขอแผนอยู่ระหว่างรออนุมัติ';
     if(d.status==='blocked' || d.status==='deleted' || d.blocked===true) return 'บัญชีนี้ถูกระงับสิทธิ์';
     if((d.planExpiresAt && toNum(d.planExpiresAt)<=now) || (d.planNextBillingAt && toNum(d.planNextBillingAt)<=now && !(p && (p.freeForever || p.billingCycle==='forever')))) return 'แผนหมดอายุหรือถึงรอบชำระเงินแล้ว';
@@ -19147,6 +19142,611 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   },true);
   document.addEventListener('click',function(){setTimeout(function(){ensureExtraUI();wrapRender();patchRenderedGrades();},120);},true);
   setInterval(function(){wrapRender(); if(!byId('grade-criteria-modal')?.classList.contains('hidden')) ensureExtraUI(); patchRenderedGrades();},1500);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Plan Rights Popup UI Patch
+     - ย้าย "สิทธิ์การใช้งานของแผนนี้แบบละเอียด" ไปเป็นปุ่มในหัวข้อสิทธิ์การใช้งาน
+     - กดแล้วเด้ง Popup ตั้งค่า
+     - แสดงตัวอย่างสิทธิ์ที่เลือกไว้ในฟอร์มหลัก
+     ========================================================= -->
+<style id="schoolhub-plan-rights-popup-ui-style">
+#schoolhub-expanded-rights-box{
+  display:none!important;
+}
+#schoolhub-plan-rights-summary-box{
+  margin-top:.75rem;
+  border:1px solid #e2e8f0;
+  background:#ffffff;
+  border-radius:1.1rem;
+  padding:.85rem;
+}
+#schoolhub-plan-rights-summary-box .spr-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  margin-bottom:.65rem;
+}
+#schoolhub-plan-rights-summary-box .spr-title{
+  font-weight:900;
+  color:#0f172a;
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+}
+#schoolhub-plan-rights-summary-box .spr-btn{
+  background:#eef2ff;
+  color:#4f46e5;
+  border:1px solid #c7d2fe;
+  border-radius:.9rem;
+  padding:.6rem .8rem;
+  font-weight:900;
+  font-size:.82rem;
+  white-space:nowrap;
+}
+#schoolhub-plan-rights-summary-box .spr-preview{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem;
+}
+#schoolhub-plan-rights-summary-box .spr-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  border:1px solid #e2e8f0;
+  background:#f8fafc;
+  color:#334155;
+  border-radius:999px;
+  padding:.38rem .62rem;
+  font-size:.76rem;
+  font-weight:800;
+}
+#schoolhub-plan-rights-summary-box .spr-chip.off{
+  background:#fff1f2;
+  border-color:#fecdd3;
+  color:#be123c;
+}
+#schoolhub-plan-rights-popup-backdrop.hidden{display:none!important;}
+#schoolhub-plan-rights-popup-backdrop:not(.hidden){display:flex!important;}
+#schoolhub-plan-rights-popup-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  background:rgba(15,23,42,.62);
+  backdrop-filter:blur(5px);
+  align-items:center;
+  justify-content:center;
+  padding:1rem;
+}
+#schoolhub-plan-rights-popup{
+  width:min(760px,100%);
+  max-height:min(86dvh,760px);
+  overflow:hidden;
+  background:white;
+  border-radius:1.65rem;
+  box-shadow:0 30px 90px rgba(15,23,42,.30);
+  border:1px solid #e2e8f0;
+  display:flex;
+  flex-direction:column;
+}
+#schoolhub-plan-rights-popup .spr-popup-header{
+  padding:1.15rem 1.25rem;
+  border-bottom:1px solid #e2e8f0;
+  background:linear-gradient(180deg,#f8fafc,#ffffff);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+}
+#schoolhub-plan-rights-popup .spr-popup-title{
+  font-size:1.1rem;
+  font-weight:900;
+  color:#0f172a;
+}
+#schoolhub-plan-rights-popup .spr-popup-body{
+  padding:1rem;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#schoolhub-plan-rights-popup .spr-popup-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.7rem;
+}
+#schoolhub-plan-rights-popup label{
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  padding:.85rem;
+  border:1px solid #e2e8f0;
+  border-radius:1rem;
+  background:#fff;
+  color:#334155;
+  font-weight:800;
+  cursor:pointer;
+}
+#schoolhub-plan-rights-popup label:has(input:checked){
+  border-color:#c7d2fe;
+  background:#eef2ff;
+  color:#3730a3;
+}
+#schoolhub-plan-rights-popup input[type="checkbox"]{
+  width:1.1rem;
+  height:1.1rem;
+  accent-color:#4f46e5;
+}
+#schoolhub-plan-rights-popup .spr-popup-footer{
+  padding:1rem 1.25rem;
+  border-top:1px solid #e2e8f0;
+  background:#f8fafc;
+  display:flex;
+  gap:.75rem;
+  justify-content:flex-end;
+}
+#schoolhub-plan-rights-popup .spr-popup-footer button{
+  border-radius:1rem;
+  padding:.8rem 1.1rem;
+  font-weight:900;
+}
+@media(max-width:767px){
+  #schoolhub-plan-rights-popup-backdrop{
+    align-items:flex-start;
+    padding:calc(env(safe-area-inset-top) + .75rem) .75rem .75rem;
+  }
+  #schoolhub-plan-rights-popup{
+    max-height:calc(100dvh - 1.5rem - env(safe-area-inset-top));
+    border-radius:1.25rem;
+  }
+  #schoolhub-plan-rights-popup .spr-popup-grid{grid-template-columns:1fr;}
+  #schoolhub-plan-rights-summary-box .spr-head{flex-direction:column;align-items:stretch;}
+  #schoolhub-plan-rights-summary-box .spr-btn{width:100%;}
+}
+</style>
+<script id="schoolhub-plan-rights-popup-ui-script">
+(function(){
+  if(window.__schoolhubPlanRightsPopupUiPatch) return;
+  window.__schoolhubPlanRightsPopupUiPatch = true;
+
+  const RIGHTS = [
+    ['allowCourses','เพิ่ม/แก้ไขรายวิชา','fa-book-open'],
+    ['allowStudents','เพิ่ม/แก้ไขนักเรียน','fa-user-graduate'],
+    ['allowAttendance','เช็คชื่อเข้าเรียน','fa-calendar-check'],
+    ['allowScores','บันทึกคะแนน','fa-star'],
+    ['allowPlanScores','จัดการแผนคะแนน','fa-list-ul'],
+    ['allowGradeCriteria','ตั้งค่าเกณฑ์เกรด','fa-medal'],
+    ['allowStudentShare','แชร์ให้นักเรียน','fa-share-nodes'],
+    ['allowExport','Export Excel','fa-file-excel'],
+    ['allowTeam','จัดการครูในรายวิชา','fa-users'],
+    ['allowEditData','แก้ไขข้อมูล','fa-pen-to-square'],
+    ['allowDeleteData','ลบข้อมูล','fa-trash'],
+    ['allowReports','รายงาน/ภาพรวม','fa-chart-pie']
+  ];
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+
+  function byId(id){return document.getElementById(id);}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+
+  function ensureHiddenInputs(){
+    // ใช้ checkbox เดิมที่ระบบสิทธิ์ใช้บันทึกจริง แต่ซ่อนไว้
+    var box=byId('schoolhub-expanded-rights-box');
+    if(!box) return;
+    RIGHTS.forEach(function(r){
+      var id='plan-sub-'+r[0];
+      if(!byId(id)){
+        box.insertAdjacentHTML('beforeend','<input type="checkbox" id="'+id+'">');
+      }
+    });
+  }
+
+  function ensureSummaryBox(){
+    ensureHiddenInputs();
+    var oldBox=byId('schoolhub-expanded-rights-box');
+    if(!oldBox || byId('schoolhub-plan-rights-summary-box')) return;
+
+    // พยายามวางรวมกับกลุ่ม "สิทธิ์การใช้งาน" เดิม
+    var allowTeam = byId('plan-sub-allow-team');
+    var anchor = allowTeam ? allowTeam.closest('.grid, .space-y-2, div') : null;
+    if(!anchor) anchor = oldBox.parentElement;
+
+    anchor.insertAdjacentHTML('afterend', `
+      <div id="schoolhub-plan-rights-summary-box">
+        <div class="spr-head">
+          <div class="spr-title"><i class="fas fa-shield-halved text-primary"></i> สิทธิ์การใช้งาน</div>
+          <button type="button" class="spr-btn" onclick="openSchoolHubPlanRightsPopup()">
+            <i class="fas fa-sliders mr-1"></i> ตั้งค่าสิทธิ์แบบละเอียด
+          </button>
+        </div>
+        <div id="schoolhub-plan-rights-preview" class="spr-preview"></div>
+      </div>
+    `);
+    renderPreview();
+  }
+
+  function ensurePopup(){
+    if(byId('schoolhub-plan-rights-popup-backdrop')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="schoolhub-plan-rights-popup-backdrop" class="hidden">
+        <div id="schoolhub-plan-rights-popup">
+          <div class="spr-popup-header">
+            <div>
+              <div class="spr-popup-title"><i class="fas fa-shield-halved text-primary mr-2"></i>ตั้งค่าสิทธิ์การใช้งานของแผน</div>
+              <div class="text-sm text-slate-500 mt-1">ติ๊ก = ใช้งานได้, ไม่ติ๊ก = ผู้ใช้แผนนั้นกดไม่ได้และขึ้นแจ้งเตือน</div>
+            </div>
+            <button type="button" onclick="closeSchoolHubPlanRightsPopup()" class="w-10 h-10 rounded-full border bg-white hover:bg-slate-50 text-slate-500"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="spr-popup-body">
+            <div class="spr-popup-grid">
+              ${RIGHTS.map(function(r){
+                return `<label>
+                  <input type="checkbox" class="spr-popup-check" data-right="${esc(r[0])}">
+                  <i class="fas ${esc(r[2])} text-primary w-5 text-center"></i>
+                  <span>${esc(r[1])}</span>
+                </label>`;
+              }).join('')}
+            </div>
+          </div>
+          <div class="spr-popup-footer">
+            <button type="button" onclick="closeSchoolHubPlanRightsPopup()" class="bg-slate-100 text-slate-700 hover:bg-slate-200">ยกเลิก</button>
+            <button type="button" onclick="saveSchoolHubPlanRightsPopup()" class="bg-primary text-white hover:bg-indigo-700">บันทึกสิทธิ์</button>
+          </div>
+        </div>
+      </div>
+    `);
+    byId('schoolhub-plan-rights-popup-backdrop').addEventListener('click', function(e){
+      if(e.target === this) closeSchoolHubPlanRightsPopup();
+    });
+  }
+
+  function readCurrentRights(){
+    ensureHiddenInputs();
+    var out={};
+    RIGHTS.forEach(function(r){
+      var el=byId('plan-sub-'+r[0]);
+      if(el) out[r[0]] = !!el.checked;
+      else out[r[0]] = r[0] === 'allowTeam' ? false : DEFAULT_TRUE.has(r[0]);
+    });
+    return out;
+  }
+
+  function writeCurrentRights(data){
+    ensureHiddenInputs();
+    RIGHTS.forEach(function(r){
+      var el=byId('plan-sub-'+r[0]);
+      if(el) el.checked = !!data[r[0]];
+    });
+
+    // sync checkbox เดิม 3 ตัว ให้ฟังก์ชัน saveAdminPlanForm เดิมไม่พัง
+    var att=byId('plan-sub-allow-attendance'), exp=byId('plan-sub-allow-export'), team=byId('plan-sub-allow-team');
+    if(att) att.checked = !!data.allowAttendance;
+    if(exp) exp.checked = !!data.allowExport;
+    if(team) team.checked = !!data.allowTeam;
+
+    renderPreview();
+  }
+
+  function renderPreview(){
+    var preview=byId('schoolhub-plan-rights-preview');
+    if(!preview) return;
+    var data=readCurrentRights();
+    var on = RIGHTS.filter(function(r){return data[r[0]];});
+    var off = RIGHTS.filter(function(r){return !data[r[0]];});
+    var chips = on.slice(0,8).map(function(r){
+      return `<span class="spr-chip"><i class="fas ${esc(r[2])}"></i>${esc(r[1])}</span>`;
+    }).join('');
+    if(on.length > 8) chips += `<span class="spr-chip">+${on.length-8} สิทธิ์</span>`;
+    if(off.length) chips += `<span class="spr-chip off"><i class="fas fa-lock"></i>ปิด ${off.length} สิทธิ์</span>`;
+    if(!chips) chips = '<span class="spr-chip off"><i class="fas fa-lock"></i>ยังไม่ได้เปิดสิทธิ์</span>';
+    preview.innerHTML = chips;
+  }
+
+  window.openSchoolHubPlanRightsPopup = function(){
+    ensureSummaryBox();
+    ensurePopup();
+    var data=readCurrentRights();
+    document.querySelectorAll('.spr-popup-check').forEach(function(chk){
+      chk.checked = !!data[chk.dataset.right];
+    });
+    byId('schoolhub-plan-rights-popup-backdrop').classList.remove('hidden');
+  };
+
+  window.closeSchoolHubPlanRightsPopup = function(){
+    byId('schoolhub-plan-rights-popup-backdrop')?.classList.add('hidden');
+  };
+
+  window.saveSchoolHubPlanRightsPopup = function(){
+    var data={};
+    document.querySelectorAll('.spr-popup-check').forEach(function(chk){
+      data[chk.dataset.right] = !!chk.checked;
+    });
+    writeCurrentRights(data);
+    closeSchoolHubPlanRightsPopup();
+  };
+
+  function syncFromExisting(){
+    ensureSummaryBox();
+    renderPreview();
+  }
+
+  function wrapFns(){
+    if(typeof window.resetAdminPlanForm === 'function' && !window.resetAdminPlanForm.__rightsPopupUiWrapped){
+      var oldReset=window.resetAdminPlanForm;
+      window.resetAdminPlanForm=function(){
+        var r=oldReset.apply(this,arguments);
+        setTimeout(syncFromExisting,60);
+        setTimeout(syncFromExisting,250);
+        return r;
+      };
+      window.resetAdminPlanForm.__rightsPopupUiWrapped=true;
+    }
+    if(typeof window.editAdminPlan === 'function' && !window.editAdminPlan.__rightsPopupUiWrapped){
+      var oldEdit=window.editAdminPlan;
+      window.editAdminPlan=function(){
+        var r=oldEdit.apply(this,arguments);
+        setTimeout(syncFromExisting,60);
+        setTimeout(syncFromExisting,250);
+        return r;
+      };
+      window.editAdminPlan.__rightsPopupUiWrapped=true;
+    }
+    if(typeof window.openAdminPlanPopup === 'function' && !window.openAdminPlanPopup.__rightsPopupUiWrapped){
+      var oldOpen=window.openAdminPlanPopup;
+      window.openAdminPlanPopup=function(){
+        var r=oldOpen.apply(this,arguments);
+        setTimeout(syncFromExisting,80);
+        setTimeout(syncFromExisting,300);
+        return r;
+      };
+      window.openAdminPlanPopup.__rightsPopupUiWrapped=true;
+    }
+  }
+
+  document.addEventListener('change', function(e){
+    if(e.target && /^plan-sub-allow/.test(e.target.id || '')) setTimeout(renderPreview,30);
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    wrapFns();
+    setTimeout(syncFromExisting,400);
+    setTimeout(syncFromExisting,1200);
+  });
+  document.addEventListener('click', function(){
+    setTimeout(function(){wrapFns(); syncFromExisting();},120);
+  }, true);
+  setInterval(function(){wrapFns(); if(byId('admin-plan-popup-backdrop') && !byId('admin-plan-popup-backdrop').classList.contains('hidden')) syncFromExisting();}, 1800);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Team Invite Accepted Plan Fix
+     - เมื่อตอบรับคำเชิญทีมแล้ว ไม่ให้ขึ้น "ยังไม่ได้เลือกแผน"
+     - ใช้สิทธิ์แผนทีมทันที แม้เอกสารทีมเดิมไม่มี planId
+     ========================================================= -->
+<script id="schoolhub-team-accepted-plan-lock-fix">
+(function(){
+  if(window.__schoolhubTeamAcceptedPlanLockFix) return;
+  window.__schoolhubTeamAcceptedPlanLockFix = true;
+
+  function isTeamAccepted(){
+    var d = window.__currentUserDir || {};
+    return d.teamStatus === 'accepted' || !!d.teamOwnerUid;
+  }
+
+  function normalizeAcceptedTeamDir(){
+    var d = window.__currentUserDir || {};
+    if(!isTeamAccepted()) return false;
+
+    d.status = 'active';
+    d.teamStatus = d.teamStatus || 'accepted';
+    d.planLockedAt = null;
+    d.planLockReason = null;
+    d.requestedPlanId = null;
+    d.requestedPlanName = null;
+
+    // ถ้า team doc ไม่มี planId ให้ใส่ค่าเสมือนเพื่อไม่ให้ระบบคิดว่ายังไม่ได้เลือกแผน
+    // ระบบสิทธิ์จะใช้ค่าใน dir ได้อยู่แล้ว
+    if(!d.planId) d.planId = 'team_shared';
+    if(!d.planName) d.planName = 'แผนทีม';
+
+    // ค่าเริ่มต้นของทีม: ไม่ล็อกการใช้งานพื้นฐาน
+    if(d.allowAttendance === undefined) d.allowAttendance = true;
+    if(d.allowExport === undefined) d.allowExport = true;
+    if(d.allowTeam === undefined) d.allowTeam = false;
+
+    window.__currentUserDir = d;
+    window.__schoolhubPlanLocked = false;
+    window.__schoolhubPlanLockReason = '';
+    try{
+      localStorage.setItem('schoolhub_plan_lock_cache', JSON.stringify({locked:false,reason:'',checkedAt:Date.now()}));
+    }catch(e){}
+    return true;
+  }
+
+  // ทับตัวเช็คสิทธิ์ด้านนอกให้รองรับทีมที่ตอบรับแล้ว
+  var oldCurrentPlanAllows = window.currentPlanAllows;
+  window.currentPlanAllows = function(key){
+    if(isTeamAccepted()){
+      normalizeAcceptedTeamDir();
+      var d = window.__currentUserDir || {};
+      if(key === 'team') return d.allowTeam === true;
+      if(key === 'export') return d.allowExport !== false;
+      if(key === 'attendance') return d.allowAttendance !== false;
+      return true;
+    }
+    return typeof oldCurrentPlanAllows === 'function' ? oldCurrentPlanAllows.apply(this, arguments) : true;
+  };
+
+  // หลังตอบรับคำเชิญ ให้ normalize ทันที ไม่ต้องรอ refresh
+  function wrapAccept(){
+    if(typeof window.schoolhubAcceptIncomingTeamInvite === 'function' && !window.schoolhubAcceptIncomingTeamInvite.__teamPlanLockFixWrapped){
+      var old = window.schoolhubAcceptIncomingTeamInvite;
+      window.schoolhubAcceptIncomingTeamInvite = async function(){
+        var r = await old.apply(this, arguments);
+        normalizeAcceptedTeamDir();
+        try{
+          if(typeof window.renderUserPlans === 'function') window.renderUserPlans();
+        }catch(e){}
+        return r;
+      };
+      window.schoolhubAcceptIncomingTeamInvite.__teamPlanLockFixWrapped = true;
+    }
+
+    if(typeof window.openUserPlanSelector === 'function' && !window.openUserPlanSelector.__teamPlanLockFixWrapped){
+      var oldOpen = window.openUserPlanSelector;
+      window.openUserPlanSelector = async function(){
+        normalizeAcceptedTeamDir();
+        var r = await oldOpen.apply(this, arguments);
+        normalizeAcceptedTeamDir();
+        try{
+          // เปลี่ยนกล่องสถานะ "ยังไม่ได้เลือกแผน" ให้เป็นแผนทีม
+          var boxes = Array.from(document.querySelectorAll('#user-current-plan-box, #view-user-plans, main'));
+          boxes.forEach(function(box){
+            if(!box) return;
+            Array.from(box.querySelectorAll('*')).forEach(function(el){
+              if((el.textContent||'').trim() === 'ยังไม่ได้เลือกแผน'){
+                el.textContent = 'แผนทีม';
+                el.classList.remove('text-rose-700','text-red-700');
+                el.classList.add('text-emerald-700');
+              }
+              if((el.textContent||'').indexOf('เลือกแผนเมื่อเริ่มใช้งาน') !== -1){
+                el.textContent = 'เข้าร่วมแผนทีมแล้ว';
+              }
+              if((el.textContent||'').indexOf('คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน') !== -1){
+                el.textContent = 'คุณได้รับสิทธิ์จากแผนทีมแล้ว สามารถเริ่มใช้งานได้ทันที';
+              }
+            });
+          });
+        }catch(e){}
+        return r;
+      };
+      window.openUserPlanSelector.__teamPlanLockFixWrapped = true;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    normalizeAcceptedTeamDir();
+    wrapAccept();
+    setTimeout(function(){ normalizeAcceptedTeamDir(); wrapAccept(); }, 400);
+    setTimeout(function(){ normalizeAcceptedTeamDir(); wrapAccept(); }, 1200);
+  });
+  document.addEventListener('click', function(){
+    setTimeout(function(){ normalizeAcceptedTeamDir(); wrapAccept(); }, 120);
+  }, true);
+  setInterval(function(){ normalizeAcceptedTeamDir(); wrapAccept(); }, 2000);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Plan Rights Popup Only
+     - ซ่อน checkbox ด้านนอก 3 อัน: เช็คชื่อได้ / Export ไฟล์ได้ / ใช้งานแบบทีมได้
+     - ให้ตั้งค่าเฉพาะใน Popup สิทธิ์แบบละเอียด
+     - input เดิมยังอยู่เพื่อให้ saveAdminPlanForm เดิมอ่านค่าได้
+     ========================================================= -->
+<style id="schoolhub-plan-rights-popup-only-style">
+/* ซ่อน label เดิมเฉพาะในฟอร์มแผน */
+#plan-sub-allow-attendance,
+#plan-sub-allow-export,
+#plan-sub-allow-team{
+  position:absolute!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  width:1px!important;
+  height:1px!important;
+}
+
+/* ซ่อน label ที่ครอบ checkbox เดิม */
+#plan-sub-allow-attendance:where(input) + *,
+#plan-sub-allow-export:where(input) + *,
+#plan-sub-allow-team:where(input) + *{
+  display:none!important;
+}
+
+#plan-sub-allow-attendance,
+#plan-sub-allow-export,
+#plan-sub-allow-team{
+  display:none!important;
+}
+#plan-sub-allow-attendance:checked,
+#plan-sub-allow-export:checked,
+#plan-sub-allow-team:checked{
+  display:none!important;
+}
+
+/* ใช้ :has ซ่อนทั้งแถว label เดิมใน browser ที่รองรับ */
+label:has(#plan-sub-allow-attendance),
+label:has(#plan-sub-allow-export),
+label:has(#plan-sub-allow-team){
+  display:none!important;
+}
+
+/* กรณี label เดิมอยู่ใน grid ให้ไม่เหลือช่องว่าง */
+#plan-sub-allow-attendance,
+#plan-sub-allow-export,
+#plan-sub-allow-team{
+  margin:0!important;
+}
+</style>
+<script id="schoolhub-plan-rights-popup-only-script">
+(function(){
+  if(window.__schoolhubPlanRightsPopupOnly) return;
+  window.__schoolhubPlanRightsPopupOnly = true;
+
+  function hideOuterThreeRights(){
+    ['plan-sub-allow-attendance','plan-sub-allow-export','plan-sub-allow-team'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(!el) return;
+
+      // ซ่อน label ที่ครอบ input เดิม แต่ไม่ลบ input ออก
+      var label=el.closest('label');
+      if(label){
+        label.style.display='none';
+        label.setAttribute('data-schoolhub-hidden-outer-right','1');
+      }
+
+      // ถ้าอยู่ในกล่องที่มีแค่ 3 สิทธิ์เดิม ให้ซ่อนกล่องนั้นหากไม่มีอย่างอื่นเหลือ
+      var parent=label && label.parentElement;
+      if(parent){
+        var text=(parent.textContent||'').replace(/\s+/g,' ').trim();
+        var onlyOld = text.includes('เช็คชื่อได้') && text.includes('Export ไฟล์ได้') && text.includes('ใช้งานแบบทีมได้');
+        var visibleChildren=[...parent.children].filter(function(c){
+          return c.style.display !== 'none' && !c.hasAttribute('data-schoolhub-hidden-outer-right');
+        });
+        if(onlyOld && visibleChildren.length===0){
+          parent.style.display='none';
+          parent.setAttribute('data-schoolhub-hidden-outer-right-group','1');
+        }
+      }
+    });
+  }
+
+  function syncPopupToHiddenInputs(){
+    // เมื่อ checkbox ใน popup เปลี่ยน ให้ sync กลับ input เดิมทันที
+    document.querySelectorAll('.spr-popup-check').forEach(function(chk){
+      chk.addEventListener('change', function(){
+        var id='plan-sub-'+chk.dataset.right;
+        var hidden=document.getElementById(id);
+        if(hidden) hidden.checked=chk.checked;
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    hideOuterThreeRights();
+    syncPopupToHiddenInputs();
+    setTimeout(hideOuterThreeRights,300);
+    setTimeout(hideOuterThreeRights,1000);
+  });
+  document.addEventListener('click', function(){
+    setTimeout(function(){
+      hideOuterThreeRights();
+      syncPopupToHiddenInputs();
+    },120);
+  }, true);
+  setInterval(hideOuterThreeRights,1500);
 })();
 </script>
 
