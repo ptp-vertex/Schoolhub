@@ -17850,6 +17850,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 <style id="schoolhub-custom-menu-system-style">
     #schoolhub-custom-menu-admin-view .shcm-field{width:100%;border:1px solid #e2e8f0;border-radius:1rem;padding:.85rem 1rem;outline:none;background:white;}
     #schoolhub-custom-menu-admin-view .shcm-field:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
+    #shcm-icon-preview i{line-height:1;}
+
     #schoolhub-custom-menu-user-view{overflow:visible!important;}
     #schoolhub-custom-menu-user-view .bg-white{overflow:visible!important;}
     #shcm-user-content{overflow:visible!important;}
@@ -17905,7 +17907,52 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
                   <h4 id="shcm-form-title" class="font-black text-slate-800 mb-3">เพิ่มเมนูใหม่</h4>
                   <div class="space-y-3">
                     <div><label class="text-xs font-bold text-slate-500">ชื่อเมนู</label><input id="shcm-title" class="shcm-field" placeholder="เช่น ระบบทะเบียน / คู่มือ / แบบฟอร์ม"></div>
-                    <div><label class="text-xs font-bold text-slate-500">ไอคอน Font Awesome</label><input id="shcm-icon" class="shcm-field" placeholder="เช่น fas fa-globe" value="fas fa-link"></div>
+                    <div>
+                      <label class="text-xs font-bold text-slate-500">ไอคอน Font Awesome</label>
+                      <div class="grid grid-cols-[64px_1fr] gap-2 items-center">
+                        <div id="shcm-icon-preview" class="h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-primary flex items-center justify-center text-2xl"><i class="fas fa-link"></i></div>
+                        <select id="shcm-icon-select" class="shcm-field">
+                          <option value="fas fa-link">🔗 ลิงก์ / Link</option>
+                          <option value="fas fa-globe">🌐 เว็บไซต์ / Website</option>
+                          <option value="fas fa-book">📘 คู่มือ / Book</option>
+                          <option value="fas fa-file-lines">📄 เอกสาร / Document</option>
+                          <option value="fas fa-file-pen">📝 แบบฟอร์ม / Form</option>
+                          <option value="fas fa-clipboard-list">📋 รายการ / Checklist</option>
+                          <option value="fas fa-chart-line">📈 รายงาน / Report</option>
+                          <option value="fas fa-graduation-cap">🎓 การศึกษา / Education</option>
+                          <option value="fas fa-school">🏫 โรงเรียน / School</option>
+                          <option value="fas fa-chalkboard-user">👨‍🏫 ครูผู้สอน / Teacher</option>
+                          <option value="fas fa-users">👥 ผู้ใช้งาน / Users</option>
+                          <option value="fas fa-user-graduate">🧑‍🎓 นักเรียน / Student</option>
+                          <option value="fas fa-calendar-days">📅 ปฏิทิน / Calendar</option>
+                          <option value="fas fa-clock">⏰ เวลา / Time</option>
+                          <option value="fas fa-star">⭐ คะแนน / Score</option>
+                          <option value="fas fa-medal">🏅 เกณฑ์เกรด / Grade</option>
+                          <option value="fas fa-download">⬇️ ดาวน์โหลด / Download</option>
+                          <option value="fas fa-upload">⬆️ อัปโหลด / Upload</option>
+                          <option value="fas fa-folder-open">📂 ไฟล์ / Folder</option>
+                          <option value="fas fa-image">🖼️ รูปภาพ / Image</option>
+                          <option value="fas fa-video">🎥 วิดีโอ / Video</option>
+                          <option value="fas fa-bullhorn">📢 ประกาศ / Announcement</option>
+                          <option value="fas fa-comments">💬 ติดต่อ / Chat</option>
+                          <option value="fas fa-envelope">✉️ อีเมล / Email</option>
+                          <option value="fas fa-phone">☎️ โทรศัพท์ / Phone</option>
+                          <option value="fas fa-location-dot">📍 สถานที่ / Location</option>
+                          <option value="fas fa-truck-fast">🚚 โลจิสติกส์ / Logistics</option>
+                          <option value="fas fa-route">🛣️ เส้นทาง / Route</option>
+                          <option value="fas fa-suitcase-rolling">🧳 ท่องเที่ยว / Tourism</option>
+                          <option value="fas fa-passport">🛂 เอกสารเดินทาง / Passport</option>
+                          <option value="fas fa-language">🌏 ภาษา / Language</option>
+                          <option value="fas fa-handshake">🤝 ความร่วมมือ / Cooperation</option>
+                          <option value="fas fa-gear">⚙️ ตั้งค่า / Settings</option>
+                          <option value="fas fa-shield-halved">🛡️ สิทธิ์ / Permission</option>
+                          <option value="fas fa-lock">🔒 ล็อก / Lock</option>
+                          <option value="fas fa-qrcode">▦ QR Code</option>
+                          <option value="custom">กำหนดเอง...</option>
+                        </select>
+                      </div>
+                      <input id="shcm-icon" class="shcm-field mt-2" placeholder="หรือพิมพ์เอง เช่น fas fa-globe" value="fas fa-link">
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                       <div><label class="text-xs font-bold text-slate-500">ประเภทการฝัง</label><select id="shcm-type" class="shcm-field"><option value="url">ฝังเป็นเว็บ URL</option><option value="html">ฝังเป็นโค้ด HTML</option></select></div>
                       <div><label class="text-xs font-bold text-slate-500">ลำดับ</label><input id="shcm-order" type="number" class="shcm-field" value="99"></div>
@@ -17950,6 +17997,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
         document.getElementById('shcm-reset-btn')?.addEventListener('click', resetForm);
         document.getElementById('shcm-save-btn')?.addEventListener('click', saveMenu);
         document.getElementById('shcm-type')?.addEventListener('change', syncFormType);
+        document.getElementById('shcm-icon-select')?.addEventListener('change', setIconFromPicker);
+        document.getElementById('shcm-icon')?.addEventListener('input', syncIconPicker);
       }
       if(!document.getElementById('nav-admin-custom-menus')){
         const adminPlans = document.getElementById('nav-admin-plans');
@@ -18012,6 +18061,26 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       document.getElementById('shcm-url')?.closest('div')?.classList.toggle('hidden', type !== 'url');
       document.getElementById('shcm-html')?.closest('div')?.classList.toggle('hidden', type !== 'html');
     }
+    function syncIconPicker(){
+      const input=document.getElementById('shcm-icon');
+      const select=document.getElementById('shcm-icon-select');
+      const preview=document.getElementById('shcm-icon-preview');
+      const val=(input?.value||'fas fa-link').trim() || 'fas fa-link';
+      if(preview) preview.innerHTML = `<i class="${esc(val)}"></i>`;
+      if(select){
+        const found=[...select.options].some(o=>o.value===val);
+        select.value = found ? val : 'custom';
+      }
+    }
+    function setIconFromPicker(){
+      const select=document.getElementById('shcm-icon-select');
+      const input=document.getElementById('shcm-icon');
+      if(!select || !input) return;
+      if(select.value !== 'custom') input.value = select.value;
+      input.classList.toggle('hidden', select.value !== 'custom');
+      syncIconPicker();
+      if(select.value === 'custom') input.focus();
+    }
     function resetForm(){
       editingMenuId=null;
       const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v;};
@@ -18019,7 +18088,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const active=document.getElementById('shcm-active'); if(active) active.checked=true;
       const show=document.getElementById('shcm-show-users'); if(show) show.checked=true;
       const t=document.getElementById('shcm-form-title'); if(t) t.textContent='เพิ่มเมนูใหม่';
-      renderPlanChecks([]); syncFormType();
+      renderPlanChecks([]); syncFormType(); syncIconPicker(); setIconFromPicker();
     }
     async function saveAll(){ await fs.setDoc(menuDoc, {items:customMenus, updatedAt:Date.now()}, {merge:true}); }
     async function saveMenu(){
@@ -18053,7 +18122,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const active=document.getElementById('shcm-active'); if(active) active.checked=m.active!==false;
       const show=document.getElementById('shcm-show-users'); if(show) show.checked=m.showToUsers!==false;
       const t=document.getElementById('shcm-form-title'); if(t) t.textContent='แก้ไขเมนู';
-      renderPlanChecks(m.allowedPlanIds||[]); syncFormType(); document.getElementById('shcm-title')?.focus();
+      renderPlanChecks(m.allowedPlanIds||[]); syncFormType(); syncIconPicker(); setIconFromPicker(); document.getElementById('shcm-title')?.focus();
     };
     window.deleteCustomMenu = function(id){
       const run=async()=>{ customMenus=customMenus.filter(x=>x.id!==id); try{ await saveAll(); renderAdmin(); renderUserMenuButtons(); alertBox('ลบแล้ว','ลบเมนูเรียบร้อย'); }catch(e){ alertBox('ลบไม่ได้', e.message || String(e), true); } };
@@ -18253,6 +18322,112 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub custom embedded web menu admin nav restore
+     - กันปุ่ม "จัดการเว็บฝัง / เมนูหลักเพิ่มเติม" หายเมื่อเมนูแอดมินถูก render ใหม่
+     ========================================================= -->
+<style id="schoolhub-custom-menu-admin-nav-restore-style">
+#nav-admin-custom-menus,
+#mobile-nav-admin-custom-menus{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+</style>
+<script id="schoolhub-custom-menu-admin-nav-restore-script">
+(function(){
+  if(window.__schoolhubCustomMenuAdminNavRestore) return;
+  window.__schoolhubCustomMenuAdminNavRestore = true;
+
+  function isAdminLike(){
+    try{
+      if(window.isAdmin === true) return true;
+      if(document.getElementById('nav-admin-plans')) return true;
+      if(document.querySelector('[data-target="admin-plans"]')) return true;
+      if(document.querySelector('#mobile-menu [onclick*="admin-plans"]')) return true;
+    }catch(e){}
+    return false;
+  }
+
+  function openAdminCustomMenus(){
+    if(typeof window.openCustomMenuAdmin === 'function'){
+      window.openCustomMenuAdmin();
+      return;
+    }
+    if(typeof window.showCustomAlert === 'function'){
+      window.showCustomAlert('ระบบยังโหลดไม่เสร็จ','กรุณากดอีกครั้งหลังจากข้อมูลโหลดเสร็จ',true);
+    }else{
+      alert('ระบบยังโหลดไม่เสร็จ กรุณากดอีกครั้ง');
+    }
+  }
+  window.schoolhubOpenCustomMenuAdminSafe = openAdminCustomMenus;
+
+  function makeDesktopButton(){
+    return '<button id="nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-fuchsia-600 hover:bg-fuchsia-50 mt-2" data-target="custom-menus"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  }
+
+  function makeMobileButton(){
+    return '<button id="mobile-nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-fuchsia-600 bg-fuchsia-50 font-medium"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  }
+
+  function restoreAdminCustomMenuButton(){
+    if(!isAdminLike()) return;
+
+    var desktopBtn = document.getElementById('nav-admin-custom-menus');
+    if(!desktopBtn){
+      var anchor = document.getElementById('nav-admin-plans') ||
+                   document.querySelector('[data-target="admin-plans"]') ||
+                   document.getElementById('nav-admin-announcements') ||
+                   document.querySelector('nav .text-emerald-600, nav .text-indigo-600, nav .text-rose-600');
+      if(anchor && anchor.insertAdjacentHTML){
+        anchor.insertAdjacentHTML('afterend', makeDesktopButton());
+      }else{
+        var nav = document.querySelector('aside nav div.space-y-2') || document.querySelector('aside nav') || document.querySelector('nav');
+        if(nav && nav.insertAdjacentHTML) nav.insertAdjacentHTML('beforeend', makeDesktopButton());
+      }
+    }else{
+      desktopBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
+      desktopBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe()');
+      desktopBtn.classList.remove('hidden');
+      desktopBtn.style.display = 'flex';
+    }
+
+    var mobileBtn = document.getElementById('mobile-nav-admin-custom-menus');
+    if(!mobileBtn){
+      var mobileAnchor = document.querySelector('#mobile-menu [onclick*="admin-plans"]') ||
+                         document.querySelector('#mobile-menu .text-emerald-600') ||
+                         document.querySelector('#mobile-menu .text-rose-600');
+      if(mobileAnchor && mobileAnchor.insertAdjacentHTML){
+        mobileAnchor.insertAdjacentHTML('afterend', makeMobileButton());
+      }else{
+        var mobileBox = document.querySelector('#mobile-menu .space-y-2') || document.querySelector('#mobile-menu div');
+        if(mobileBox && mobileBox.insertAdjacentHTML) mobileBox.insertAdjacentHTML('beforeend', makeMobileButton());
+      }
+    }else{
+      mobileBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
+      mobileBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}');
+      mobileBtn.classList.remove('hidden');
+      mobileBtn.style.display = 'flex';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    restoreAdminCustomMenuButton();
+    setTimeout(restoreAdminCustomMenuButton, 300);
+    setTimeout(restoreAdminCustomMenuButton, 1000);
+    setTimeout(restoreAdminCustomMenuButton, 2500);
+  });
+
+  document.addEventListener('click', function(){
+    setTimeout(restoreAdminCustomMenuButton, 120);
+  }, true);
+
+  setInterval(restoreAdminCustomMenuButton, 1200);
+})();
+</script>
+
 </body>');
       return htmlText + autoScript;
     }
@@ -18276,7 +18451,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       try{ const s=await fs.getDoc(plansDoc); if(s.exists()) customPlans = Array.isArray(s.data().items) ? s.data().items : []; }catch(e){ console.warn('custom menu load plans failed',e); }
     }
     function start(){
-      ensureViews(); resetForm();
+      ensureViews(); resetForm(); setTimeout(syncIconPicker,100);
       fs.onSnapshot(menuDoc, snap=>{ customMenus = snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : []; ensureViews(); renderUserMenuButtons(); renderAdmin(); }, err=>console.warn('custom menu snapshot failed',err));
       fs.onSnapshot(plansDoc, snap=>{ customPlans = snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : []; renderPlanChecks(editingMenuId ? (customMenus.find(x=>x.id===editingMenuId)?.allowedPlanIds||[]) : []); renderAdmin(); renderUserMenuButtons(); }, err=>console.warn('custom menu plans snapshot failed',err));
       setInterval(renderUserMenuButtons, 3000);
@@ -18436,6 +18611,112 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       else modal.classList.add('hidden');
     }
   }, true);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub custom embedded web menu admin nav restore
+     - กันปุ่ม "จัดการเว็บฝัง / เมนูหลักเพิ่มเติม" หายเมื่อเมนูแอดมินถูก render ใหม่
+     ========================================================= -->
+<style id="schoolhub-custom-menu-admin-nav-restore-style">
+#nav-admin-custom-menus,
+#mobile-nav-admin-custom-menus{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+</style>
+<script id="schoolhub-custom-menu-admin-nav-restore-script">
+(function(){
+  if(window.__schoolhubCustomMenuAdminNavRestore) return;
+  window.__schoolhubCustomMenuAdminNavRestore = true;
+
+  function isAdminLike(){
+    try{
+      if(window.isAdmin === true) return true;
+      if(document.getElementById('nav-admin-plans')) return true;
+      if(document.querySelector('[data-target="admin-plans"]')) return true;
+      if(document.querySelector('#mobile-menu [onclick*="admin-plans"]')) return true;
+    }catch(e){}
+    return false;
+  }
+
+  function openAdminCustomMenus(){
+    if(typeof window.openCustomMenuAdmin === 'function'){
+      window.openCustomMenuAdmin();
+      return;
+    }
+    if(typeof window.showCustomAlert === 'function'){
+      window.showCustomAlert('ระบบยังโหลดไม่เสร็จ','กรุณากดอีกครั้งหลังจากข้อมูลโหลดเสร็จ',true);
+    }else{
+      alert('ระบบยังโหลดไม่เสร็จ กรุณากดอีกครั้ง');
+    }
+  }
+  window.schoolhubOpenCustomMenuAdminSafe = openAdminCustomMenus;
+
+  function makeDesktopButton(){
+    return '<button id="nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-fuchsia-600 hover:bg-fuchsia-50 mt-2" data-target="custom-menus"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  }
+
+  function makeMobileButton(){
+    return '<button id="mobile-nav-admin-custom-menus" onclick="schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-fuchsia-600 bg-fuchsia-50 font-medium"><i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง</button>';
+  }
+
+  function restoreAdminCustomMenuButton(){
+    if(!isAdminLike()) return;
+
+    var desktopBtn = document.getElementById('nav-admin-custom-menus');
+    if(!desktopBtn){
+      var anchor = document.getElementById('nav-admin-plans') ||
+                   document.querySelector('[data-target="admin-plans"]') ||
+                   document.getElementById('nav-admin-announcements') ||
+                   document.querySelector('nav .text-emerald-600, nav .text-indigo-600, nav .text-rose-600');
+      if(anchor && anchor.insertAdjacentHTML){
+        anchor.insertAdjacentHTML('afterend', makeDesktopButton());
+      }else{
+        var nav = document.querySelector('aside nav div.space-y-2') || document.querySelector('aside nav') || document.querySelector('nav');
+        if(nav && nav.insertAdjacentHTML) nav.insertAdjacentHTML('beforeend', makeDesktopButton());
+      }
+    }else{
+      desktopBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
+      desktopBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe()');
+      desktopBtn.classList.remove('hidden');
+      desktopBtn.style.display = 'flex';
+    }
+
+    var mobileBtn = document.getElementById('mobile-nav-admin-custom-menus');
+    if(!mobileBtn){
+      var mobileAnchor = document.querySelector('#mobile-menu [onclick*="admin-plans"]') ||
+                         document.querySelector('#mobile-menu .text-emerald-600') ||
+                         document.querySelector('#mobile-menu .text-rose-600');
+      if(mobileAnchor && mobileAnchor.insertAdjacentHTML){
+        mobileAnchor.insertAdjacentHTML('afterend', makeMobileButton());
+      }else{
+        var mobileBox = document.querySelector('#mobile-menu .space-y-2') || document.querySelector('#mobile-menu div');
+        if(mobileBox && mobileBox.insertAdjacentHTML) mobileBox.insertAdjacentHTML('beforeend', makeMobileButton());
+      }
+    }else{
+      mobileBtn.innerHTML = '<i class="fas fa-puzzle-piece w-5 text-center"></i> จัดการเว็บฝัง';
+      mobileBtn.setAttribute('onclick','schoolhubOpenCustomMenuAdminSafe(); try{toggleMobileMenu&&toggleMobileMenu()}catch(e){}');
+      mobileBtn.classList.remove('hidden');
+      mobileBtn.style.display = 'flex';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    restoreAdminCustomMenuButton();
+    setTimeout(restoreAdminCustomMenuButton, 300);
+    setTimeout(restoreAdminCustomMenuButton, 1000);
+    setTimeout(restoreAdminCustomMenuButton, 2500);
+  });
+
+  document.addEventListener('click', function(){
+    setTimeout(restoreAdminCustomMenuButton, 120);
+  }, true);
+
+  setInterval(restoreAdminCustomMenuButton, 1200);
 })();
 </script>
 
