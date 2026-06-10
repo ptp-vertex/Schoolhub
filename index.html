@@ -20731,5 +20731,418 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub Plan Card Auto Features Display Fix
+     - ให้กล่องแผนการใช้งานจริง แสดงรายการสิทธิ์อัตโนมัติจากการตั้งค่า
+     - ข้อความที่แอดมินพิมพ์เองจะแสดงบนสุด
+     - ถ้าไม่ได้พิมพ์เอง จะแสดงเฉพาะสิทธิ์จากการตั้งค่า
+     ========================================================= -->
+<style id="schoolhub-plan-card-auto-features-display-style">
+.schoolhub-auto-plan-features{
+  margin-top:1rem;
+  display:flex;
+  flex-direction:column;
+  gap:.55rem;
+}
+.schoolhub-auto-plan-feature{
+  display:flex;
+  align-items:flex-start;
+  gap:.55rem;
+  font-size:.86rem;
+  line-height:1.45;
+  color:#334155;
+  font-weight:700;
+}
+.schoolhub-auto-plan-feature i{
+  color:#10b981;
+  margin-top:.18rem;
+  width:1rem;
+  text-align:center;
+  flex:0 0 auto;
+}
+.schoolhub-auto-plan-feature.manual i{
+  color:#4f46e5;
+}
+.schoolhub-auto-plan-feature-divider{
+  height:1px;
+  background:#e2e8f0;
+  margin:.15rem 0;
+}
+</style>
+<script id="schoolhub-plan-card-auto-features-display-script">
+(function(){
+  if(window.__schoolhubPlanCardAutoFeaturesDisplayFix) return;
+  window.__schoolhubPlanCardAutoFeaturesDisplayFix = true;
+
+  const RIGHTS = [
+    ['allowCourses','เพิ่ม/แก้ไขรายวิชา'],
+    ['allowStudents','เพิ่ม/แก้ไขนักเรียน'],
+    ['allowAttendance','เช็คชื่อเข้าเรียน'],
+    ['allowScores','บันทึกคะแนน'],
+    ['allowPlanScores','จัดการแผนคะแนน'],
+    ['allowGradeCriteria','ตั้งค่าเกณฑ์เกรด'],
+    ['allowStudentShare','แชร์ให้นักเรียน'],
+    ['allowExport','Export Excel'],
+    ['allowTeam','ใช้งานแบบทีม'],
+    ['allowEditData','แก้ไขข้อมูล'],
+    ['allowDeleteData','ลบข้อมูล'],
+    ['allowReports','รายงาน/ภาพรวม']
+  ];
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+  function n(v,fb){v=Number(v);return Number.isFinite(v)?v:(fb||0);}
+  function unique(arr){
+    var seen=new Set(), out=[];
+    (arr||[]).forEach(function(x){
+      x=String(x||'').trim();
+      if(!x) return;
+      var key=x.replace(/^✓\s*/,'').trim();
+      if(seen.has(key)) return;
+      seen.add(key); out.push(x);
+    });
+    return out;
+  }
+  function manualFeatures(plan){
+    if(Array.isArray(plan.manualFeatures)) return plan.manualFeatures.map(String).map(x=>x.trim()).filter(Boolean);
+    // ถ้า features เดิมมี ✓ นำหน้า ให้ถือว่าเป็น auto ไม่ใช่ข้อความพิมพ์เอง
+    return (plan.features||[]).map(String).map(x=>x.trim()).filter(x=>x && !x.startsWith('✓'));
+  }
+  function autoFeatures(plan){
+    plan=plan||{};
+    var out=[];
+    if(plan.courseLimit !== undefined) out.push(n(plan.courseLimit,0) ? ('เพิ่มรายวิชาได้ '+n(plan.courseLimit,0)+' วิชา') : 'เพิ่มรายวิชาไม่จำกัด');
+    if(plan.studentLimit !== undefined) out.push(n(plan.studentLimit,0) ? ('นักเรียนสูงสุด '+n(plan.studentLimit,0)+' คน') : 'นักเรียนไม่จำกัด');
+    if(plan.weekLimit !== undefined || plan.maxWeeks !== undefined) out.push('ใช้งานได้ '+n(plan.weekLimit || plan.maxWeeks,20)+' สัปดาห์');
+    RIGHTS.forEach(function(r){
+      var id=r[0], label=r[1];
+      var enabled;
+      if(id==='allowTeam') enabled = plan.allowTeam === true || n(plan.teamMemberLimit||plan.maxTeamMembers||plan.teamLimit,1) >= 2;
+      else if(plan[id] !== undefined) enabled = plan[id] !== false;
+      else enabled = DEFAULT_TRUE.has(id);
+      if(enabled) out.push(label);
+    });
+    return unique(out);
+  }
+  function finalFeatures(plan){
+    return {manual: unique(manualFeatures(plan)), auto: unique(autoFeatures(plan))};
+  }
+  function featureHtml(plan){
+    var f=finalFeatures(plan);
+    var html='';
+    if(f.manual.length){
+      html += f.manual.map(function(x){return '<div class="schoolhub-auto-plan-feature manual"><i class="fas fa-star"></i><span>'+esc(x)+'</span></div>';}).join('');
+      if(f.auto.length) html += '<div class="schoolhub-auto-plan-feature-divider"></div>';
+    }
+    html += f.auto.map(function(x){return '<div class="schoolhub-auto-plan-feature"><i class="fas fa-check"></i><span>'+esc(x)+'</span></div>';}).join('');
+    return '<div class="schoolhub-auto-plan-features">'+html+'</div>';
+  }
+  window.schoolhubBuildPlanFeaturesHtml = featureHtml;
+  window.schoolhubGetPlanDisplayFeatures = function(plan){
+    var f=finalFeatures(plan);
+    return f.manual.concat(f.auto.map(function(x){return '✓ '+x;}));
+  };
+
+  function patchPlanObjects(){
+    try{
+      if(!Array.isArray(window.subscriptionPlans)) return;
+      window.subscriptionPlans = window.subscriptionPlans.map(function(p){
+        p = Object.assign({}, p);
+        var f=finalFeatures(p);
+        p.manualFeatures = f.manual;
+        p.autoFeatures = f.auto.map(function(x){return '✓ '+x;});
+        p.features = f.manual.concat(p.autoFeatures);
+        return p;
+      });
+      try{ localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(window.subscriptionPlans)); }catch(e){}
+    }catch(e){}
+  }
+
+  function replaceCardFeatureLists(){
+    var plans = Array.isArray(window.subscriptionPlans) ? window.subscriptionPlans : [];
+    if(!plans.length) return;
+
+    // หา card จากชื่อแผน แล้วแทนรายการ features ที่ render เดิม
+    plans.forEach(function(p){
+      var name=String(p.name||'').trim();
+      if(!name) return;
+      document.querySelectorAll('.pricing-card, #user-plan-list > div, #landing-plans-section .rounded-\\[2rem\\], .plan-card').forEach(function(card){
+        if(!card || card.dataset.schoolhubAutoFeaturesPatched === '1') return;
+        if((card.textContent||'').indexOf(name) === -1) return;
+
+        // ลบ list เดิมที่เป็นรายการสิทธิ์ใน card เท่านั้น
+        var oldLists = Array.from(card.querySelectorAll('ul, .space-y-2, .space-y-3')).filter(function(el){
+          var txt=el.textContent||'';
+          return /เช็คชื่อ|บันทึกคะแนน|Export|แชร์|รายวิชา|นักเรียน|สิทธิ์|✓|เพิ่ม\/แก้ไข/.test(txt);
+        });
+        oldLists.forEach(function(el){ el.remove(); });
+
+        var btn = Array.from(card.querySelectorAll('button,a')).slice(-1)[0];
+        var box=document.createElement('div');
+        box.innerHTML=featureHtml(p);
+        if(btn && btn.parentElement === card) card.insertBefore(box.firstElementChild, btn);
+        else if(btn) btn.insertAdjacentElement('beforebegin', box.firstElementChild);
+        else card.insertAdjacentHTML('beforeend', featureHtml(p));
+        card.dataset.schoolhubAutoFeaturesPatched = '1';
+      });
+    });
+  }
+
+  function wrapRender(fnName){
+    var old=window[fnName];
+    if(typeof old !== 'function' || old.__autoFeatureDisplayWrapped) return;
+    window[fnName]=function(){
+      patchPlanObjects();
+      var r=old.apply(this,arguments);
+      setTimeout(function(){patchPlanObjects(); replaceCardFeatureLists();},50);
+      setTimeout(function(){patchPlanObjects(); replaceCardFeatureLists();},250);
+      return r;
+    };
+    window[fnName].__autoFeatureDisplayWrapped=true;
+  }
+
+  function init(){
+    patchPlanObjects();
+    wrapRender('renderLandingPlans');
+    wrapRender('renderUserPlans');
+    wrapRender('renderAdminPlans');
+    replaceCardFeatureLists();
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    init();
+    setTimeout(init,400);
+    setTimeout(init,1200);
+  });
+  document.addEventListener('click',function(){setTimeout(init,150);},true);
+  document.addEventListener('change',function(){setTimeout(init,150);},true);
+  setInterval(init,2000);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Shared Teacher Readonly Hide Edit Buttons
+     - ถ้าจัดการครูในวิชาเลือก "ดูอย่างเดียว"
+     - ซ่อนปุ่มแก้ไข/ลบ/จัดการแผน/เกณฑ์/ครู ในหน้าเลือกรายวิชาและหน้ารายวิชา
+     - ยังเข้าไปดูข้อมูลรายวิชาได้ตามปกติ
+     ========================================================= -->
+<style id="schoolhub-shared-teacher-readonly-hide-edit-style">
+.schoolhub-readonly-shared-course .schoolhub-edit-action,
+.schoolhub-readonly-shared-course button[data-edit-action="true"],
+.schoolhub-readonly-shared-course a[data-edit-action="true"]{
+  display:none!important;
+}
+.schoolhub-readonly-shared-course .readonly-badge{
+  display:inline-flex!important;
+}
+.readonly-badge{
+  display:none;
+  align-items:center;
+  gap:.35rem;
+  border:1px solid #bfdbfe;
+  background:#eff6ff;
+  color:#1d4ed8;
+  border-radius:999px;
+  padding:.25rem .55rem;
+  font-size:.72rem;
+  font-weight:900;
+}
+</style>
+<script id="schoolhub-shared-teacher-readonly-hide-edit-script">
+(function(){
+  if(window.__schoolhubSharedTeacherReadonlyHideEdit) return;
+  window.__schoolhubSharedTeacherReadonlyHideEdit = true;
+
+  function currentEmail(){
+    try{
+      return String((window.currentUser && window.currentUser.email) || (auth && auth.currentUser && auth.currentUser.email) || '').trim().toLowerCase();
+    }catch(e){return '';}
+  }
+
+  function isReadonlyShare(course){
+    if(!course) return false;
+    var email=currentEmail();
+    var uid='';
+    try{ uid=String((window.currentUser && window.currentUser.uid) || (auth && auth.currentUser && auth.currentUser.uid) || ''); }catch(e){}
+
+    // owner ไม่ใช่ readonly
+    var owner = String(course.ownerEmail || course.teacherEmail || course.createdByEmail || course.userEmail || '').trim().toLowerCase();
+    var ownerUid = String(course.ownerUid || course.createdByUid || course.userId || '').trim();
+    if((email && owner && email===owner) || (uid && ownerUid && uid===ownerUid)) return false;
+
+    var list = []
+      .concat(Array.isArray(course.sharedTeachers) ? course.sharedTeachers : [])
+      .concat(Array.isArray(course.teachers) ? course.teachers : [])
+      .concat(Array.isArray(course.courseTeachers) ? course.courseTeachers : [])
+      .concat(Array.isArray(course.sharedWith) ? course.sharedWith : []);
+
+    var me=list.find(function(x){
+      x=x||{};
+      var em=String(x.email||x.userEmail||x.teacherEmail||'').trim().toLowerCase();
+      var id=String(x.uid||x.userId||'').trim();
+      return (email && em===email) || (uid && id===uid);
+    });
+
+    if(!me) {
+      // บางระบบใส่ field ง่าย ๆ
+      if(course.shareMode === 'readonly' || course.permission === 'readonly' || course.role === 'viewer') return true;
+      return false;
+    }
+
+    var role=String(me.role||me.permission||me.access||me.mode||'').toLowerCase();
+    var canEdit = me.canEdit === true || me.edit === true || me.allowEdit === true || role==='editor' || role==='co_teacher' || role==='teacher';
+    var readonly = me.readOnly === true || me.readonly === true || me.canEdit === false || role==='viewer' || role==='view' || role==='readonly' || role==='read_only' || role==='ดูอย่างเดียว';
+
+    return readonly && !canEdit;
+  }
+
+  window.schoolhubIsReadonlySharedCourse = isReadonlyShare;
+
+  function getCourseIdFromCard(card){
+    if(!card) return '';
+    var s = (card.getAttribute('onclick')||'') + ' ' + card.innerHTML;
+    var m = s.match(/openCourseDetail\(['"]([^'"]+)['"]\)/) || s.match(/editCourse\(['"]([^'"]+)['"]\)/) || s.match(/deleteCourse\(['"]([^'"]+)['"]\)/);
+    if(m) return m[1];
+    return card.dataset.courseId || card.getAttribute('data-course-id') || '';
+  }
+
+  function courseById(id){
+    try{return (window.state && Array.isArray(state.courses) ? state.courses : []).find(function(c){return String(c.id)===String(id);});}catch(e){return null;}
+  }
+
+  function markReadonlyCourseCards(){
+    var courses = [];
+    try{courses = (window.state && Array.isArray(state.courses)) ? state.courses : [];}catch(e){}
+    if(!courses.length) return;
+
+    document.querySelectorAll('#course-grid > div, #course-grid .course-card, [data-course-id]').forEach(function(card){
+      var id=getCourseIdFromCard(card);
+      var c=courseById(id);
+      if(!c){
+        var txt=card.textContent||'';
+        c=courses.find(function(x){return txt.indexOf(x.name||'__')!==-1 || txt.indexOf(x.code||'__')!==-1;});
+      }
+      if(!c) return;
+      var ro=isReadonlyShare(c);
+      card.classList.toggle('schoolhub-readonly-shared-course', ro);
+      card.setAttribute('data-readonly-share', ro ? 'true' : 'false');
+
+      if(ro && !card.querySelector('.readonly-badge')){
+        var h=card.querySelector('h3, .font-bold, .font-black') || card.firstElementChild;
+        if(h) h.insertAdjacentHTML('afterend','<span class="readonly-badge"><i class="fas fa-eye"></i>ดูอย่างเดียว</span>');
+      }
+
+      if(ro){
+        card.querySelectorAll('button,a').forEach(function(btn){
+          var s=(btn.getAttribute('onclick')||'')+' '+(btn.textContent||'')+' '+(btn.id||'')+' '+(btn.className||'');
+          if(/editCourse|deleteCourse|แก้ไข|ลบ|จัดการครู|เกณฑ์เกรด|แผนคะแนน|เพิ่ม/i.test(s)){
+            btn.classList.add('schoolhub-edit-action');
+            btn.setAttribute('data-edit-action','true');
+            btn.style.display='none';
+          }
+        });
+      }
+    });
+  }
+
+  function hideReadonlyDetailActions(){
+    var cid = window.currentActiveCourseId || '';
+    var c=courseById(cid);
+    if(!isReadonlyShare(c)) return;
+
+    document.querySelectorAll('#view-course-detail button,#view-course-detail a,#header-actions button,#header-actions a').forEach(function(btn){
+      var s=(btn.getAttribute('onclick')||'')+' '+(btn.textContent||'')+' '+(btn.id||'')+' '+(btn.className||'');
+      if(/editCourse|deleteCourse|openPlanModalForCurrentCourse|openGradeCriteria|CourseTeachers|จัดการครู|จัดการแผน|เกณฑ์เกรด|แก้ไข|ลบ|เพิ่ม/i.test(s)){
+        // ปุ่มกลับไม่ซ่อน
+        if(/course-back-btn|กลับ/.test(s)) return;
+        btn.classList.add('schoolhub-edit-action');
+        btn.setAttribute('data-edit-action','true');
+        btn.style.display='none';
+      }
+    });
+  }
+
+  function patchRender(){
+    if(typeof window.renderCourses === 'function' && !window.renderCourses.__readonlyShareWrapped){
+      var old=window.renderCourses;
+      window.renderCourses=function(){
+        var r=old.apply(this,arguments);
+        setTimeout(markReadonlyCourseCards,40);
+        setTimeout(markReadonlyCourseCards,250);
+        return r;
+      };
+      window.renderCourses.__readonlyShareWrapped=true;
+    }
+    if(typeof window.renderCourseGrid === 'function' && !window.renderCourseGrid.__readonlyShareWrapped){
+      var old2=window.renderCourseGrid;
+      window.renderCourseGrid=function(){
+        var r=old2.apply(this,arguments);
+        setTimeout(markReadonlyCourseCards,40);
+        setTimeout(markReadonlyCourseCards,250);
+        return r;
+      };
+      window.renderCourseGrid.__readonlyShareWrapped=true;
+    }
+    if(typeof window.openCourseDetail === 'function' && !window.openCourseDetail.__readonlyShareWrapped){
+      var oldOpen=window.openCourseDetail;
+      window.openCourseDetail=function(){
+        var r=oldOpen.apply(this,arguments);
+        setTimeout(function(){markReadonlyCourseCards(); hideReadonlyDetailActions();},60);
+        setTimeout(hideReadonlyDetailActions,300);
+        return r;
+      };
+      window.openCourseDetail.__readonlyShareWrapped=true;
+    }
+  }
+
+  function blockReadonlyEdit(action){
+    var cid = window.currentActiveCourseId || '';
+    var c=courseById(cid);
+    if(!isReadonlyShare(c)) return false;
+    if(typeof window.showCustomAlert === 'function') window.showCustomAlert('ดูได้อย่างเดียว','คุณมีสิทธิ์ดูรายวิชานี้เท่านั้น ไม่สามารถ'+(action||'แก้ไขข้อมูล')+'ได้',true);
+    else alert('คุณมีสิทธิ์ดูรายวิชานี้เท่านั้น');
+    return true;
+  }
+
+  function wrapEditFn(name, label){
+    var old=window[name];
+    if(typeof old !== 'function' || old.__readonlyShareWrapped) return;
+    window[name]=function(){
+      if(blockReadonlyEdit(label)) return false;
+      return old.apply(this,arguments);
+    };
+    window[name].__readonlyShareWrapped=true;
+  }
+
+  function init(){
+    patchRender();
+    ['editCourse','deleteCourse','openPlanModalForCurrentCourse','openGradeCriteriaModalForCurrentCourse','openCourseTeachers','openCourseTeachersModal','addCourseTeacher','saveCourseTeachers','saveCourse','handleAddPlan','editPlan','deletePlan','saveGradeCriteria'].forEach(function(n){wrapEditFn(n,'แก้ไขข้อมูล');});
+    markReadonlyCourseCards();
+    hideReadonlyDetailActions();
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    init();
+    setTimeout(init,500);
+    setTimeout(init,1500);
+  });
+  document.addEventListener('click',function(e){
+    var btn=e.target && e.target.closest ? e.target.closest('button,a') : null;
+    if(btn){
+      var card=btn.closest('[data-readonly-share="true"],.schoolhub-readonly-shared-course');
+      var s=(btn.getAttribute('onclick')||'')+' '+(btn.textContent||'')+' '+(btn.id||'')+' '+(btn.className||'');
+      if(card && /editCourse|deleteCourse|แก้ไข|ลบ|จัดการครู|เกณฑ์เกรด|แผนคะแนน|เพิ่ม/i.test(s)){
+        e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+        return false;
+      }
+    }
+    setTimeout(init,120);
+  },true);
+  setInterval(init,2000);
+})();
+</script>
+
 </body>
 </html>
