@@ -18100,7 +18100,160 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     function makeSrcDoc(rawHtml){
       const autoScript = `<script>(function(){function h(){var b=document.body,e=document.documentElement;var v=Math.max(b?b.scrollHeight:0,e?e.scrollHeight:0,b?b.offsetHeight:0,e?e.offsetHeight:0,b?b.clientHeight:0,e?e.clientHeight:0);parent.postMessage({type:'SHCM_FRAME_HEIGHT',height:v},'*');}document.documentElement.style.overflow='hidden';document.addEventListener('DOMContentLoaded',h);window.addEventListener('load',h);window.addEventListener('resize',h);setInterval(h,600);try{new ResizeObserver(h).observe(document.body);}catch(e){}})();<\/script>`;
       const htmlText = String(rawHtml || '');
-      if(/<\/body>/i.test(htmlText)) return htmlText.replace(/<\/body>/i, autoScript + '</body>');
+      if(/<\/body>/i.test(htmlText)) return htmlText.replace(/<\/body>/i, autoScript + '
+<!-- =========================================================
+     SchoolHub score plan mobile click final fix
+     - แก้ปุ่ม "แผนคะแนน" มือถือ และ "จัดการแผนเก็บคะแนน" บนหน้าคะแนนให้กดติด
+     - กัน overlay / patch อื่นทับ event
+     - เปิด popup แผนคะแนนตรง ๆ และยก popup ขึ้นหน้าสุด
+     ========================================================= -->
+<style id="schoolhub-score-plan-mobile-click-final-fix-style">
+@media (max-width:767px){
+  button[onclick*="openPlanModalForCurrentCourse"],
+  #course-tab-scores button[onclick*="openPlanModalForCurrentCourse"],
+  .mobile-course-tab-btn + button[onclick*="openPlanModalForCurrentCourse"]{
+    pointer-events:auto!important;
+    position:relative!important;
+    z-index:50!important;
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:rgba(79,70,229,.16)!important;
+  }
+  #plan-modal{
+    z-index:2147483647!important;
+  }
+  #plan-modal:not(.hidden){
+    display:flex!important;
+    pointer-events:auto!important;
+  }
+  #plan-modal > div{
+    pointer-events:auto!important;
+  }
+}
+</style>
+<script id="schoolhub-score-plan-mobile-click-final-fix-script">
+(function(){
+  if(window.__schoolhubScorePlanMobileClickFinalFix) return;
+  window.__schoolhubScorePlanMobileClickFinalFix = true;
+
+  function isMobile(){
+    return window.matchMedia && window.matchMedia('(max-width:767px)').matches;
+  }
+
+  function getActiveCourseId(){
+    try{
+      if(window.currentActiveCourseId) return window.currentActiveCourseId;
+      if(typeof currentActiveCourseId !== 'undefined' && currentActiveCourseId) return currentActiveCourseId;
+    }catch(e){}
+    try{
+      var visible = document.querySelector('#view-course-detail:not(.hidden)');
+      if(visible){
+        var input = document.getElementById('plan-course-id');
+        if(input && input.value) return input.value;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function directOpenPlanModal(){
+    var courseId = getActiveCourseId();
+    if(!courseId){
+      if(window.showCustomAlert) window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
+      return false;
+    }
+
+    try{
+      if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(courseId, 'จัดการแผนคะแนน')) return false;
+    }catch(e){}
+
+    var modal = document.getElementById('plan-modal');
+    if(!modal) return false;
+
+    try{
+      if(modal.parentElement !== document.body) document.body.appendChild(modal);
+    }catch(e){}
+
+    try{
+      var c = (window.state && Array.isArray(window.state.courses)) ? window.state.courses.find(function(x){return x.id === courseId;}) : null;
+      var title = document.getElementById('plan-modal-title');
+      if(title) title.textContent = c && c.code ? '(' + c.code + ')' : '';
+    }catch(e){}
+
+    try{
+      var courseInput = document.getElementById('plan-course-id');
+      if(courseInput) courseInput.value = courseId;
+    }catch(e){}
+
+    try{ if(typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); }catch(e){}
+    try{ if(typeof window.renderPlanList === 'function') window.renderPlanList(courseId); }catch(e){}
+
+    modal.classList.add('schoolhub-score-plan-modal');
+    modal.classList.remove('hidden');
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.zIndex = '2147483647';
+    modal.style.display = 'flex';
+    modal.style.pointerEvents = 'auto';
+
+    try{
+      var panel = modal.querySelector(':scope > div') || modal.firstElementChild;
+      if(panel){
+        panel.style.pointerEvents = 'auto';
+        panel.style.position = 'relative';
+        panel.style.zIndex = '2147483647';
+      }
+    }catch(e){}
+
+    setTimeout(function(){
+      try{
+        var first = document.getElementById('plan-week') || modal.querySelector('input,select,button');
+        if(first && first.focus) first.focus({preventScroll:true});
+      }catch(e){}
+    },80);
+
+    return false;
+  }
+
+  var oldOpen = window.openPlanModalForCurrentCourse;
+  window.openPlanModalForCurrentCourse = function(){
+    if(isMobile()) return directOpenPlanModal();
+    if(typeof oldOpen === 'function') return oldOpen.apply(this, arguments);
+    return directOpenPlanModal();
+  };
+
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
+    if(!btn || !isMobile()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    directOpenPlanModal();
+    return false;
+  }, true);
+
+  document.addEventListener('touchend', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
+    if(!btn || !isMobile()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    directOpenPlanModal();
+    return false;
+  }, true);
+
+  document.addEventListener('click', function(e){
+    var modal = document.getElementById('plan-modal');
+    if(!modal || modal.classList.contains('hidden')) return;
+    if(e.target === modal){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof window.closePlanModal === 'function') window.closePlanModal();
+      else modal.classList.add('hidden');
+    }
+  }, true);
+})();
+</script>
+
+</body>');
       return htmlText + autoScript;
     }
     window.openCustomMenuUser = function(id){
@@ -18130,6 +18283,159 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
   }).catch(e=>console.error('SchoolHub custom menu system failed', e));
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub score plan mobile click final fix
+     - แก้ปุ่ม "แผนคะแนน" มือถือ และ "จัดการแผนเก็บคะแนน" บนหน้าคะแนนให้กดติด
+     - กัน overlay / patch อื่นทับ event
+     - เปิด popup แผนคะแนนตรง ๆ และยก popup ขึ้นหน้าสุด
+     ========================================================= -->
+<style id="schoolhub-score-plan-mobile-click-final-fix-style">
+@media (max-width:767px){
+  button[onclick*="openPlanModalForCurrentCourse"],
+  #course-tab-scores button[onclick*="openPlanModalForCurrentCourse"],
+  .mobile-course-tab-btn + button[onclick*="openPlanModalForCurrentCourse"]{
+    pointer-events:auto!important;
+    position:relative!important;
+    z-index:50!important;
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:rgba(79,70,229,.16)!important;
+  }
+  #plan-modal{
+    z-index:2147483647!important;
+  }
+  #plan-modal:not(.hidden){
+    display:flex!important;
+    pointer-events:auto!important;
+  }
+  #plan-modal > div{
+    pointer-events:auto!important;
+  }
+}
+</style>
+<script id="schoolhub-score-plan-mobile-click-final-fix-script">
+(function(){
+  if(window.__schoolhubScorePlanMobileClickFinalFix) return;
+  window.__schoolhubScorePlanMobileClickFinalFix = true;
+
+  function isMobile(){
+    return window.matchMedia && window.matchMedia('(max-width:767px)').matches;
+  }
+
+  function getActiveCourseId(){
+    try{
+      if(window.currentActiveCourseId) return window.currentActiveCourseId;
+      if(typeof currentActiveCourseId !== 'undefined' && currentActiveCourseId) return currentActiveCourseId;
+    }catch(e){}
+    try{
+      var visible = document.querySelector('#view-course-detail:not(.hidden)');
+      if(visible){
+        var input = document.getElementById('plan-course-id');
+        if(input && input.value) return input.value;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function directOpenPlanModal(){
+    var courseId = getActiveCourseId();
+    if(!courseId){
+      if(window.showCustomAlert) window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
+      return false;
+    }
+
+    try{
+      if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(courseId, 'จัดการแผนคะแนน')) return false;
+    }catch(e){}
+
+    var modal = document.getElementById('plan-modal');
+    if(!modal) return false;
+
+    try{
+      if(modal.parentElement !== document.body) document.body.appendChild(modal);
+    }catch(e){}
+
+    try{
+      var c = (window.state && Array.isArray(window.state.courses)) ? window.state.courses.find(function(x){return x.id === courseId;}) : null;
+      var title = document.getElementById('plan-modal-title');
+      if(title) title.textContent = c && c.code ? '(' + c.code + ')' : '';
+    }catch(e){}
+
+    try{
+      var courseInput = document.getElementById('plan-course-id');
+      if(courseInput) courseInput.value = courseId;
+    }catch(e){}
+
+    try{ if(typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); }catch(e){}
+    try{ if(typeof window.renderPlanList === 'function') window.renderPlanList(courseId); }catch(e){}
+
+    modal.classList.add('schoolhub-score-plan-modal');
+    modal.classList.remove('hidden');
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.zIndex = '2147483647';
+    modal.style.display = 'flex';
+    modal.style.pointerEvents = 'auto';
+
+    try{
+      var panel = modal.querySelector(':scope > div') || modal.firstElementChild;
+      if(panel){
+        panel.style.pointerEvents = 'auto';
+        panel.style.position = 'relative';
+        panel.style.zIndex = '2147483647';
+      }
+    }catch(e){}
+
+    setTimeout(function(){
+      try{
+        var first = document.getElementById('plan-week') || modal.querySelector('input,select,button');
+        if(first && first.focus) first.focus({preventScroll:true});
+      }catch(e){}
+    },80);
+
+    return false;
+  }
+
+  var oldOpen = window.openPlanModalForCurrentCourse;
+  window.openPlanModalForCurrentCourse = function(){
+    if(isMobile()) return directOpenPlanModal();
+    if(typeof oldOpen === 'function') return oldOpen.apply(this, arguments);
+    return directOpenPlanModal();
+  };
+
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
+    if(!btn || !isMobile()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    directOpenPlanModal();
+    return false;
+  }, true);
+
+  document.addEventListener('touchend', function(e){
+    var btn = e.target && e.target.closest && e.target.closest('button[onclick*="openPlanModalForCurrentCourse"]');
+    if(!btn || !isMobile()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    directOpenPlanModal();
+    return false;
+  }, true);
+
+  document.addEventListener('click', function(e){
+    var modal = document.getElementById('plan-modal');
+    if(!modal || modal.classList.contains('hidden')) return;
+    if(e.target === modal){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof window.closePlanModal === 'function') window.closePlanModal();
+      else modal.classList.add('hidden');
+    }
+  }, true);
 })();
 </script>
 
