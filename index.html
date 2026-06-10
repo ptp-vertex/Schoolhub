@@ -7161,6 +7161,14 @@ ${resetUrl.toString()}
             window.downloadExcelMultiSheet({"รายชื่อนักเรียน": state.students.map(s => ({"รหัส":s.code,"ชื่อ":s.name,"ชั้น":s.grade}))}, "รายชื่อนักเรียนส่วนกลาง");
         };
         window.exportScoresToExcel = () => {
+            try{
+                const plan = (window.currentUserPlan || window.activePlan || state?.currentPlan || {});
+                const allow = plan.allowExport === true || plan.allowExport === 'true';
+                if(!allow){
+                    return showCustomAlert("แผนนี้ไม่รองรับ Export","กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel",true);
+                }
+            }catch(e){}
+
             const cid = currentActiveCourseId;
             const courseStudents = window.getCourseStudents(cid); if(!cid || courseStudents.length===0) return showCustomAlert("ผิดพลาด", "ไม่มีข้อมูลนักเรียนในวิชานี้", true);
             const cName = state.courses.find(c=>c.id===cid)?.name || 'Unknown';
