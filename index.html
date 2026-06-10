@@ -17850,8 +17850,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 <style id="schoolhub-custom-menu-system-style">
     #schoolhub-custom-menu-admin-view .shcm-field{width:100%;border:1px solid #e2e8f0;border-radius:1rem;padding:.85rem 1rem;outline:none;background:white;}
     #schoolhub-custom-menu-admin-view .shcm-field:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
-    #schoolhub-custom-menu-user-view iframe{width:100%;height:calc(100dvh - 190px);min-height:520px;border:0;border-radius:1.5rem;background:white;}
-    @media(max-width:767px){#schoolhub-custom-menu-user-view iframe{height:calc(100dvh - 145px);min-height:420px;border-radius:1rem;}#schoolhub-custom-menu-admin-view .shcm-admin-grid{grid-template-columns:1fr!important;}}
+    #schoolhub-custom-menu-user-view{overflow:visible!important;}
+    #schoolhub-custom-menu-user-view .bg-white{overflow:visible!important;}
+    #shcm-user-content{overflow:visible!important;}
+    #schoolhub-custom-menu-user-view iframe.shcm-auto-frame{width:100%;height:auto;min-height:720px;border:0;border-radius:1.5rem;background:white;display:block;overflow:hidden!important;}
+    @media(max-width:767px){#schoolhub-custom-menu-user-view iframe.shcm-auto-frame{min-height:760px;border-radius:1rem;}#schoolhub-custom-menu-admin-view .shcm-admin-grid{grid-template-columns:1fr!important;}}
 </style>
 <script type="module" id="schoolhub-custom-menu-system-script">
 (function(){
@@ -18056,6 +18059,50 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const run=async()=>{ customMenus=customMenus.filter(x=>x.id!==id); try{ await saveAll(); renderAdmin(); renderUserMenuButtons(); alertBox('ลบแล้ว','ลบเมนูเรียบร้อย'); }catch(e){ alertBox('ลบไม่ได้', e.message || String(e), true); } };
       if(window.showCustomConfirm) window.showCustomConfirm('ลบเมนู','ยืนยันลบเมนูนี้หรือไม่?',run); else if(confirm('ยืนยันลบเมนูนี้หรือไม่?')) run();
     };
+    function shcmAutoSizeFrame(frame){
+      if(!frame) return;
+      const setH = h => {
+        h = Math.max(760, Number(h||0) + 24);
+        frame.style.height = h + 'px';
+        frame.style.overflow = 'hidden';
+      };
+      frame.addEventListener('load', ()=>{
+        try{
+          const d = frame.contentDocument || frame.contentWindow.document;
+          if(d){
+            const apply = ()=>{
+              const b=d.body, e=d.documentElement;
+              if(!b || !e) return;
+              b.style.overflow = 'hidden';
+              e.style.overflow = 'hidden';
+              b.style.minHeight = '0';
+              setH(Math.max(
+                b.scrollHeight, e.scrollHeight,
+                b.offsetHeight, e.offsetHeight,
+                b.clientHeight, e.clientHeight
+              ));
+            };
+            apply();
+            try{ new ResizeObserver(apply).observe(d.body); }catch(_){}
+            setTimeout(apply, 300); setTimeout(apply, 1000); setTimeout(apply, 2000);
+          }
+        }catch(e){
+          /* URL ข้ามโดเมนอ่านความสูงจริงไม่ได้ จึงใช้ความสูงยาวพิเศษเพื่อให้เลื่อนด้านนอกแทน */
+          setH(Math.max(window.innerHeight * 2.2, 1400));
+        }
+      });
+    }
+    window.addEventListener('message', ev=>{
+      if(!ev || !ev.data || ev.data.type !== 'SHCM_FRAME_HEIGHT') return;
+      const frame=document.querySelector('#shcm-user-content iframe.shcm-auto-frame');
+      if(frame) frame.style.height = Math.max(760, Number(ev.data.height||0)+24) + 'px';
+    });
+    function makeSrcDoc(rawHtml){
+      const autoScript = `<script>(function(){function h(){var b=document.body,e=document.documentElement;var v=Math.max(b?b.scrollHeight:0,e?e.scrollHeight:0,b?b.offsetHeight:0,e?e.offsetHeight:0,b?b.clientHeight:0,e?e.clientHeight:0);parent.postMessage({type:'SHCM_FRAME_HEIGHT',height:v},'*');}document.documentElement.style.overflow='hidden';document.addEventListener('DOMContentLoaded',h);window.addEventListener('load',h);window.addEventListener('resize',h);setInterval(h,600);try{new ResizeObserver(h).observe(document.body);}catch(e){}})();<\/script>`;
+      const htmlText = String(rawHtml || '');
+      if(/<\/body>/i.test(htmlText)) return htmlText.replace(/<\/body>/i, autoScript + '</body>');
+      return htmlText + autoScript;
+    }
     window.openCustomMenuUser = function(id){
       const m=customMenus.find(x=>x.id===id);
       if(!m || !canSeeMenu(m)) return alertBox('ไม่มีสิทธิ์เข้าเมนูนี้','แผนปัจจุบันของคุณไม่รองรับเมนูนี้',true);
@@ -18066,8 +18113,10 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       const ps=document.getElementById('page-subtitle'); if(ps) ps.textContent='เมนูที่ผู้ดูแลระบบเพิ่มให้';
       const title=document.getElementById('shcm-user-title'); if(title) title.textContent=m.title||'เมนูเพิ่มเติม';
       const box=document.getElementById('shcm-user-content'); if(!box) return;
-      if(m.type==='html') box.innerHTML = `<iframe sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" srcdoc="${esc(m.html||'')}"></iframe>`;
-      else box.innerHTML = `<iframe sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" src="${esc(m.url||'about:blank')}"></iframe>`;
+      if(m.type==='html') box.innerHTML = `<iframe class="shcm-auto-frame" scrolling="no" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" srcdoc="${esc(makeSrcDoc(m.html||''))}"></iframe>`;
+      else box.innerHTML = `<iframe class="shcm-auto-frame" scrolling="no" sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts" src="${esc(m.url||'about:blank')}"></iframe>`;
+      shcmAutoSizeFrame(box.querySelector('iframe'));
+      setTimeout(()=>{ const sc=document.querySelector('main > div.flex-1.overflow-y-auto'); if(sc) sc.scrollTop=0; },50);
     };
 
     async function loadPlansOnce(){
