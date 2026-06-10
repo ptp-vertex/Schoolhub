@@ -17654,131 +17654,105 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 })();
 </script>
 
-</body>
-</html>
 
-<!-- =========================================================
-     FINAL FIX: Export buttons must alert first when plan has no Export right
-     - Do not open Excel download modal for users without Export permission
-     - Do not hijack X / Cancel buttons inside existing modals
-     - Keep alert/confirm popup above every modal
-     ========================================================= -->
-<style id="schoolhub-final-alert-top-and-export-guard-style">
-#custom-alert,
-#custom-confirm,
-#custom-alert-box,
-#custom-confirm-box{
-    z-index:2147483647 !important;
-}
-#custom-alert:not(.hidden),
-#custom-confirm:not(.hidden){
-    position:fixed !important;
-    inset:0 !important;
-    z-index:2147483647 !important;
-}
-</style>
-<script id="schoolhub-final-export-alert-first-guard">
+
+<!-- Patch: Overview Excel export must alert before opening/downloading when plan has no Export right -->
+<script id="schoolhub-overview-export-alert-first-fix">
 (function(){
-  if (window.__schoolhubFinalExportAlertFirstGuard) return;
-  window.__schoolhubFinalExportAlertFirstGuard = true;
+  if(window.__schoolhubOverviewExportAlertFirstFix) return;
+  window.__schoolhubOverviewExportAlertFirstFix = true;
 
-  function showExportDenied(){
-    if (typeof window.showCustomAlert === 'function') {
-      window.showCustomAlert('แผนนี้ไม่รองรับ Export', 'กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel', true);
-    } else {
+  function showNoExportRightAlert(){
+    if(typeof window.showCustomAlert === 'function'){
+      window.showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
+    }else{
       alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
     }
-    setTimeout(function(){
-      ['custom-alert','custom-confirm'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (el && el.parentElement !== document.body) document.body.appendChild(el);
-        if (el) el.style.zIndex = '2147483647';
-      });
-    }, 0);
-    return false;
   }
 
-  function exportAllowedSilently(){
-    try {
-      if (typeof window.schoolhubGetRealPlanRights === 'function') {
-        var r = window.schoolhubGetRealPlanRights();
-        return !!(r && !r.locked && r.allowExport !== false);
+  function canExportNow(){
+    try{
+      if(typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('export');
+    }catch(e){}
+    try{
+      var p = window.currentUserPlan || window.userCurrentPlan || window.activePlan || window.currentPlan || null;
+      if(!p && window.state){
+        p = window.state.currentUserPlan || window.state.userPlan || window.state.plan || null;
       }
-      if (typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('export');
-      var p = (typeof window.getCurrentPlanObject === 'function') ? window.getCurrentPlanObject() : (window.currentPlan || null);
-      if (p && p.allowExport === false) return false;
-    } catch(e) {}
+      // ถ้าเจอข้อมูลแผนและปิด Export ชัดเจน ให้บล็อก
+      if(p && p.allowExport === false) return false;
+      if(p && p.features && Array.isArray(p.features) && p.allowExport !== true){
+        var hasExportText = p.features.some(function(x){ return /export|excel|ส่งออก/i.test(String(x||'')); });
+        if(!hasExportText && p.allowExport !== true) return false;
+      }
+    }catch(e){}
+    // fallback: ใช้ตัวตรวจเดิมของระบบถ้ามี
+    try{
+      if(typeof window.hasPlanPermission === 'function') return !!window.hasPlanPermission('allowExport');
+      if(typeof window.checkPlanPermission === 'function') return !!window.checkPlanPermission('allowExport', {silent:true});
+    }catch(e){}
     return true;
   }
 
-  function ensureExportRight(){
-    if (exportAllowedSilently()) return true;
-    return showExportDenied();
-  }
+  window.schoolhubEnsureExportRight = function(){
+    if(canExportNow()) return true;
+    showNoExportRightAlert();
+    return false;
+  };
 
-  function isCloseOrCancelButton(el){
-    var btn = el && el.closest && el.closest('button,a,[role="button"]');
-    if (!btn) return false;
-    var id = (btn.id || '').toLowerCase();
-    var cls = (btn.className || '').toString().toLowerCase();
-    var txt = (btn.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
-    var aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-    return id.indexOf('close') !== -1 || id.indexOf('cancel') !== -1 ||
-           cls.indexOf('close') !== -1 || cls.indexOf('cancel') !== -1 ||
-           txt === 'ยกเลิก' || txt === '×' || txt === 'x' ||
-           aria.indexOf('close') !== -1 || aria.indexOf('ปิด') !== -1;
-  }
-
-  function isExportTrigger(btn){
-    if (!btn) return false;
-    var id = (btn.id || '').toLowerCase();
-    var cls = (btn.className || '').toString().toLowerCase();
-    var onclick = (btn.getAttribute('onclick') || '').toLowerCase();
-    var txt = (btn.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
-
-    if (onclick.indexOf('exportscorestoexcel') !== -1) return true;
-    if (onclick.indexOf('exportattendancetoexcel') !== -1) return true;
-    if (onclick.indexOf('exportstudentstoexcel') !== -1) return true;
-    if (onclick.indexOf('downloadexcel') !== -1) return true;
-
-    if (id.indexOf('export') !== -1 && (id.indexOf('confirm') !== -1 || id.indexOf('excel') !== -1 || id.indexOf('attendance') !== -1 || id.indexOf('overview') !== -1)) return true;
-    if (cls.indexOf('export') !== -1 && (txt.indexOf('excel') !== -1 || txt.indexOf('โหลด') !== -1)) return true;
-
-    return (txt.indexOf('โหลด') !== -1 && txt.indexOf('excel') !== -1) ||
-           (txt.indexOf('export') !== -1 && txt.indexOf('excel') !== -1);
-  }
-
-  document.addEventListener('click', function(e){
-    if (isCloseOrCancelButton(e.target)) return;
-    var btn = e.target && e.target.closest && e.target.closest('button,a,[role="button"]');
-    if (!isExportTrigger(btn)) return;
-    if (exportAllowedSilently()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-    showExportDenied();
-  }, true);
-
-  function guardFunction(name){
+  function wrapExportFunction(name){
     var old = window[name];
-    if (typeof old !== 'function' || old.__schoolhubExportAlertFirstGuarded) return;
-    var fn = function(){
-      if (!ensureExportRight()) return;
+    if(typeof old !== 'function' || old.__schoolhubExportRightWrapped) return;
+    var wrapped = function(){
+      if(!window.schoolhubEnsureExportRight()) return false;
       return old.apply(this, arguments);
     };
-    fn.__schoolhubExportAlertFirstGuarded = true;
-    window[name] = fn;
+    wrapped.__schoolhubExportRightWrapped = true;
+    wrapped.__schoolhubOriginalExportFn = old;
+    window[name] = wrapped;
   }
 
-  function applyGuards(){
-    guardFunction('exportScoresToExcel');
-    guardFunction('exportAttendanceToExcel');
-    guardFunction('exportStudentsToExcel');
-    guardFunction('downloadExcelMultiSheet');
+  function wrapAll(){
+    // รวมหน้า “ภาพรวม” ด้วย: exportScoresToExcel คือปุ่ม โหลดตารางนี้ (Excel)
+    ['exportScoresToExcel','exportStudentsToExcel','exportAttendanceToExcel','exportAttendanceRangeToExcel','downloadExcelMultiSheet'].forEach(wrapExportFunction);
   }
 
-  applyGuards();
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(applyGuards, 100); setTimeout(applyGuards, 800); });
-  setTimeout(applyGuards, 1500);
+  // ดักคลิกก่อน onclick เดิม โดยเฉพาะปุ่มหน้า ภาพรวม
+  document.addEventListener('click', function(ev){
+    var el = ev.target && ev.target.closest ? ev.target.closest('button,a,[role="button"]') : null;
+    if(!el) return;
+    var text = (el.textContent || '').replace(/\s+/g,' ').trim();
+    var oc = el.getAttribute('onclick') || '';
+    var idcls = (el.id || '') + ' ' + (el.className || '');
+    var inOverview = !!(el.closest && el.closest('#course-tab-overview'));
+    var isExport = /exportScoresToExcel|exportStudentsToExcel|exportAttendance|downloadExcel|Excel|เอ็กซ์เซล|โหลดตารางนี้|โหลด Excel/i.test(text + ' ' + oc + ' ' + idcls);
+    var isDismiss = /ยกเลิก|ปิด|cancel|close|dismiss|times|xmark|fa-times/i.test(text + ' ' + oc + ' ' + idcls);
+    if(isExport && !isDismiss && (inOverview || /exportScoresToExcel|โหลดตารางนี้/i.test(text + ' ' + oc))){
+      if(!window.schoolhubEnsureExportRight()){
+        ev.preventDefault();
+        ev.stopPropagation();
+        if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        return false;
+      }
+    }
+  }, true);
+
+  wrapAll();
+  document.addEventListener('DOMContentLoaded', wrapAll);
+  setTimeout(wrapAll, 100);
+  setTimeout(wrapAll, 500);
+  setTimeout(wrapAll, 1500);
+
+  // ถ้าโค้ดส่วนอื่น override exportScoresToExcel ทีหลัง ให้ครอบกลับอัตโนมัติ
+  var lastScoreFn = window.exportScoresToExcel;
+  setInterval(function(){
+    if(window.exportScoresToExcel !== lastScoreFn){
+      wrapExportFunction('exportScoresToExcel');
+      lastScoreFn = window.exportScoresToExcel;
+    }
+  }, 400);
 })();
 </script>
+
+</body>
+</html>
