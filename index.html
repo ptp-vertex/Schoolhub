@@ -19983,5 +19983,564 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub Auto Features + Effective Team Plan System
+     - รายการสิทธิ์ที่แสดง = ข้อความที่พิมพ์เองอยู่บนสุด + สิทธิ์จริงที่เปิดไว้แบบอัตโนมัติ
+     - สมาชิกทีมใช้สิทธิ์แผนของเจ้าของ โดยไม่ต้องเลือกแผนเอง
+     - ถ้าเจ้าของลบ/ยกเลิกสมาชิก: ถ้ามีแผนเดิมและยังไม่หมดอายุให้กลับไปใช้แผนเดิม, ถ้าไม่มีให้กลายเป็นไม่มีแผน
+     - กล่องแผนปัจจุบันแสดงสถานะทีม เจ้าของ รอบบิล บทบาท จำนวนคนที่ใช้ได้
+     ========================================================= -->
+<style id="schoolhub-auto-features-team-effective-style">
+.schoolhub-team-plan-card{
+  background:linear-gradient(135deg,#ecfdf5 0%,#eef2ff 100%);
+  border:1px solid #a7f3d0;
+  color:#064e3b;
+}
+.schoolhub-team-plan-card .sh-meta{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.45rem .75rem;
+  margin-top:.75rem;
+}
+.schoolhub-team-plan-card .sh-meta div{
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(226,232,240,.85);
+  border-radius:.9rem;
+  padding:.55rem .7rem;
+  font-size:.75rem;
+  font-weight:800;
+  color:#334155;
+}
+@media(max-width:767px){
+  .schoolhub-team-plan-card .sh-meta{grid-template-columns:1fr;}
+}
+</style>
+<script id="schoolhub-auto-features-team-effective-script">
+(function(){
+  if(window.__schoolhubAutoFeaturesTeamEffective) return;
+  window.__schoolhubAutoFeaturesTeamEffective = true;
+
+  const RIGHTS = [
+    ['allowCourses','เพิ่ม/แก้ไขรายวิชา'],
+    ['allowStudents','เพิ่ม/แก้ไขนักเรียน'],
+    ['allowAttendance','เช็คชื่อเข้าเรียน'],
+    ['allowScores','บันทึกคะแนน'],
+    ['allowPlanScores','จัดการแผนคะแนน'],
+    ['allowGradeCriteria','ตั้งค่าเกณฑ์เกรด'],
+    ['allowStudentShare','แชร์ให้นักเรียน'],
+    ['allowExport','Export Excel'],
+    ['allowTeam','ใช้งานแบบทีม'],
+    ['allowEditData','แก้ไขข้อมูล'],
+    ['allowDeleteData','ลบข้อมูล'],
+    ['allowReports','รายงาน/ภาพรวม']
+  ];
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+
+  function byId(id){return document.getElementById(id);}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+  function n(v,fb){v=Number(v);return Number.isFinite(v)?v:(fb||0);}
+  function fmtDate(v){
+    if(!v) return 'ไม่มีรอบเรียกเก็บถัดไป';
+    try{return new Date(Number(v)).toLocaleString('th-TH');}catch(e){return 'ไม่มีรอบเรียกเก็บถัดไป';}
+  }
+  function allPlans(){try{return Array.isArray(window.subscriptionPlans)?window.subscriptionPlans:[];}catch(e){return[];}}
+  function currentDir(){return window.__currentUserDir || {};}
+  function isExpiredPlan(d){
+    const now=Date.now();
+    if(!d || !d.planId) return true;
+    if(d.planExpiresAt && n(d.planExpiresAt) <= now) return true;
+    if(d.planNextBillingAt && n(d.planNextBillingAt) <= now && !(d.freeForever || d.billingCycle==='forever' || d.planBillingCycle==='forever')) return true;
+    return false;
+  }
+  function findPlan(id){
+    if(!id) return null;
+    return allPlans().find(function(p){return String(p.id||'')===String(id);}) || null;
+  }
+  function featureLabel(plan, id, label){
+    if(id === 'allowTeam') return plan && plan.allowTeam === true ? label : '';
+    if(plan && plan[id] !== undefined) return plan[id] !== false ? label : '';
+    return DEFAULT_TRUE.has(id) ? label : '';
+  }
+  function autoFeatureList(plan){
+    plan = plan || {};
+    const base = [];
+    if(plan.courseLimit !== undefined) base.push(Number(plan.courseLimit||0) ? ('เพิ่มรายวิชาได้ '+Number(plan.courseLimit)+' วิชา') : 'เพิ่มรายวิชาไม่จำกัด');
+    if(plan.studentLimit !== undefined) base.push(Number(plan.studentLimit||0) ? ('นักเรียนสูงสุด '+Number(plan.studentLimit)+' คน') : 'นักเรียนไม่จำกัด');
+    if(plan.weekLimit !== undefined || plan.maxWeeks !== undefined) base.push('ใช้งานได้ '+Number(plan.weekLimit||plan.maxWeeks||20)+' สัปดาห์');
+    RIGHTS.forEach(function(r){
+      const txt = featureLabel(plan, r[0], r[1]);
+      if(txt) base.push(txt);
+    });
+    return Array.from(new Set(base.filter(Boolean)));
+  }
+  function manualFeatureList(){
+    const ta=byId('plan-sub-features');
+    return (ta && ta.value || '').split('\n').map(function(x){return x.trim();}).filter(Boolean);
+  }
+  function updateFeatureTextareaPreview(){
+    const ta=byId('plan-sub-features');
+    if(!ta) return;
+    if(!ta.dataset.schoolhubManualPlaceholder){
+      ta.dataset.schoolhubManualPlaceholder = '1';
+      ta.placeholder = 'พิมพ์ข้อความที่ต้องการแสดงเพิ่มเติมเองได้ที่นี่ เช่น\nทดลองใช้ฟรี 30 วัน\nรองรับทุกอุปกรณ์\n\nระบบจะนำสิทธิ์ที่เปิดไว้มาแสดงต่อท้ายให้อัตโนมัติ';
+    }
+    ensureFeaturePreview();
+  }
+  function collectPlanFromForm(){
+    const get=(id)=>byId(id);
+    const p={};
+    p.courseLimit = n(get('plan-sub-course-limit')?.value,0);
+    p.studentLimit = n(get('plan-sub-student-limit')?.value,0);
+    p.weekLimit = n(get('plan-sub-week-limit')?.value,20);
+    p.teamMemberLimit = Math.max(1,n(get('plan-sub-team-limit')?.value,1));
+    RIGHTS.forEach(function(r){
+      const el=get('plan-sub-'+r[0]);
+      if(el) p[r[0]] = !!el.checked;
+    });
+    p.allowTeam = get('plan-sub-allow-team')?.checked || p.allowTeam === true;
+    p.allowAttendance = get('plan-sub-allow-attendance')?.checked !== false && p.allowAttendance !== false;
+    p.allowExport = get('plan-sub-allow-export')?.checked !== false && p.allowExport !== false;
+    return p;
+  }
+  function ensureFeaturePreview(){
+    const ta=byId('plan-sub-features');
+    if(!ta) return;
+    let box=byId('schoolhub-auto-feature-preview');
+    if(!box){
+      ta.insertAdjacentHTML('afterend','<div id="schoolhub-auto-feature-preview" class="mt-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 text-sm text-slate-700"></div>');
+      box=byId('schoolhub-auto-feature-preview');
+    }
+    const manual=manualFeatureList();
+    const auto=autoFeatureList(collectPlanFromForm());
+    box.innerHTML =
+      '<div class="font-black text-indigo-700 mb-2"><i class="fas fa-list-check mr-1"></i>ตัวอย่างรายการสิทธิ์ที่จะแสดง</div>' +
+      (manual.length ? '<div class="mb-2"><div class="text-xs font-black text-slate-500 mb-1">ข้อความที่พิมพ์เอง</div>'+manual.map(x=>'<div>• '+esc(x)+'</div>').join('')+'</div>' : '') +
+      '<div><div class="text-xs font-black text-slate-500 mb-1">สิทธิ์อัตโนมัติจากการตั้งค่า</div>'+auto.map(x=>'<div>✓ '+esc(x)+'</div>').join('')+'</div>';
+  }
+  function applyFeaturesToPlanItem(item){
+    const manual=(item.features || manualFeatureList()).map(function(x){return String(x||'').trim();}).filter(Boolean);
+    const auto=autoFeatureList(item).map(function(x){return '✓ '+x;});
+    item.manualFeatures = manual;
+    item.autoFeatures = auto;
+    item.features = Array.from(new Set(manual.concat(auto)));
+    item.autoFeaturesEnabled = true;
+    return item;
+  }
+  function patchPlanSave(){
+    if(typeof window.saveAdminPlanForm === 'function' && !window.saveAdminPlanForm.__autoFeaturesWrapped){
+      const old=window.saveAdminPlanForm;
+      window.saveAdminPlanForm = async function(){
+        // ก่อน save ให้ preview ทัน
+        ensureFeaturePreview();
+        const r = await old.apply(this, arguments);
+        try{
+          const editId=byId('plan-sub-edit-id')?.value || '';
+          const latest=(window.subscriptionPlans||[]).slice().sort((a,b)=>n(b.updatedAt)-n(a.updatedAt))[0];
+          const id=editId || latest?.id;
+          const idx=(window.subscriptionPlans||[]).findIndex(p=>String(p.id)===String(id));
+          if(idx>=0){
+            window.subscriptionPlans[idx]=applyFeaturesToPlanItem(window.subscriptionPlans[idx]);
+            if(typeof window.renderAdminPlans==='function') window.renderAdminPlans();
+            if(typeof window.renderLandingPlans==='function') window.renderLandingPlans();
+            try{
+              if(typeof setDoc==='function' && typeof getPlansDocRef==='function'){
+                await setDoc(getPlansDocRef(),{items:window.subscriptionPlans,updatedAt:Date.now()},{merge:true});
+              }
+            }catch(e){}
+          }
+        }catch(e){}
+        return r;
+      };
+      window.saveAdminPlanForm.__autoFeaturesWrapped=true;
+    }
+    if(typeof window.editAdminPlan === 'function' && !window.editAdminPlan.__autoFeaturesWrapped){
+      const oldEdit=window.editAdminPlan;
+      window.editAdminPlan=function(id){
+        const r=oldEdit.apply(this,arguments);
+        const p=findPlan(id);
+        if(p && byId('plan-sub-features')){
+          byId('plan-sub-features').value=(p.manualFeatures || (p.features||[]).filter(x=>!String(x).trim().startsWith('✓ '))).join('\n');
+        }
+        setTimeout(ensureFeaturePreview,80);
+        return r;
+      };
+      window.editAdminPlan.__autoFeaturesWrapped=true;
+    }
+    if(typeof window.resetAdminPlanForm === 'function' && !window.resetAdminPlanForm.__autoFeaturesWrapped){
+      const oldReset=window.resetAdminPlanForm;
+      window.resetAdminPlanForm=function(){
+        const r=oldReset.apply(this,arguments);
+        setTimeout(ensureFeaturePreview,80);
+        return r;
+      };
+      window.resetAdminPlanForm.__autoFeaturesWrapped=true;
+    }
+  }
+
+  function storePreviousPlanBeforeTeam(payload){
+    const d=currentDir();
+    if(d.planId && d.teamStatus !== 'accepted' && d.planId !== 'team_shared'){
+      payload.previousPlan = {
+        planId:d.planId||null, planName:d.planName||'', planPrice:d.planPrice||'',
+        planBillingCycle:d.planBillingCycle||d.billingCycle||'',
+        planAmount:d.planAmount||0, planNextBillingAt:d.planNextBillingAt||null,
+        planExpiresAt:d.planExpiresAt||null, courseLimit:d.courseLimit, studentLimit:d.studentLimit,
+        weekLimit:d.weekLimit, allowAttendance:d.allowAttendance, allowExport:d.allowExport,
+        allowTeam:d.allowTeam, savedAt:Date.now()
+      };
+    }
+    return payload;
+  }
+  function normalizeTeamPayload(team, teamId, me){
+    const ownerEmail = team.ownerEmail || team.ownerUid || teamId || '';
+    const p = findPlan(team.planId) || {};
+    let payload = {
+      effectivePlanSource:'team',
+      teamOwnerUid:teamId,
+      teamOwnerEmail:ownerEmail,
+      teamRole:(me && me.role) || 'member',
+      teamStatus:'accepted',
+      teamPlanId:team.planId || 'team_shared',
+      teamPlanName:team.planName || p.name || 'แผนทีม',
+      planId: team.planId || 'team_shared',
+      planName: team.planName || p.name || 'แผนทีม',
+      planPrice: team.planPrice || p.price || '',
+      planNextBillingAt: team.planNextBillingAt || team.nextBillingAt || p.planNextBillingAt || null,
+      planExpiresAt: team.planExpiresAt || p.planExpiresAt || null,
+      teamMemberLimit: Math.max(1,n(team.teamMemberLimit || team.maxTeamMembers || p.teamMemberLimit || p.maxTeamMembers,1)),
+      courseLimit:n(team.courseLimit ?? p.courseLimit,0),
+      studentLimit:n(team.studentLimit ?? p.studentLimit,0),
+      weekLimit:n(team.weekLimit ?? p.weekLimit ?? p.maxWeeks,20),
+      allowAttendance:(team.allowAttendance ?? p.allowAttendance) !== false,
+      allowExport:(team.allowExport ?? p.allowExport) !== false,
+      allowTeam:false,
+      status:'active',
+      planLockedAt:null,
+      planLockReason:null,
+      requestedPlanId:null,
+      requestedPlanName:null,
+      updatedAt:Date.now()
+    };
+    RIGHTS.forEach(function(r){
+      if(payload[r[0]] === undefined) payload[r[0]] = (team[r[0]] ?? p[r[0]]);
+      if(payload[r[0]] === undefined) payload[r[0]] = r[0]==='allowTeam' ? false : DEFAULT_TRUE.has(r[0]);
+      payload[r[0]] = payload[r[0]] !== false;
+    });
+    if(payload.teamRole === 'co_owner') payload.allowTeam = true;
+    return payload;
+  }
+  async function fetchTeam(teamId){
+    try{
+      if(typeof getDoc==='function' && typeof doc==='function' && typeof db!=='undefined'){
+        const ref=doc(db,'teams',teamId);
+        const snap=await getDoc(ref);
+        if(snap.exists()) return snap.data()||{};
+      }
+    }catch(e){}
+    return null;
+  }
+  async function applyEffectiveTeamPlan(teamId, me){
+    const team=await fetchTeam(teamId);
+    if(!team) return null;
+    const payload=storePreviousPlanBeforeTeam(normalizeTeamPayload(team, teamId, me||{}));
+    try{
+      window.__currentUserDir=Object.assign(window.__currentUserDir||{},payload);
+      window.__schoolhubPlanLocked=false;
+      window.__schoolhubPlanLockReason='';
+      if(typeof setDoc==='function' && typeof doc==='function' && typeof db!=='undefined'){
+        const u=(typeof getUser==='function'?getUser():null) || (typeof currentUser!=='undefined'?currentUser:null);
+        if(u && u.uid){
+          const publicCol = (typeof PUBLIC!=='undefined'?PUBLIC:'public_users_directory');
+          await setDoc(doc(db,publicCol,u.uid),payload,{merge:true});
+        }
+      }
+    }catch(e){}
+    return payload;
+  }
+  function restorePreviousOrNoPlan(){
+    const d=currentDir();
+    const prev=d.previousPlan;
+    let next={teamOwnerUid:null,teamOwnerEmail:null,teamRole:null,teamStatus:null,effectivePlanSource:null,teamPlanId:null,teamPlanName:null,updatedAt:Date.now()};
+    if(prev && prev.planId && !isExpiredPlan(prev)){
+      Object.assign(next,prev,{status:'active',planLockedAt:null,planLockReason:null});
+      delete next.savedAt;
+    }else{
+      Object.assign(next,{planId:null,planName:null,planPrice:null,status:'plan_locked',planLockedAt:Date.now(),planLockReason:'ยังไม่ได้เลือกแผน'});
+    }
+    window.__currentUserDir=Object.assign(d,next);
+    return next;
+  }
+  function patchTeamAcceptCancel(){
+    if(typeof window.schoolhubAcceptIncomingTeamInvite === 'function' && !window.schoolhubAcceptIncomingTeamInvite.__effectiveTeamWrapped){
+      const old=window.schoolhubAcceptIncomingTeamInvite;
+      window.schoolhubAcceptIncomingTeamInvite=async function(teamId,inviteId){
+        const r=await old.apply(this,arguments);
+        try{
+          let me={};
+          const team=await fetchTeam(teamId);
+          if(team && Array.isArray(team.members)) me=team.members.find(m=>String(m.id)===String(inviteId))||{};
+          await applyEffectiveTeamPlan(teamId,me);
+          if(typeof window.renderUserPlans==='function') window.renderUserPlans();
+          if(typeof window.openUserPlanSelector==='function') await window.openUserPlanSelector();
+        }catch(e){}
+        return r;
+      };
+      window.schoolhubAcceptIncomingTeamInvite.__effectiveTeamWrapped=true;
+    }
+    if(typeof window.schoolhubCancelTeamInvite === 'function' && !window.schoolhubCancelTeamInvite.__effectiveTeamWrapped){
+      const oldCancel=window.schoolhubCancelTeamInvite;
+      window.schoolhubCancelTeamInvite=async function(id){
+        const r=await oldCancel.apply(this,arguments);
+        // เจ้าของยกเลิกคนอื่น: ให้ refresh panel; สมาชิกที่ถูกลบจะถูกจัดการตอนโหลดของเขาเอง
+        try{ if(typeof window.loadAndRenderTeamPanel==='function') await window.loadAndRenderTeamPanel(); }catch(e){}
+        return r;
+      };
+      window.schoolhubCancelTeamInvite.__effectiveTeamWrapped=true;
+    }
+  }
+  async function verifyMyTeamStillAccepted(){
+    const d=currentDir();
+    if(d.teamStatus!=='accepted' || !d.teamOwnerUid) return;
+    const team=await fetchTeam(d.teamOwnerUid);
+    if(!team) return;
+    const email=String(d.email || (typeof currentUser!=='undefined' && currentUser?.email) || '').toLowerCase();
+    const uid=String(d.uid || (typeof currentUser!=='undefined' && currentUser?.uid) || '');
+    const me=(team.members||[]).find(m => (uid && String(m.uid||'')===uid) || (email && String(m.email||'').toLowerCase()===email));
+    if(!me || (me.status||'pending')!=='accepted'){
+      const next=restorePreviousOrNoPlan();
+      try{
+        if(typeof setDoc==='function' && typeof doc==='function' && typeof db!=='undefined'){
+          const u=(typeof getUser==='function'?getUser():null) || (typeof currentUser!=='undefined'?currentUser:null);
+          if(u && u.uid){
+            const publicCol = (typeof PUBLIC!=='undefined'?PUBLIC:'public_users_directory');
+            await setDoc(doc(db,publicCol,u.uid),next,{merge:true});
+          }
+        }
+      }catch(e){}
+      if(typeof window.showCustomAlert==='function'){
+        if(next.planId) showCustomAlert('ออกจากแผนทีมแล้ว','ระบบกลับไปใช้แผนเดิมของคุณแล้ว');
+        else showCustomAlert('ออกจากแผนทีมแล้ว','คุณยังไม่มีแผนส่วนตัว กรุณาเลือกแผนก่อนใช้งาน',true);
+      }
+    }else{
+      await applyEffectiveTeamPlan(d.teamOwnerUid,me);
+    }
+  }
+  function renderTeamPlanCard(){
+    const d=currentDir();
+    if(d.teamStatus!=='accepted' && d.effectivePlanSource!=='team') return false;
+    const box=byId('user-current-plan-box');
+    if(!box) return false;
+    const role = d.teamRole === 'co_owner' ? 'เจ้าของร่วม' : (d.teamRole === 'owner' ? 'เจ้าของ' : 'ผู้ใช้ร่วม');
+    const owner = d.teamOwnerEmail || d.teamOwnerUid || '-';
+    const limit = d.teamMemberLimit || d.maxTeamMembers || d.teamLimit || 1;
+    box.innerHTML = `<div class="schoolhub-team-plan-card rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <div class="text-sm font-black text-emerald-600"><i class="fas fa-users mr-1"></i>แผนปัจจุบัน: ทีม</div>
+        <div class="text-xl font-black">${esc(d.planName || d.teamPlanName || 'แผนทีม')}</div>
+        <div class="sh-meta">
+          <div>เจ้าของ: ${esc(owner)}</div>
+          <div>สิทธิ์ของคุณ: ${esc(role)}</div>
+          <div>ใช้ได้สูงสุด: ${esc(limit)} คน</div>
+          <div>เรียกเก็บครั้งต่อไป: ${esc(fmtDate(d.planNextBillingAt))}</div>
+          ${d.previousPlan && d.previousPlan.planId ? `<div>แผนส่วนตัวเดิม: ${esc(d.previousPlan.planName || d.previousPlan.planId)}</div>` : `<div>แผนส่วนตัวเดิม: ไม่มี</div>`}
+        </div>
+      </div>
+      <i class="fas fa-people-group text-3xl text-emerald-600"></i>
+    </div>`;
+    return true;
+  }
+  function patchRenderUserPlans(){
+    if(typeof window.renderUserPlans === 'function' && !window.renderUserPlans.__effectiveTeamWrapped){
+      const old=window.renderUserPlans;
+      window.renderUserPlans=function(){
+        const r=old.apply(this,arguments);
+        setTimeout(renderTeamPlanCard,40);
+        setTimeout(renderTeamPlanCard,240);
+        return r;
+      };
+      window.renderUserPlans.__effectiveTeamWrapped=true;
+    }
+    if(typeof window.openUserPlanSelector === 'function' && !window.openUserPlanSelector.__effectiveTeamWrapped){
+      const oldOpen=window.openUserPlanSelector;
+      window.openUserPlanSelector=async function(){
+        await verifyMyTeamStillAccepted();
+        const r=await oldOpen.apply(this,arguments);
+        setTimeout(renderTeamPlanCard,60);
+        return r;
+      };
+      window.openUserPlanSelector.__effectiveTeamWrapped=true;
+    }
+  }
+
+  function init(){
+    updateFeatureTextareaPreview();
+    patchPlanSave();
+    patchTeamAcceptCancel();
+    patchRenderUserPlans();
+    if((currentDir().teamStatus==='accepted' || currentDir().teamOwnerUid)) renderTeamPlanCard();
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    init();
+    setTimeout(init,500);
+    setTimeout(function(){init(); verifyMyTeamStillAccepted();},1600);
+  });
+  document.addEventListener('click',function(){setTimeout(init,160);},true);
+  document.addEventListener('input',function(e){
+    if(e.target && (e.target.id==='plan-sub-features' || /^plan-sub-/.test(e.target.id||''))) setTimeout(ensureFeaturePreview,60);
+  },true);
+  document.addEventListener('change',function(e){
+    if(e.target && /^plan-sub-/.test(e.target.id||'')) setTimeout(ensureFeaturePreview,60);
+  },true);
+  setInterval(function(){init();},2500);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Overview Export Button Permission + Popup Fix
+     - ปุ่มโหลด Excel หน้า "ภาพรวม" ไม่เทาค้างเมื่อมีสิทธิ์
+     - ถ้าไม่มีสิทธิ์ กดแล้วแจ้งเตือนทันที ไม่เปิด popup โหลด
+     - แก้เฉพาะกลุ่ม Export/Excel
+     ========================================================= -->
+<script id="schoolhub-overview-export-button-popup-final-fix">
+(function(){
+  if(window.__schoolhubOverviewExportButtonPopupFinalFix) return;
+  window.__schoolhubOverviewExportButtonPopupFinalFix = true;
+
+  function getDir(){ return window.__currentUserDir || {}; }
+
+  function allowExport(){
+    try{
+      if(typeof window.schoolhubExpandedPlanAllows === 'function') return !!window.schoolhubExpandedPlanAllows('export');
+    }catch(e){}
+    try{
+      if(typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('export');
+    }catch(e){}
+    try{
+      var d=getDir();
+      if(d.teamStatus === 'accepted' || d.teamOwnerUid) return d.allowExport !== false;
+      if(d.allowExport !== undefined) return d.allowExport !== false;
+      var p = window.currentUserPlan || window.activePlan || null;
+      if(!p && Array.isArray(window.subscriptionPlans) && d.planId){
+        p = window.subscriptionPlans.find(function(x){ return String(x.id||'') === String(d.planId||''); });
+      }
+      if(p) return p.allowExport !== false;
+    }catch(e){}
+    return true;
+  }
+
+  function alertNoExport(){
+    if(typeof window.showCustomAlert === 'function'){
+      return window.showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
+    }
+    alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
+  }
+
+  function isExportEl(el){
+    if(!el) return false;
+    var s = String((el.getAttribute('onclick')||'') + ' ' + (el.textContent||'') + ' ' + (el.id||'') + ' ' + (el.className||''));
+    return /exportScoresToExcel|exportAttendanceToExcel|exportStudentsToExcel|downloadExcelMultiSheet|openOverviewExport|Excel|โหลดตาราง|โหลด Excel|ส่งออก/i.test(s);
+  }
+
+  function closeExportPopups(){
+    [
+      'schoolhub-overview-excel-room-modal',
+      'schoolhub-overview-excel-room-popup',
+      'overview-export-modal',
+      'export-modal',
+      'excel-export-modal',
+      'download-excel-modal'
+    ].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.classList.add('hidden');
+    });
+    document.querySelectorAll('[id*="excel"][id*="modal"],[id*="Excel"][id*="modal"],[id*="export"][id*="modal"],[id*="Export"][id*="modal"],[id*="download"][id*="modal"],[class*="excel"][class*="modal"],[class*="export"][class*="modal"]').forEach(function(el){
+      var txt=(el.textContent||'');
+      if(/โหลด|Excel|Export|ส่งออก|เลือกห้อง/i.test(txt)) el.classList.add('hidden');
+    });
+  }
+
+  function fixButtonVisuals(){
+    var ok=allowExport();
+    document.querySelectorAll('button,a,[role="button"]').forEach(function(el){
+      if(!isExportEl(el)) return;
+      if(ok){
+        el.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
+        el.removeAttribute('aria-disabled');
+        if(/Export|แผนนี้ไม่รองรับ|ไม่มีสิทธิ์|ไม่รองรับ/.test(el.getAttribute('title')||'')) el.removeAttribute('title');
+        el.disabled=false;
+        el.style.opacity='';
+        el.style.pointerEvents='';
+        el.style.filter='';
+      }else{
+        el.classList.add('opacity-50','cursor-not-allowed');
+        el.setAttribute('title','แผนนี้ไม่รองรับ Export');
+        el.setAttribute('aria-disabled','true');
+        el.classList.remove('pointer-events-none');
+        el.style.pointerEvents='';
+      }
+    });
+  }
+
+  function wrapExportFunction(name){
+    var old=window[name];
+    if(typeof old !== 'function' || old.__schoolhubOverviewExportFinalWrapped) return;
+    var fn=function(){
+      if(!allowExport()){
+        closeExportPopups();
+        alertNoExport();
+        return false;
+      }
+      return old.apply(this, arguments);
+    };
+    fn.__schoolhubOverviewExportFinalWrapped = true;
+    window[name]=fn;
+  }
+
+  function applyWraps(){
+    [
+      'exportScoresToExcel',
+      'exportAttendanceToExcel',
+      'exportStudentsToExcel',
+      'downloadExcelMultiSheet',
+      'openOverviewExportModal',
+      'showOverviewExportModal',
+      'openExportPopup',
+      'showExportModal'
+    ].forEach(wrapExportFunction);
+    fixButtonVisuals();
+  }
+
+  document.addEventListener('click', function(e){
+    var el=e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+    if(!el || !isExportEl(el)) return;
+
+    if(!allowExport()){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      closeExportPopups();
+      alertNoExport();
+      return false;
+    }
+
+    fixButtonVisuals();
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    applyWraps();
+    setTimeout(applyWraps,300);
+    setTimeout(applyWraps,1000);
+    setTimeout(applyWraps,2000);
+  });
+  document.addEventListener('click', function(){ setTimeout(applyWraps,120); }, true);
+  document.addEventListener('change', function(){ setTimeout(applyWraps,120); }, true);
+  setInterval(applyWraps, 1200);
+
+  window.schoolhubFixExportButtonsNow = applyWraps;
+})();
+</script>
+
 </body>
 </html>
