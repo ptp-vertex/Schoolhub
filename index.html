@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -5900,9 +5901,69 @@ async function submitPlanRequest(planId){
             if (location.protocol === 'file:') {
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
             }
-            let provider = new GoogleAuthProvider(); window.isSocialAuthenticating = true; toggleLoader(true);
-            try { const result = await signInWithPopup(auth, provider); const email = normalizeSchoolHubEmail(result.user && result.user.email); if(!isSchoolHubValidEmail(email)){ await signOut(auth); window.isSocialAuthenticating = false; toggleLoader(false); return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true); } await addUserToDirectory(result.user, result.user.displayName || email, 'user'); window.isSocialAuthenticating = false; }
-            catch (error) { window.isSocialAuthenticating = false; toggleLoader(false); showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true); }
+
+            // Google Login mobile fix เฉพาะจุด:
+            // แก้เคสมือถือเด้งไปหน้า firebaseapp auth handler แล้วขึ้น missing initial state
+            // โดยล้าง state เก่าก่อนเริ่ม, ใช้ popup จาก user click โดยตรง, และกันกดซ้ำ
+            if (window.__schoolhubGoogleLoginBusy) return;
+            window.__schoolhubGoogleLoginBusy = true;
+
+            const clearGoogleTempState = () => {
+                try {
+                    Object.keys(sessionStorage || {}).forEach(k => {
+                        if (/firebase|auth|google|oauth|redirect|schoolhub_google/i.test(k)) sessionStorage.removeItem(k);
+                    });
+                } catch(e) {}
+            };
+
+            clearGoogleTempState();
+
+            let provider = new GoogleAuthProvider();
+            try {
+                provider.addScope('email');
+                provider.addScope('profile');
+                provider.setCustomParameters({
+                    prompt: 'select_account'
+                });
+            } catch(e) {}
+
+            window.isSocialAuthenticating = true;
+            toggleLoader(true);
+
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const email = normalizeSchoolHubEmail(result.user && result.user.email);
+                if(!isSchoolHubValidEmail(email)){
+                    await signOut(auth);
+                    window.isSocialAuthenticating = false;
+                    window.__schoolhubGoogleLoginBusy = false;
+                    toggleLoader(false);
+                    return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true);
+                }
+
+                await addUserToDirectory(result.user, result.user.displayName || email, 'user');
+                try { saveSchoolHubSession(result.user, 'user'); } catch(e) {}
+                window.isSocialAuthenticating = false;
+                window.__schoolhubGoogleLoginBusy = false;
+                toggleLoader(false);
+            }
+            catch (error) {
+                window.isSocialAuthenticating = false;
+                window.__schoolhubGoogleLoginBusy = false;
+                toggleLoader(false);
+                clearGoogleTempState();
+
+                const msg = String((error && (error.message || error.code)) || '');
+                if (/missing initial state|sessionStorage|storage-partitioned|popup-blocked|popup-closed|cancelled-popup-request/i.test(msg)) {
+                    return showCustomAlert(
+                        'เข้าสู่ระบบ Google ไม่สำเร็จบนมือถือ',
+                        'ให้ปิดแท็บ Google ที่ค้าง แล้วกลับมากด Google อีกครั้ง หากยังเป็นอยู่ให้เปิดผ่าน Chrome/Safari แบบปกติ ไม่ใช่โหมดส่วนตัว',
+                        true
+                    );
+                }
+
+                showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true);
+            }
         };
 
         onAuthStateChanged(auth, async (user) => {
