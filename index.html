@@ -20592,49 +20592,5 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
-
-<!-- SchoolHub Custom Menu Permission + Active State Fix -->
-<style id="schoolhub-custom-menu-active-fix">
-.custom-menu-disabled,
-.sidebar-menu-disabled{
- opacity:.55!important;
- filter:grayscale(.35)!important;
-}
-.custom-menu-item.active,
-.sidebar-menu-item.active{
- background:#eef2ff!important;
- color:#4f46e5!important;
- font-weight:700!important;
-}
-</style>
-<script id="schoolhub-custom-menu-active-fix-script">
-(function(){
- if(window.__schoolhubCustomMenuFix) return;
- window.__schoolhubCustomMenuFix=true;
-
- function menuEnabled(menu){
-   return menu && menu.enabled===true;
- }
- function menuVisibleForUser(menu,isAdmin){
-   if(isAdmin) return true;
-   return !!menu.showToUsers;
- }
-
- window.schoolhubCustomMenuCanOpen=function(menu,isAdmin){
-   if(!menuVisibleForUser(menu,isAdmin)) return false;
-
-   if(!menuEnabled(menu)){
-      if(typeof showCustomAlert==='function'){
-         showCustomAlert('เมนูนี้ยังไม่เปิดใช้งาน','กรุณาติดต่อผู้ดูแลระบบ',true);
-      }else{
-         alert('เมนูนี้ยังไม่เปิดใช้งาน\nกรุณาติดต่อผู้ดูแลระบบ');
-      }
-      return false;
-   }
-   return true;
- };
-})();
-</script>
-
 </body>
 </html>
