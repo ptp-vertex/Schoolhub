@@ -20390,5 +20390,207 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub No Plan Red Box + Hide Team Limit Fix
+     - ถ้ายังไม่ได้เลือกแผน ห้ามแสดง "ใช้ร่วมกันได้สูงสุด 1 คน"
+     - กล่องยังไม่ได้เลือกแผนเป็นสีแดง
+     - ปิดข้อความ teamLimit ที่หลุดจาก auto feature เมื่อไม่มี planId
+     ========================================================= -->
+<style id="schoolhub-no-plan-red-no-team-limit-style">
+#user-current-plan-box.schoolhub-no-plan-state,
+#view-user-plans .schoolhub-no-plan-state{
+  border-color:#fecaca!important;
+  background:#fff1f2!important;
+  color:#7f1d1d!important;
+}
+#user-current-plan-box.schoolhub-no-plan-state *{
+  color:inherit;
+}
+#user-current-plan-box.schoolhub-no-plan-state .text-slate-500,
+#user-current-plan-box.schoolhub-no-plan-state .text-slate-600,
+#user-current-plan-box.schoolhub-no-plan-state .text-slate-700{
+  color:#991b1b!important;
+}
+#user-current-plan-box.schoolhub-no-plan-state .schoolhub-hide-when-no-plan{
+  display:none!important;
+}
+</style>
+
+<script id="schoolhub-no-plan-red-no-team-limit-script">
+(function(){
+  if(window.__schoolhubNoPlanRedNoTeamLimitFix) return;
+  window.__schoolhubNoPlanRedNoTeamLimitFix = true;
+
+  function dir(){ return window.__currentUserDir || {}; }
+
+  function hasPlan(){
+    var d = dir();
+    return !!(d && d.planId && d.planId !== 'team_shared');
+  }
+
+  function isNoPlanText(s){
+    return /ยังไม่ได้เลือกแผน|เลือกแผนเมื่อเริ่มใช้งาน|ยังไม่มีแผน/.test(String(s||''));
+  }
+
+  function cleanupNoPlanBox(){
+    var box = document.getElementById('user-current-plan-box');
+    if(!box) return;
+
+    if(!hasPlan()){
+      box.classList.add('schoolhub-no-plan-state');
+
+      // ลบ/ซ่อนข้อความ "ใช้ร่วมกันได้สูงสุด 1 คน" ที่หลุดมาจาก auto feature
+      Array.from(box.querySelectorAll('*')).forEach(function(el){
+        var txt = (el.textContent || '').replace(/\s+/g,' ').trim();
+        if(/ใช้ร่วมกันได้สูงสุด\s*1\s*คน/.test(txt) || /ใช้ร่วมกันได้สูงสุด/.test(txt)){
+          el.classList.add('schoolhub-hide-when-no-plan');
+          el.style.display = 'none';
+        }
+      });
+
+      // ถ้าข้อความถูกใส่เป็น text node ตรง ๆ ใน box ให้ rewrite แบบปลอดภัย
+      if(/ใช้ร่วมกันได้สูงสุด\s*1\s*คน/.test(box.textContent || '') && !box.querySelector('.schoolhub-no-plan-clean-card')){
+        box.innerHTML = '<div class="schoolhub-no-plan-clean-card rounded-3xl border border-rose-200 bg-rose-50 p-5">' +
+          '<div class="text-sm font-black text-rose-600">ยังไม่ได้เลือกแผน</div>' +
+          '<div class="text-2xl font-black text-rose-900 mt-1">เลือกแผนเมื่อเริ่มใช้งาน</div>' +
+          '<p class="text-sm font-bold text-rose-700 mt-2">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</p>' +
+        '</div>';
+      }
+    }else{
+      box.classList.remove('schoolhub-no-plan-state');
+    }
+  }
+
+  // แก้ currentPlanInfo/teamLimit ถ้ามีจาก patch ก่อนหน้า: ไม่มีแผน = teamLimit 0
+  var oldCurrentPlanSingleRender = window.schoolhubCurrentPlanTeamShareStableRender || window.schoolhubCurrentPlanSingleRender;
+  if(typeof oldCurrentPlanSingleRender === 'function' && !oldCurrentPlanSingleRender.__noPlanWrapped){
+    window.schoolhubCurrentPlanTeamShareStableRender = function(){
+      var r = oldCurrentPlanSingleRender.apply(this, arguments);
+      setTimeout(cleanupNoPlanBox, 80);
+      return r;
+    };
+    window.schoolhubCurrentPlanTeamShareStableRender.__noPlanWrapped = true;
+  }
+
+  function init(){
+    cleanupNoPlanBox();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    init();
+    setTimeout(init, 300);
+    setTimeout(init, 1000);
+  });
+  document.addEventListener('click', function(){ setTimeout(init, 120); }, true);
+  document.addEventListener('change', function(){ setTimeout(init, 120); }, true);
+
+  window.schoolhubNoPlanRedNoTeamLimitNow = init;
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub No Plan Red Card Style Fix
+     - ไม่เอาสีแดงคลุมกล่องเดิม
+     - สร้างกล่องใหม่สไตล์เดียวกับกล่องสีฟ้าของคนมีแผน แต่เป็นโทนแดง
+     ========================================================= -->
+<style id="schoolhub-no-plan-red-card-style-fix">
+#user-current-plan-box.schoolhub-no-plan-state{
+  border:0!important;
+  background:transparent!important;
+  color:inherit!important;
+  padding:0!important;
+}
+.schoolhub-no-plan-card-proper{
+  border-radius:1.5rem!important;
+  padding:1.25rem!important;
+  border:1px solid #fecaca!important;
+  background:linear-gradient(135deg,#fff1f2 0%,#ffffff 100%)!important;
+  color:#7f1d1d!important;
+}
+.schoolhub-no-plan-card-proper .no-plan-label{
+  font-size:.875rem!important;
+  font-weight:900!important;
+  color:#dc2626!important;
+}
+.schoolhub-no-plan-card-proper .no-plan-title{
+  font-size:1.5rem!important;
+  line-height:1.25!important;
+  font-weight:900!important;
+  color:#7f1d1d!important;
+  margin-top:.25rem!important;
+}
+.schoolhub-no-plan-card-proper .no-plan-desc{
+  margin-top:.6rem!important;
+  color:#991b1b!important;
+  font-size:.95rem!important;
+  line-height:1.55!important;
+  font-weight:700!important;
+}
+.schoolhub-no-plan-card-proper .meta-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:.65rem!important;
+  margin-top:1rem!important;
+}
+.schoolhub-no-plan-card-proper .meta-item{
+  background:rgba(255,255,255,.86)!important;
+  border:1px solid #fecaca!important;
+  border-radius:1rem!important;
+  padding:.75rem .9rem!important;
+  font-size:.85rem!important;
+  font-weight:900!important;
+  color:#991b1b!important;
+}
+@media(max-width:767px){
+  .schoolhub-no-plan-card-proper .meta-grid{grid-template-columns:1fr!important;}
+}
+</style>
+
+<script id="schoolhub-no-plan-red-card-style-script">
+(function(){
+  if(window.__schoolhubNoPlanRedCardStyleFix) return;
+  window.__schoolhubNoPlanRedCardStyleFix = true;
+
+  function dir(){ return window.__currentUserDir || {}; }
+  function hasPlan(){
+    var d = dir();
+    return !!(d && d.planId && d.planId !== 'team_shared');
+  }
+
+  function renderNoPlanCardProper(){
+    var box = document.getElementById('user-current-plan-box');
+    if(!box || hasPlan()) return;
+
+    box.classList.add('schoolhub-no-plan-state');
+    box.innerHTML =
+      '<div class="schoolhub-no-plan-card-proper">' +
+        '<div class="no-plan-label"><i class="fas fa-circle-exclamation mr-1"></i>แผนปัจจุบัน</div>' +
+        '<div class="no-plan-title">ยังไม่ได้เลือกแผน</div>' +
+        '<div class="meta-grid">' +
+          '<div class="meta-item">สถานะ: ยังไม่มีแผน</div>' +
+          '<div class="meta-item">รอบชำระเงินครั้งต่อไป: ไม่มี</div>' +
+        '</div>' +
+        '<p class="no-plan-desc">เลือกแผนเมื่อเริ่มใช้งาน คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</p>' +
+      '</div>';
+  }
+
+  function init(){
+    renderNoPlanCardProper();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    init();
+    setTimeout(init, 250);
+    setTimeout(init, 900);
+  });
+  document.addEventListener('click', function(){ setTimeout(init, 120); }, true);
+  document.addEventListener('change', function(){ setTimeout(init, 120); }, true);
+
+  window.schoolhubRenderNoPlanRedCardProper = init;
+})();
+</script>
+
 </body>
 </html>
