@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -21411,6 +21410,578 @@ label:has(#plan-sub-allow-team){
   setInterval(function(){
     patchHeavyLoaders();
   }, 3000);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Plan Details All Pages Fix
+     - ให้รายละเอียดสิทธิ์แบบเต็มแสดงเหมือนกันทุกหน้า:
+       1) หน้าหลักก่อนล็อกอิน
+       2) หน้าเลือก / เปลี่ยนแผน
+       3) หน้าจัดการแผนของแอดมิน
+     ========================================================= -->
+<style id="schoolhub-plan-details-all-pages-style">
+.schoolhub-plan-full-details{
+  margin-top:1rem!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:.55rem!important;
+}
+.schoolhub-plan-full-detail{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:.55rem!important;
+  color:#334155!important;
+  font-size:.9rem!important;
+  line-height:1.45!important;
+  font-weight:800!important;
+}
+.schoolhub-plan-full-detail i{
+  width:1rem!important;
+  min-width:1rem!important;
+  text-align:center!important;
+  margin-top:.18rem!important;
+}
+.schoolhub-plan-full-detail.manual i{ color:#4f46e5!important; }
+.schoolhub-plan-full-detail.auto i{ color:#10b981!important; }
+.schoolhub-plan-full-detail-divider{
+  height:1px!important;
+  background:#e2e8f0!important;
+  margin:.2rem 0!important;
+}
+#admin-plan-cards .schoolhub-plan-full-details,
+#admin-plan-table .schoolhub-plan-full-details{
+  margin-top:.7rem!important;
+}
+#admin-plan-cards .schoolhub-plan-full-detail,
+#admin-plan-table .schoolhub-plan-full-detail{
+  font-size:.78rem!important;
+  gap:.45rem!important;
+}
+</style>
+
+<script id="schoolhub-plan-details-all-pages-script">
+(function(){
+  if(window.__schoolhubPlanDetailsAllPagesFix) return;
+  window.__schoolhubPlanDetailsAllPagesFix = true;
+
+  const RIGHTS = [
+    ['allowCourses','เพิ่ม/แก้ไขรายวิชา'],
+    ['allowStudents','เพิ่ม/แก้ไขนักเรียน'],
+    ['allowAttendance','เช็คชื่อเข้าเรียน'],
+    ['allowScores','บันทึกคะแนน'],
+    ['allowPlanScores','จัดการแผนคะแนน'],
+    ['allowGradeCriteria','ตั้งค่าเกณฑ์เกรด'],
+    ['allowStudentShare','แชร์ให้นักเรียน'],
+    ['allowExport','Export Excel'],
+    ['allowTeam','ใช้งานแบบทีม'],
+    ['allowEditData','แก้ไขข้อมูล'],
+    ['allowDeleteData','ลบข้อมูล'],
+    ['allowReports','รายงาน/ภาพรวม']
+  ];
+
+  const DEFAULT_TRUE = new Set([
+    'allowCourses','allowStudents','allowAttendance','allowScores',
+    'allowPlanScores','allowGradeCriteria','allowStudentShare',
+    'allowExport','allowEditData','allowDeleteData','allowReports'
+  ]);
+
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];
+    });
+  }
+  function n(v,fb){
+    v=Number(v);
+    return Number.isFinite(v)?v:(fb||0);
+  }
+  function allPlans(){
+    try{
+      if(Array.isArray(window.subscriptionPlans)) return window.subscriptionPlans;
+      return JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');
+    }catch(e){return [];}
+  }
+  function unique(arr){
+    const seen = new Set(), out = [];
+    (arr||[]).forEach(function(x){
+      x = String(x||'').trim();
+      if(!x) return;
+      const key = x.replace(/^✓\s*/,'').trim();
+      if(seen.has(key)) return;
+      seen.add(key);
+      out.push(x);
+    });
+    return out;
+  }
+  function manualFeatures(plan){
+    if(Array.isArray(plan.manualFeatures)){
+      return unique(plan.manualFeatures);
+    }
+    return unique((plan.features||[]).filter(function(x){
+      return String(x||'').trim() && !String(x||'').trim().startsWith('✓');
+    }));
+  }
+  function autoFeatures(plan){
+    plan = plan || {};
+    const out = [];
+
+    if(plan.courseLimit !== undefined){
+      out.push(n(plan.courseLimit,0) ? ('เพิ่มรายวิชาได้ '+n(plan.courseLimit,0)+' วิชา') : 'เพิ่มรายวิชาไม่จำกัด');
+    }
+    if(plan.studentLimit !== undefined){
+      out.push(n(plan.studentLimit,0) ? ('นักเรียนสูงสุด '+n(plan.studentLimit,0)+' คน') : 'นักเรียนไม่จำกัด');
+    }
+    if(plan.weekLimit !== undefined || plan.maxWeeks !== undefined){
+      out.push('ใช้งานได้ '+n(plan.weekLimit || plan.maxWeeks,20)+' สัปดาห์');
+    }
+
+    RIGHTS.forEach(function(r){
+      const id = r[0], label = r[1];
+      let enabled;
+      if(id === 'allowTeam'){
+        enabled = plan.allowTeam === true || n(plan.teamMemberLimit || plan.maxTeamMembers || plan.teamLimit, 1) >= 2;
+      }else if(plan[id] !== undefined){
+        enabled = plan[id] !== false;
+      }else{
+        enabled = DEFAULT_TRUE.has(id);
+      }
+      if(enabled) out.push(label);
+    });
+
+    return unique(out);
+  }
+  function detailHtml(plan){
+    const manual = manualFeatures(plan);
+    const auto = autoFeatures(plan);
+    let html = '<div class="schoolhub-plan-full-details">';
+    if(manual.length){
+      html += manual.map(function(x){
+        return '<div class="schoolhub-plan-full-detail manual"><i class="fas fa-star"></i><span>'+esc(x)+'</span></div>';
+      }).join('');
+      if(auto.length) html += '<div class="schoolhub-plan-full-detail-divider"></div>';
+    }
+    html += auto.map(function(x){
+      return '<div class="schoolhub-plan-full-detail auto"><i class="fas fa-check"></i><span>'+esc(x)+'</span></div>';
+    }).join('');
+    html += '</div>';
+    return html;
+  }
+
+  window.schoolhubBuildPlanDetailsFullHtml = detailHtml;
+
+  function normalizePlanObjects(){
+    try{
+      if(!Array.isArray(window.subscriptionPlans)) return;
+      window.subscriptionPlans = window.subscriptionPlans.map(function(p){
+        p = Object.assign({}, p);
+        const manual = manualFeatures(p);
+        const auto = autoFeatures(p).map(function(x){ return '✓ '+x; });
+        p.manualFeatures = manual;
+        p.autoFeatures = auto;
+        p.features = unique(manual.concat(auto));
+        return p;
+      });
+      try{ localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(window.subscriptionPlans)); }catch(e){}
+    }catch(e){}
+  }
+
+  function findPlanForCard(card){
+    const txt = card.textContent || '';
+    return allPlans().find(function(p){
+      return p && p.name && txt.indexOf(String(p.name)) !== -1;
+    });
+  }
+
+  function removeOldFeatureBlocks(card){
+    Array.from(card.querySelectorAll('.schoolhub-plan-full-details,.schoolhub-auto-plan-features')).forEach(function(el){
+      el.remove();
+    });
+
+    Array.from(card.querySelectorAll('ul')).forEach(function(el){
+      const t = el.textContent || '';
+      if(/รายวิชา|นักเรียน|สัปดาห์|เช็คชื่อ|คะแนน|Export|แชร์|เกณฑ์|ทีม|รายงาน|แก้ไข|ลบ/.test(t)){
+        el.remove();
+      }
+    });
+  }
+
+  function insertDetails(card, plan){
+    if(!card || !plan) return;
+    if(card.dataset.schoolhubFullDetailsApplied === '1') return;
+
+    removeOldFeatureBlocks(card);
+
+    const btn = Array.from(card.querySelectorAll('button,a')).filter(function(x){
+      return /สมัคร|เลือก|ต่ออายุ|แก้ไข|ลบ|ดูรายละเอียด/i.test(x.textContent||'');
+    }).slice(-1)[0];
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = detailHtml(plan);
+    const details = wrap.firstElementChild;
+
+    if(btn){
+      btn.parentNode.insertBefore(details, btn);
+    }else{
+      card.appendChild(details);
+    }
+
+    card.dataset.schoolhubFullDetailsApplied = '1';
+  }
+
+  function patchCardsInArea(selector){
+    document.querySelectorAll(selector).forEach(function(card){
+      const plan = findPlanForCard(card);
+      if(plan) insertDetails(card, plan);
+    });
+  }
+
+  function applyAllPlanCards(){
+    normalizePlanObjects();
+
+    // หน้าหลักก่อนล็อกอิน
+    patchCardsInArea('#landing-view .pricing-card, #landing-view [class*="pricing"], #landing-plans-section > div, #landing-plans-section .rounded-\\[2rem\\]');
+
+    // หน้าเลือก / เปลี่ยนแผน
+    patchCardsInArea('#user-plan-list > div, #view-user-plans .pricing-card, #view-user-plans [class*="pricing"], #view-user-plans .rounded-\\[2rem\\]');
+
+    // หน้าจัดการแผนของแอดมิน
+    patchCardsInArea('#admin-plan-cards > div, #view-admin-plans .pricing-card, #view-admin-plans [class*="pricing"], #view-admin-plans .rounded-\\[2rem\\]');
+
+    // ถ้าเป็น table admin ให้เติมใน cell ชื่อแผน/รายละเอียด
+    document.querySelectorAll('#admin-plan-table tbody tr').forEach(function(tr){
+      if(tr.dataset.schoolhubFullDetailsApplied === '1') return;
+      const plan = findPlanForCard(tr);
+      if(!plan) return;
+      const target = tr.querySelector('td:nth-child(2), td:first-child') || tr.querySelector('td');
+      if(target){
+        target.insertAdjacentHTML('beforeend', detailHtml(plan));
+        tr.dataset.schoolhubFullDetailsApplied = '1';
+      }
+    });
+  }
+
+  function wrapRender(fnName){
+    const old = window[fnName];
+    if(typeof old !== 'function' || old.__planDetailsAllPagesWrapped) return;
+    window[fnName] = function(){
+      normalizePlanObjects();
+      const r = old.apply(this, arguments);
+      setTimeout(applyAllPlanCards, 60);
+      setTimeout(applyAllPlanCards, 300);
+      return r;
+    };
+    window[fnName].__planDetailsAllPagesWrapped = true;
+  }
+
+  function init(){
+    wrapRender('renderLandingPlans');
+    wrapRender('renderUserPlans');
+    wrapRender('renderAdminPlans');
+    normalizePlanObjects();
+    applyAllPlanCards();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    init();
+    setTimeout(init, 500);
+    setTimeout(init, 1500);
+  });
+  document.addEventListener('click', function(){ setTimeout(init, 150); }, true);
+  document.addEventListener('change', function(){ setTimeout(init, 150); }, true);
+  setInterval(init, 2200);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Plan Details Real Card + Button Spacing Fix
+     - บังคับให้รายละเอียดสิทธิ์แบบเต็มขึ้นใน:
+       1) หน้าหลักก่อนล็อกอิน
+       2) หน้าเลือก / เปลี่ยนแผน
+       3) หน้าจัดการแผนแอดมิน
+     - ปุ่มเลือก/สมัครแผนนี้ห่างจากรายการสิทธิ์มากขึ้น
+     ========================================================= -->
+<style id="schoolhub-plan-details-real-card-spacing-style">
+.schoolhub-plan-full-details,
+.schoolhub-auto-plan-features{
+  margin-top:1rem!important;
+  margin-bottom:1.35rem!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:.55rem!important;
+}
+.schoolhub-plan-full-detail,
+.schoolhub-auto-plan-feature{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:.55rem!important;
+  color:#334155!important;
+  font-size:.9rem!important;
+  line-height:1.45!important;
+  font-weight:800!important;
+}
+.schoolhub-plan-full-detail i,
+.schoolhub-auto-plan-feature i{
+  width:1rem!important;
+  min-width:1rem!important;
+  text-align:center!important;
+  margin-top:.18rem!important;
+}
+.schoolhub-plan-full-detail.manual i,
+.schoolhub-auto-plan-feature.manual i{ color:#4f46e5!important; }
+.schoolhub-plan-full-detail.auto i,
+.schoolhub-auto-plan-feature:not(.manual) i{ color:#10b981!important; }
+.schoolhub-plan-full-detail-divider,
+.schoolhub-auto-plan-feature-divider{
+  height:1px!important;
+  background:#e2e8f0!important;
+  margin:.3rem 0!important;
+}
+
+/* เว้นปุ่มเลือกแผนนี้/สมัครแผนนี้ให้ห่างจากคำสุดท้าย */
+.schoolhub-plan-details-button-spaced{
+  margin-top:1.35rem!important;
+}
+
+/* แอดมินให้เล็กลงนิดเพื่อไม่ล้น */
+#admin-plan-cards .schoolhub-plan-full-details,
+#admin-plan-cards .schoolhub-auto-plan-features,
+#view-admin-plans .schoolhub-plan-full-details,
+#view-admin-plans .schoolhub-auto-plan-features{
+  margin-top:.75rem!important;
+  margin-bottom:1rem!important;
+}
+#admin-plan-cards .schoolhub-plan-full-detail,
+#view-admin-plans .schoolhub-plan-full-detail,
+#admin-plan-cards .schoolhub-auto-plan-feature,
+#view-admin-plans .schoolhub-auto-plan-feature{
+  font-size:.8rem!important;
+}
+</style>
+
+<script id="schoolhub-plan-details-real-card-spacing-script">
+(function(){
+  if(window.__schoolhubPlanDetailsRealCardSpacingFix) return;
+  window.__schoolhubPlanDetailsRealCardSpacingFix = true;
+
+  const RIGHTS = [
+    ['allowCourses','เพิ่ม/แก้ไขรายวิชา'],
+    ['allowStudents','เพิ่ม/แก้ไขนักเรียน'],
+    ['allowAttendance','เช็คชื่อเข้าเรียน'],
+    ['allowScores','บันทึกคะแนน'],
+    ['allowPlanScores','จัดการแผนคะแนน'],
+    ['allowGradeCriteria','ตั้งค่าเกณฑ์เกรด'],
+    ['allowStudentShare','แชร์ให้นักเรียน'],
+    ['allowExport','Export Excel'],
+    ['allowTeam','ใช้งานแบบทีม'],
+    ['allowEditData','แก้ไขข้อมูล'],
+    ['allowDeleteData','ลบข้อมูล'],
+    ['allowReports','รายงาน/ภาพรวม']
+  ];
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+  function n(v,fb){v=Number(v);return Number.isFinite(v)?v:(fb||0);}
+  function getPlans(){
+    try{
+      if(Array.isArray(window.subscriptionPlans) && window.subscriptionPlans.length) return window.subscriptionPlans;
+      return JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');
+    }catch(e){return [];}
+  }
+  function uniq(arr){
+    const seen=new Set(), out=[];
+    (arr||[]).forEach(x=>{
+      x=String(x||'').trim();
+      if(!x) return;
+      const key=x.replace(/^✓\s*/,'').trim();
+      if(seen.has(key)) return;
+      seen.add(key); out.push(x);
+    });
+    return out;
+  }
+  function manualFeatures(p){
+    if(Array.isArray(p.manualFeatures)) return uniq(p.manualFeatures);
+    return uniq((p.features||[]).filter(x=>String(x||'').trim() && !String(x||'').trim().startsWith('✓')));
+  }
+  function autoFeatures(p){
+    p=p||{};
+    const out=[];
+    if(p.courseLimit !== undefined) out.push(n(p.courseLimit,0) ? ('เพิ่มรายวิชาได้ '+n(p.courseLimit,0)+' วิชา') : 'เพิ่มรายวิชาไม่จำกัด');
+    if(p.studentLimit !== undefined) out.push(n(p.studentLimit,0) ? ('นักเรียนสูงสุด '+n(p.studentLimit,0)+' คน') : 'นักเรียนไม่จำกัด');
+    if(p.weekLimit !== undefined || p.maxWeeks !== undefined) out.push('ใช้งานได้ '+n(p.weekLimit || p.maxWeeks,20)+' สัปดาห์');
+    RIGHTS.forEach(([id,label])=>{
+      let enabled;
+      if(id==='allowTeam') enabled = p.allowTeam === true || n(p.teamMemberLimit || p.maxTeamMembers || p.teamLimit, 1) >= 2;
+      else if(p[id] !== undefined) enabled = p[id] !== false;
+      else enabled = DEFAULT_TRUE.has(id);
+      if(enabled) out.push(label);
+    });
+    return uniq(out);
+  }
+  function detailsHtml(p){
+    const manual=manualFeatures(p), auto=autoFeatures(p);
+    let h='<div class="schoolhub-plan-full-details">';
+    if(manual.length){
+      h += manual.map(x=>'<div class="schoolhub-plan-full-detail manual"><i class="fas fa-star"></i><span>'+esc(x)+'</span></div>').join('');
+      if(auto.length) h += '<div class="schoolhub-plan-full-detail-divider"></div>';
+    }
+    h += auto.map(x=>'<div class="schoolhub-plan-full-detail auto"><i class="fas fa-check"></i><span>'+esc(x)+'</span></div>').join('');
+    h += '</div>';
+    return h;
+  }
+
+  window.schoolhubBuildPlanDetailsFullHtml = detailsHtml;
+
+  function normalizePlans(){
+    try{
+      if(!Array.isArray(window.subscriptionPlans)) return;
+      window.subscriptionPlans = window.subscriptionPlans.map(p=>{
+        p=Object.assign({},p);
+        const manual=manualFeatures(p);
+        const auto=autoFeatures(p).map(x=>'✓ '+x);
+        p.manualFeatures=manual;
+        p.autoFeatures=auto;
+        p.features=uniq(manual.concat(auto));
+        return p;
+      });
+      try{localStorage.setItem('schoolhub_subscription_plans',JSON.stringify(window.subscriptionPlans));}catch(e){}
+    }catch(e){}
+  }
+
+  function findPlanForCard(card){
+    const txt=card.textContent||'';
+    return getPlans().find(p=>p && p.name && txt.indexOf(String(p.name)) !== -1);
+  }
+
+  function isPlanCard(el){
+    if(!el) return false;
+    const txt=el.textContent||'';
+    if(!/บาท|ฟรี|เดือน|ปี|สมัคร|เลือก|แผน|รายวิชา|Excel|เช็คชื่อ|คะแนน/.test(txt)) return false;
+    return !!findPlanForCard(el);
+  }
+
+  function cleanOld(card){
+    card.querySelectorAll('.schoolhub-plan-full-details,.schoolhub-auto-plan-features').forEach(e=>e.remove());
+    card.querySelectorAll('ul').forEach(ul=>{
+      const t=ul.textContent||'';
+      if(/รายวิชา|นักเรียน|สัปดาห์|เช็คชื่อ|คะแนน|Export|แชร์|เกณฑ์|ทีม|รายงาน|แก้ไข|ลบ/.test(t)) ul.remove();
+    });
+  }
+
+  function spaceButtons(card){
+    card.querySelectorAll('button,a').forEach(btn=>{
+      const t=btn.textContent||'';
+      if(/สมัคร|เลือก|แผนนี้|ต่ออายุ|ชำระ|ขอใช้/.test(t)){
+        btn.classList.add('schoolhub-plan-details-button-spaced');
+      }
+    });
+  }
+
+  function applyToCard(card){
+    const p=findPlanForCard(card);
+    if(!p) return;
+    if(card.dataset.schoolhubRealDetailsPlanId === String(p.id||p.name||'')){
+      spaceButtons(card);
+      return;
+    }
+    cleanOld(card);
+
+    const buttons=Array.from(card.querySelectorAll('button,a')).filter(b=>/สมัคร|เลือก|แผนนี้|ต่ออายุ|ชำระ|ขอใช้/.test(b.textContent||''));
+    const btn=buttons[buttons.length-1];
+    const wrap=document.createElement('div');
+    wrap.innerHTML=detailsHtml(p);
+    const details=wrap.firstElementChild;
+
+    if(btn && btn.parentElement){
+      btn.parentElement.insertBefore(details, btn);
+    }else{
+      card.insertAdjacentElement('beforeend', details);
+    }
+    spaceButtons(card);
+    card.dataset.schoolhubRealDetailsPlanId = String(p.id||p.name||'');
+  }
+
+  function findAndApply(){
+    normalizePlans();
+
+    const selectors = [
+      '#landing-view .pricing-card',
+      '#landing-view [class*="pricing"]',
+      '#landing-plans-section .rounded-\\[2rem\\]',
+      '#landing-plans-section > div > div',
+      '#user-plan-list > div',
+      '#view-user-plans .pricing-card',
+      '#view-user-plans [class*="pricing"]',
+      '#view-user-plans .rounded-\\[2rem\\]',
+      '#view-user-plans .grid > div',
+      '#admin-plan-cards > div',
+      '#view-admin-plans .pricing-card',
+      '#view-admin-plans [class*="pricing"]',
+      '#view-admin-plans .rounded-\\[2rem\\]',
+      '#view-admin-plans .grid > div'
+    ];
+    selectors.forEach(sel=>{
+      document.querySelectorAll(sel).forEach(card=>{
+        if(isPlanCard(card)) applyToCard(card);
+      });
+    });
+
+    // fallback: หา card ที่มีชื่อแผนทั่วหน้าเฉพาะ view แผน
+    ['landing-view','view-user-plans','view-admin-plans'].forEach(id=>{
+      const root=document.getElementById(id);
+      if(!root) return;
+      getPlans().forEach(p=>{
+        if(!p.name) return;
+        const candidates=Array.from(root.querySelectorAll('div')).filter(el=>{
+          const txt=el.textContent||'';
+          return txt.includes(p.name) && /บาท|ฟรี|สมัคร|เลือก|รายวิชา|เดือน|ปี/.test(txt);
+        });
+        candidates.sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length);
+        const card=candidates.find(el=>isPlanCard(el));
+        if(card) applyToCard(card);
+      });
+    });
+
+    // table admin
+    document.querySelectorAll('#admin-plan-table tbody tr').forEach(tr=>{
+      if(tr.dataset.schoolhubRealDetailsApplied==='1') return;
+      const p=findPlanForCard(tr);
+      if(!p) return;
+      const target=tr.querySelector('td:nth-child(2),td:first-child') || tr.querySelector('td');
+      if(target){
+        target.insertAdjacentHTML('beforeend', detailsHtml(p));
+        tr.dataset.schoolhubRealDetailsApplied='1';
+      }
+    });
+  }
+
+  function wrap(fnName){
+    const old=window[fnName];
+    if(typeof old !== 'function' || old.__realPlanDetailsWrapped) return;
+    window[fnName]=function(){
+      normalizePlans();
+      const r=old.apply(this,arguments);
+      setTimeout(findAndApply,80);
+      setTimeout(findAndApply,350);
+      setTimeout(findAndApply,900);
+      return r;
+    };
+    window[fnName].__realPlanDetailsWrapped=true;
+  }
+
+  function init(){
+    wrap('renderLandingPlans');
+    wrap('renderUserPlans');
+    wrap('renderAdminPlans');
+    wrap('openUserPlanSelector');
+    findAndApply();
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{init();setTimeout(init,500);setTimeout(init,1500);});
+  document.addEventListener('click',()=>setTimeout(init,150),true);
+  document.addEventListener('change',()=>setTimeout(init,150),true);
+  setInterval(init,2200);
 })();
 </script>
 
