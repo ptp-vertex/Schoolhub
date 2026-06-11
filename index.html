@@ -21985,5 +21985,80 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- SchoolHub Overview Export Immediate Alert Fix -->
+<script id="schoolhub-overview-export-immediate-alert-fix">
+(function(){
+ if(window.__overviewExportImmediateFix) return;
+ window.__overviewExportImmediateFix=true;
+
+ function noExport(){
+   try{
+     if(typeof schoolhubExpandedPlanAllows==='function') return !schoolhubExpandedPlanAllows('export');
+   }catch(e){}
+   try{
+     if(typeof currentPlanAllows==='function') return !currentPlanAllows('export');
+   }catch(e){}
+   return false;
+ }
+
+ function showMsg(){
+   if(typeof showCustomAlert==='function'){
+      showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
+   } else {
+      alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
+   }
+ }
+
+ function isExportBtn(el){
+   const t=((el?.textContent)||'')+' '+((el?.id)||'')+' '+((el?.getAttribute?.('onclick'))||'');
+   return /โหลด Excel|โหลดตารางนี้|Export Excel|ส่งออก Excel/i.test(t);
+ }
+
+ function isCloseBtn(el){
+   const t=((el?.textContent)||'')+' '+((el?.id)||'')+' '+((el?.getAttribute?.('onclick'))||'');
+   return /ยกเลิก|ปิด|close|cancel|×/i.test(t);
+ }
+
+ document.addEventListener('click',function(e){
+   const btn=e.target.closest('button,a');
+   if(!btn) return;
+
+   if(isCloseBtn(btn)){
+      btn.disabled=false;
+      btn.style.pointerEvents='auto';
+      return;
+   }
+
+   if(isExportBtn(btn) && noExport()){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+      document.querySelectorAll('[id*="export"],[id*="excel"],[class*="modal"],[class*="popup"]').forEach(x=>{
+        if(/export|excel/i.test((x.id||'')+' '+(x.className||''))){
+          x.classList.add('hidden');
+          x.style.display='none';
+        }
+      });
+
+      showMsg();
+      return false;
+   }
+ }, true);
+
+ function unlockCloseButtons(){
+   document.querySelectorAll('button,a').forEach(btn=>{
+      if(isCloseBtn(btn)){
+         btn.disabled=false;
+         btn.style.pointerEvents='auto';
+         btn.style.opacity='1';
+      }
+   });
+ }
+ setInterval(unlockCloseButtons,1000);
+})();
+</script>
+
 </body>
 </html>
