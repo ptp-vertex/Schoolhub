@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -21841,30 +21842,31 @@ label:has(#plan-sub-allow-team){
 
 
 
+
 <!-- =========================================================
-     SchoolHub Overview Export No-Spin Permission Fix
-     - แก้เฉพาะ Export หน้า "ภาพรวม" แบบเบา ไม่ใช้ MutationObserver / setInterval
-     - ถ้าไม่มีสิทธิ์ Export: แจ้งเตือนทันที ไม่เปิด popup
-     - ปุ่ม X / ยกเลิกกดได้เสมอ
+     SchoolHub Overview Export Like Attendance Fix
+     - ก็อปแนวทางหน้าเช็คชื่อ: ปุ่มโหลด Excel ถ้าไม่มีสิทธิ์ กดแล้ว alert ทันที
+     - ไม่เปิด popup เลือกห้อง/ดาวน์โหลดก่อน
+     - ปุ่ม X / ยกเลิก ไม่ถูกจับเป็น Export และกดได้เสมอ
      ========================================================= -->
-<style id="schoolhub-overview-export-no-spin-style">
-.schoolhub-export-close-safe,
-button[onclick*="closeExport"],
-button[onclick*="cancelExport"],
-button[onclick*="closeOverview"],
-button[onclick*="cancelOverview"],
-button[aria-label*="ปิด"],
-button[title*="ปิด"]{
+<style id="schoolhub-overview-export-like-attendance-style">
+.schoolhub-export-disabled-btn{
+  opacity:.5!important;
+  cursor:not-allowed!important;
   pointer-events:auto!important;
+}
+.schoolhub-export-close-always{
   opacity:1!important;
   cursor:pointer!important;
+  pointer-events:auto!important;
   filter:none!important;
 }
 </style>
-<script id="schoolhub-overview-export-no-spin-script">
+
+<script id="schoolhub-overview-export-like-attendance-script">
 (function(){
-  if(window.__schoolhubOverviewExportNoSpinFix) return;
-  window.__schoolhubOverviewExportNoSpinFix = true;
+  if(window.__schoolhubOverviewExportLikeAttendanceFix) return;
+  window.__schoolhubOverviewExportLikeAttendanceFix = true;
 
   function dir(){ return window.__currentUserDir || {}; }
 
@@ -21889,37 +21891,53 @@ button[title*="ปิด"]{
     return true;
   }
 
-  function showNoExport(){
+  function noExportMessage(){
     if(typeof window.showCustomAlert === 'function'){
       window.showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
     }else{
-      alert('แผนนี้ไม่รองรับ Export\\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
+      alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
     }
   }
 
-  function txt(el){
+  function allText(el){
     if(!el) return '';
     return String(
-      (el.id||'') + ' ' +
-      (el.className||'') + ' ' +
-      (el.textContent||'') + ' ' +
-      ((el.getAttribute && el.getAttribute('onclick'))||'') + ' ' +
-      ((el.getAttribute && el.getAttribute('aria-label'))||'') + ' ' +
-      ((el.getAttribute && el.getAttribute('title'))||'')
+      (el.id || '') + ' ' +
+      (el.className || '') + ' ' +
+      (el.textContent || '') + ' ' +
+      ((el.getAttribute && el.getAttribute('onclick')) || '') + ' ' +
+      ((el.getAttribute && el.getAttribute('aria-label')) || '') + ' ' +
+      ((el.getAttribute && el.getAttribute('title')) || '')
     );
   }
 
-  function isClose(el){
-    return /ยกเลิก|ปิด|close|cancel|fa-times|fa-xmark|×|✕/i.test(txt(el));
+  function isCloseCancelButton(el){
+    var s = allText(el).replace(/\s+/g,' ').trim();
+    return (
+      /(^| )(x|×|✕)( |$)/i.test(s) ||
+      /ยกเลิก|ปิด|close|cancel|fa-times|fa-xmark/i.test(s)
+    );
   }
 
-  function isOverviewExportBtn(el){
-    if(!el || isClose(el)) return false;
-    var s = txt(el);
-    return /โหลดตารางนี้|โหลด Excel|Export Excel|ส่งออก Excel|exportScoresToExcel|openOverviewExport|showOverviewExport|downloadExcelMultiSheet/i.test(s);
+  // จับเฉพาะปุ่มที่เป็น "เปิด/ดาวน์โหลด Excel" เท่านั้น ห้ามจับ X/ยกเลิก
+  function isOverviewExportButton(el){
+    if(!el || isCloseCancelButton(el)) return false;
+
+    var s = allText(el);
+
+    // ต้องมีคำ/ฟังก์ชัน export แบบชัดเจน
+    var hasExportWord = /โหลดตารางนี้|โหลด Excel|Export Excel|ส่งออก Excel|ดาวน์โหลด Excel/i.test(s);
+    var hasExportFn = /exportScoresToExcel|openOverviewExport|showOverviewExport|openOverviewExcel|showOverviewExcel|downloadExcelMultiSheet|exportOverviewToExcel|downloadOverviewExcel/i.test(s);
+
+    if(!hasExportWord && !hasExportFn) return false;
+
+    // กันปุ่มยกเลิกที่มีคำว่า export ใน onclick เช่น closeExportModal()
+    if(/closeExport|cancelExport|closeOverview|cancelOverview/i.test(s)) return false;
+
+    return true;
   }
 
-  function closeOnlyOverviewExportPopup(){
+  function closeOnlyExportPopup(){
     [
       'overview-export-modal',
       'schoolhub-overview-excel-room-modal',
@@ -21936,99 +21954,109 @@ button[title*="ปิด"]{
     });
   }
 
-  function unlockCloseButtons(scope){
-    (scope || document).querySelectorAll('button,a,[role="button"]').forEach(function(b){
-      if(isClose(b)){
-        b.classList.add('schoolhub-export-close-safe');
-        b.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
-        b.disabled = false;
-        b.removeAttribute('disabled');
-        b.removeAttribute('aria-disabled');
-        b.style.pointerEvents = 'auto';
-        b.style.opacity = '1';
-        b.style.cursor = 'pointer';
-        b.style.filter = '';
-      }
+  function unlockCloseCancel(){
+    document.querySelectorAll('button,a,[role="button"]').forEach(function(btn){
+      if(!isCloseCancelButton(btn)) return;
+      btn.classList.add('schoolhub-export-close-always');
+      btn.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale','schoolhub-export-disabled-btn');
+      btn.disabled = false;
+      btn.removeAttribute('disabled');
+      btn.removeAttribute('aria-disabled');
+      btn.style.pointerEvents = 'auto';
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      btn.style.filter = '';
     });
   }
 
-  function guardFunction(name){
+  function paintExportButtons(){
+    var ok = allowExport();
+    document.querySelectorAll('button,a,[role="button"]').forEach(function(btn){
+      if(!isOverviewExportButton(btn)) return;
+
+      if(ok){
+        btn.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale','schoolhub-export-disabled-btn');
+        btn.removeAttribute('aria-disabled');
+        btn.removeAttribute('title');
+        btn.disabled = false;
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+        btn.style.filter = '';
+      }else{
+        // เหมือนหน้าเช็คชื่อ: ปุ่มดูเทา แต่ยังกดได้เพื่อขึ้นแจ้งเตือน
+        btn.classList.add('schoolhub-export-disabled-btn');
+        btn.classList.remove('pointer-events-none');
+        btn.disabled = false;
+        btn.setAttribute('aria-disabled','true');
+        btn.setAttribute('title','แผนนี้ไม่รองรับ Export');
+        btn.style.pointerEvents = 'auto';
+      }
+    });
+    unlockCloseCancel();
+  }
+
+  function guardExportFunction(name){
     var old = window[name];
-    if(typeof old !== 'function' || old.__schoolhubNoSpinExportGuard) return;
+    if(typeof old !== 'function' || old.__schoolhubOverviewExportLikeAttendanceGuard) return;
     var wrapped = function(){
       if(!allowExport()){
-        closeOnlyOverviewExportPopup();
-        showNoExport();
+        closeOnlyExportPopup();
+        noExportMessage();
         return false;
       }
       return old.apply(this, arguments);
     };
-    wrapped.__schoolhubNoSpinExportGuard = true;
+    wrapped.__schoolhubOverviewExportLikeAttendanceGuard = true;
     window[name] = wrapped;
   }
 
-  function installOnce(){
+  function install(){
     [
       'exportScoresToExcel',
       'downloadExcelMultiSheet',
       'openOverviewExportModal',
       'showOverviewExportModal',
       'openOverviewExcelModal',
-      'showOverviewExcelModal'
-    ].forEach(guardFunction);
+      'showOverviewExcelModal',
+      'exportOverviewToExcel',
+      'downloadOverviewExcel'
+    ].forEach(guardExportFunction);
 
-    unlockCloseButtons(document);
-
-    document.querySelectorAll('button,a,[role="button"]').forEach(function(b){
-      if(isOverviewExportBtn(b)){
-        if(allowExport()){
-          b.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
-          b.removeAttribute('aria-disabled');
-          b.style.pointerEvents = '';
-          b.style.opacity = '';
-          b.style.filter = '';
-        }else{
-          b.classList.add('opacity-50','cursor-not-allowed');
-          b.classList.remove('pointer-events-none');
-          b.setAttribute('aria-disabled','true');
-          b.setAttribute('title','แผนนี้ไม่รองรับ Export');
-          b.style.pointerEvents = 'auto';
-        }
-      }
-    });
+    paintExportButtons();
   }
 
-  // capture ก่อน inline onclick เปิด popup
+  // ใช้ click capture เท่านั้น ไม่ใช้ mousedown/touchstart เพื่อไม่ไปชนปุ่มปิด popup
   document.addEventListener('click', function(e){
-    var b = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
-    if(!b) return;
+    var btn = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+    if(!btn) return;
 
-    if(isClose(b)){
-      unlockCloseButtons(document);
-      return;
+    if(isCloseCancelButton(btn)){
+      unlockCloseCancel();
+      return true;
     }
 
-    if(isOverviewExportBtn(b) && !allowExport()){
+    if(isOverviewExportButton(btn) && !allowExport()){
       e.preventDefault();
       e.stopPropagation();
       if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-      closeOnlyOverviewExportPopup();
-      showNoExport();
+
+      closeOnlyExportPopup();
+      noExportMessage();
       return false;
     }
   }, true);
 
   document.addEventListener('DOMContentLoaded', function(){
-    installOnce();
-    setTimeout(installOnce, 300);
-    setTimeout(installOnce, 1000);
+    install();
+    setTimeout(install,300);
+    setTimeout(install,1000);
   });
 
-  document.addEventListener('click', function(){
-    setTimeout(installOnce, 120);
-  }, true);
+  document.addEventListener('click', function(){ setTimeout(install,120); }, true);
+  document.addEventListener('change', function(){ setTimeout(install,120); }, true);
 
-  window.schoolhubOverviewExportNoSpinFixNow = installOnce;
+  window.schoolhubOverviewExportLikeAttendanceFixNow = install;
 })();
 </script>
 
