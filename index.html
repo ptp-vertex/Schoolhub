@@ -21276,5 +21276,231 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<!-- =========================================================
+     SchoolHub Overview Export Alert First + Close Button Fix
+     - หน้า "ภาพรวม" กดโหลด Excel แล้วถ้าไม่มีสิทธิ์ ให้แจ้งเตือนทันที
+     - ห้ามเปิด popup ดาวน์โหลดก่อน
+     - ปุ่ม X / ยกเลิก / พื้นหลัง popup ต้องกดปิดได้เสมอ แม้ไม่มีสิทธิ์ Export
+     ========================================================= -->
+<style id="schoolhub-overview-export-alert-close-final-style">
+button[onclick*="close"][onclick*="Export"],
+button[onclick*="cancel"][onclick*="Export"],
+button[onclick*="closeOverview"],
+button[onclick*="cancelOverview"],
+button[onclick*="closeExport"],
+button[onclick*="cancelExport"],
+#overview-export-modal button,
+#schoolhub-overview-excel-room-modal button,
+#schoolhub-overview-excel-room-popup button,
+#excel-export-modal button,
+#download-excel-modal button{
+  pointer-events:auto!important;
+}
+
+button[onclick*="close"],
+button[onclick*="cancel"],
+button[aria-label*="ปิด"],
+button[aria-label*="close"],
+button[title*="ปิด"],
+button[title*="ยกเลิก"]{
+  opacity:1!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  filter:none!important;
+}
+</style>
+
+<script id="schoolhub-overview-export-alert-close-final-script">
+(function(){
+  if(window.__schoolhubOverviewExportAlertCloseFinalFix) return;
+  window.__schoolhubOverviewExportAlertCloseFinalFix = true;
+
+  function dir(){ return window.__currentUserDir || {}; }
+
+  function allowExport(){
+    try{
+      if(typeof window.schoolhubExpandedPlanAllows === 'function') return !!window.schoolhubExpandedPlanAllows('export');
+    }catch(e){}
+    try{
+      if(typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('export');
+    }catch(e){}
+    try{
+      var d = dir();
+      if(d.teamStatus === 'accepted' || d.teamOwnerUid) return d.allowExport !== false;
+      if(d.allowExport !== undefined) return d.allowExport !== false;
+
+      var p = window.currentUserPlan || window.activePlan || null;
+      if(!p && Array.isArray(window.subscriptionPlans) && d.planId){
+        p = window.subscriptionPlans.find(function(x){ return String(x.id||'') === String(d.planId||''); });
+      }
+      if(p) return p.allowExport !== false;
+    }catch(e){}
+    return true;
+  }
+
+  function alertNoExport(){
+    if(typeof window.showCustomAlert === 'function'){
+      window.showCustomAlert('แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel',true);
+    }else{
+      alert('แผนนี้ไม่รองรับ Export\nกรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel');
+    }
+  }
+
+  function isCloseOrCancel(el){
+    if(!el) return false;
+    var s = String((el.getAttribute('onclick')||'')+' '+(el.textContent||'')+' '+(el.id||'')+' '+(el.className||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||''));
+    return /ปิด|ยกเลิก|cancel|close|fa-times|fa-xmark|×/i.test(s);
+  }
+
+  function isExportOpenButton(el){
+    if(!el || isCloseOrCancel(el)) return false;
+    var s = String((el.getAttribute('onclick')||'')+' '+(el.textContent||'')+' '+(el.id||'')+' '+(el.className||''));
+    return /exportScoresToExcel|openOverviewExport|showOverviewExport|โหลดตารางนี้|โหลด Excel|Export Excel|ส่งออก Excel/i.test(s);
+  }
+
+  function isExportPopup(el){
+    if(!el) return false;
+    var s = String((el.id||'')+' '+(el.className||'')+' '+(el.textContent||''));
+    return /overview.*excel|excel.*overview|export.*modal|download.*excel|เลือกห้อง|โหลดไฟล์|ดาวน์โหลด/i.test(s);
+  }
+
+  function closeExportPopups(){
+    [
+      'overview-export-modal',
+      'schoolhub-overview-excel-room-modal',
+      'schoolhub-overview-excel-room-popup',
+      'excel-export-modal',
+      'download-excel-modal',
+      'export-modal'
+    ].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('.fixed.inset-0,[id*="modal"],[id*="popup"]').forEach(function(el){
+      if(isExportPopup(el)){
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+  }
+
+  function unlockCloseButtons(){
+    document.querySelectorAll('button,a,[role="button"]').forEach(function(el){
+      if(isCloseOrCancel(el)){
+        el.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
+        el.removeAttribute('aria-disabled');
+        el.disabled = false;
+        el.style.pointerEvents = 'auto';
+        el.style.opacity = '1';
+        el.style.filter = '';
+        el.style.cursor = 'pointer';
+      }
+    });
+  }
+
+  function fixExportButtonVisuals(){
+    var ok = allowExport();
+    document.querySelectorAll('button,a,[role="button"]').forEach(function(el){
+      if(isCloseOrCancel(el)) return;
+      if(!isExportOpenButton(el)) return;
+
+      if(ok){
+        el.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
+        el.removeAttribute('aria-disabled');
+        if(/Export|ไม่มีสิทธิ์|ไม่รองรับ/.test(el.getAttribute('title')||'')) el.removeAttribute('title');
+        el.disabled = false;
+        el.style.opacity = '';
+        el.style.pointerEvents = '';
+        el.style.filter = '';
+        el.style.cursor = '';
+      }else{
+        el.classList.add('opacity-50','cursor-not-allowed');
+        el.classList.remove('pointer-events-none');
+        el.setAttribute('aria-disabled','true');
+        el.setAttribute('title','แผนนี้ไม่รองรับ Export');
+        el.style.pointerEvents = 'auto';
+      }
+    });
+    unlockCloseButtons();
+  }
+
+  function wrapFunction(name){
+    var old = window[name];
+    if(typeof old !== 'function' || old.__overviewExportAlertCloseWrapped) return;
+    var fn = function(){
+      if(!allowExport()){
+        closeExportPopups();
+        alertNoExport();
+        return false;
+      }
+      return old.apply(this, arguments);
+    };
+    fn.__overviewExportAlertCloseWrapped = true;
+    window[name] = fn;
+  }
+
+  function wrapAll(){
+    [
+      'exportScoresToExcel',
+      'openOverviewExportModal',
+      'showOverviewExportModal',
+      'openOverviewExcelModal',
+      'showOverviewExcelModal',
+      'downloadExcelMultiSheet'
+    ].forEach(wrapFunction);
+    fixExportButtonVisuals();
+  }
+
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+
+    if(btn && isCloseOrCancel(btn)){
+      unlockCloseButtons();
+      return;
+    }
+
+    if(btn && isExportOpenButton(btn) && !allowExport()){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      closeExportPopups();
+      alertNoExport();
+      return false;
+    }
+  }, true);
+
+  var mo = new MutationObserver(function(){
+    if(!allowExport()){
+      document.querySelectorAll('.fixed.inset-0:not(.hidden),[id*="modal"]:not(.hidden),[id*="popup"]:not(.hidden)').forEach(function(el){
+        if(isExportPopup(el)) {
+          el.classList.add('hidden');
+          el.style.display = 'none';
+        }
+      });
+    }
+    unlockCloseButtons();
+    fixExportButtonVisuals();
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    wrapAll();
+    try{ mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']}); }catch(e){}
+    setTimeout(wrapAll,300);
+    setTimeout(wrapAll,1000);
+  });
+
+  document.addEventListener('click', function(){ setTimeout(wrapAll,120); }, true);
+  document.addEventListener('change', function(){ setTimeout(wrapAll,120); }, true);
+  setInterval(wrapAll,1200);
+
+  window.schoolhubFixOverviewExportAlertCloseNow = wrapAll;
+})();
+</script>
+
 </body>
 </html>
