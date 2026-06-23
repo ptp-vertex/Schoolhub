@@ -4587,28 +4587,12 @@ document.addEventListener('click',function(){
         function formatSchoolHubDateTime(value){
             if(!value) return '-';
             let d;
-            try{
-                if(value && typeof value.toDate === 'function') d = value.toDate();
-                else if(typeof value === 'number') d = new Date(value);
-                else if(typeof value === 'string'){
-                    const v = value.trim();
-                    // รองรับค่าจาก input datetime-local เช่น 2026-06-23T15:18
-                    d = new Date(v);
-                    if(Number.isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)){
-                        const [datePart,timePart] = v.split('T');
-                        const [y,m,day] = datePart.split('-').map(Number);
-                        const [hh,mm] = timePart.split(':').map(Number);
-                        d = new Date(y, m - 1, day, hh, mm);
-                    }
-                } else d = new Date(value);
-            }catch(_){ return '-'; }
+            if(typeof value === 'number') d = new Date(value);
+            else if(value && typeof value.toDate === 'function') d = value.toDate();
+            else d = new Date(value);
             if(!d || Number.isNaN(d.getTime())) return '-';
-            return d.toLocaleString('th-TH', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            return d.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
         }
-        // alias กลาง ป้องกัน error จากแพตช์/โค้ดเก่าที่เรียกชื่อ formatThaiDateTime
-        window.formatSchoolHubDateTime = formatSchoolHubDateTime;
-        window.formatThaiDateTime = formatSchoolHubDateTime;
-        const formatThaiDateTime = formatSchoolHubDateTime;
         window.loadUserPaymentHistory = async (showToast=false) => {
             const box = document.getElementById('user-payment-history-list');
             if(!box) return;
@@ -4630,7 +4614,7 @@ document.addEventListener('click',function(){
                 box.innerHTML = rows.map(r => {
                     const [label,color,icon] = planRequestStatusText(r.status, r.autoApproved);
                     const amount = r.planAmount || extractPlanAmount(r.planPrice || '');
-                    const paid = formatSchoolHubDateTime(r.paymentTime || r.paidAt || r.paymentDate || r.submittedAt || r.createdAt);
+                    const paid = r.paymentTime || r.paidAt || '';
                     const ref = r.paymentReference || r.slipReference || '-';
                     const reason = r.rejectReason || r.rejectedReason || r.reason || '';
                     return `<div class="rounded-2xl border border-${color}-100 bg-${color}-50/45 p-4">
@@ -4644,7 +4628,7 @@ document.addEventListener('click',function(){
                                 <div class="mt-1 text-sm text-slate-600 leading-7">
                                     ยอดชำระ: <b>${amount ? Number(amount).toLocaleString('th-TH') + ' บาท' : escapeHTML(r.planPrice || '-')}</b><br>
                                     ผู้ชำระ: <b>${escapeHTML(r.payerName || r.name || '-')}</b><br>
-                                    เวลาที่แจ้งชำระ: <b>${escapeHTML(paid)}</b><br>
+                                    เวลาที่แจ้งชำระ: <b>${escapeHTML(paid || '-')}</b><br>
                                     เลขอ้างอิง: <b>${escapeHTML(ref)}</b>
                                 </div>
                                 ${reason ? `<div class="mt-2 text-sm text-rose-700 bg-white/70 border border-rose-100 rounded-xl p-3"><b>เหตุผล:</b> ${escapeHTML(reason)}</div>` : ''}
@@ -7611,9 +7595,9 @@ ${resetUrl.toString()}
                 body.innerHTML=reqs.map(r=>{
                     const isPending=r.status==='pending';
                     const statusBadge=r.status==='approved'?'<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">อนุมัติแล้ว</span>':(r.status==='rejected'?'<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">ไม่อนุมัติ</span>':'<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">รอตรวจสอบ</span>');
-                    const when=formatSchoolHubDateTime(r.createdAt);
-                    const paidAt=formatSchoolHubDateTime(r.paymentTime||r.paidAt||r.paymentDate||r.createdAt);
-                    const startAt=r.status==='approved'&&r.approvedAt?formatSchoolHubDateTime(r.approvedAt):null;
+                    const when=r.createdAt?new Date(r.createdAt).toLocaleString('th-TH'):'-';
+                    const paidAt=r.paymentTime||r.paidAt||r.paymentDate||'-';
+                    const startAt=r.status==='approved'&&r.approvedAt?new Date(r.approvedAt).toLocaleString('th-TH'):null;
                     const slip=r.slipDataUrl||r.paymentProofDataUrl||r.slipUrl||r.proofUrl||'';
                     const slipHTML=slip?`<div class="mt-3"><p class="text-xs text-slate-400 font-bold mb-1">สลิปการโอนเงิน</p><img src="${escapeHTML(slip)}" class="max-h-72 rounded-2xl border border-slate-200 object-contain bg-slate-50 mx-auto" alt="หลักฐานการชำระเงิน"></div>`:'<div class="mt-3 text-xs text-slate-400 bg-slate-50 border border-dashed rounded-2xl p-4 text-center">ไม่มีรูปหลักฐานในรายการนี้</div>';
                     const actions=isPending?`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4"><button onclick="approvePlanRequest('${r.docId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-2xl text-sm font-bold"><i class="fas fa-check"></i> อนุมัติแผนนี้</button><button onclick="rejectPlanRequest('${r.docId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 px-4 py-3 rounded-2xl text-sm font-bold"><i class="fas fa-times"></i> ไม่อนุมัติ</button></div>`:'<div class="mt-4 text-xs text-slate-400 text-center">รายการนี้ดำเนินการแล้ว</div>';
@@ -18963,8 +18947,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
           <div>
             <label>รูปแบบเกรด</label>
             <select id="grade-type-select">
-              <option value="number">ตัวเลข: 0 / 1 / 2 / 3 / 4</option>
-              <option value="letter">ตัวอักษร: F / D / C / B / A</option>
+              <option value="number">รูปแบบตัวเลข (4, 3.5)</option>
+              <option value="letter">รูปแบบตัวอักษร (A, B+)</option>
             </select>
           </div>
           <div>
@@ -19236,8 +19220,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   document.addEventListener('change',function(e){
     if(e.target && e.target.id==='grade-type-select') syncGradeTypeUI();
   },true);
-  document.addEventListener('click',function(){setTimeout(function(){ensureExtraUI();wrapRender();patchRenderedGrades();},120);},true);
-  setInterval(function(){wrapRender(); if(!byId('grade-criteria-modal')?.classList.contains('hidden')) ensureExtraUI(); patchRenderedGrades();},1500);
+  document.addEventListener('click',function(e){ if(e.target && e.target.closest && e.target.closest('select')) return; setTimeout(function(){ensureExtraUI();wrapRender();patchRenderedGrades();},120);},true);
+  // ปิด polling เกรดซ้ำทุก 1.5 วิ เพื่อลดอาการหน่วงของ dropdown บนมือถือ
 })();
 </script>
 
@@ -21315,5 +21299,744 @@ label:has(#plan-sub-allow-team){
   }, true);
 })();
 </script>
+
+
+<!-- =========================================================
+     SchoolHub Grade Modal Scroll + Dropdown Performance Final Fix
+     - ตั้งค่าเกรดเลื่อนในจอได้ทุกขนาด
+     - ไม่ rebuild dropdown ซ้ำระหว่างเปิด/เลื่อน select
+     - ลด transition/filter/handler ที่ทำให้ dropdown หน่วง
+     ========================================================= -->
+<style id="schoolhub-grade-modal-scroll-dropdown-performance-final">
+#grade-criteria-modal{
+    z-index: 2147483000 !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)) !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+#grade-criteria-modal.hidden{ display:none !important; }
+#grade-criteria-modal:not(.hidden){ display:flex !important; }
+#grade-criteria-modal > div{
+    width: min(100%, 32rem) !important;
+    max-width: 32rem !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border-radius: 1.6rem !important;
+}
+#grade-criteria-modal > div > .p-6.border-b{
+    flex: 0 0 auto !important;
+    padding: 1rem 1.15rem !important;
+}
+#grade-criteria-modal form{
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 1rem 1.15rem !important;
+    overscroll-behavior: contain !important;
+}
+#grade-criteria-modal form .pt-4.flex.gap-3{
+    position: sticky !important;
+    bottom: 0 !important;
+    background: linear-gradient(to top, #fff 78%, rgba(255,255,255,.92)) !important;
+    padding-top: .9rem !important;
+    padding-bottom: .15rem !important;
+    z-index: 2 !important;
+}
+#grade-criteria-modal input,
+#grade-criteria-modal select,
+#grade-criteria-modal button,
+select,
+select option{
+    transition: none !important;
+    animation: none !important;
+    filter: none !important;
+    will-change: auto !important;
+}
+select{
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    cursor: pointer !important;
+}
+@media (max-width: 767px){
+    #grade-criteria-modal{
+        padding: calc(env(safe-area-inset-top) + .6rem) .6rem calc(env(safe-area-inset-bottom) + .6rem) !important;
+    }
+    #grade-criteria-modal > div{
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(100dvh - 1.2rem) !important;
+        border-radius: 1.25rem !important;
+    }
+    #grade-criteria-modal .grid.grid-cols-2{
+        grid-template-columns: 1fr !important;
+        gap: .7rem !important;
+    }
+    #grade-criteria-modal form .pt-4.flex.gap-3{
+        flex-direction: column !important;
+    }
+    #grade-criteria-modal form .pt-4.flex.gap-3 button{
+        width: 100% !important;
+        min-height: 44px !important;
+    }
+    select{
+        font-size: 16px !important;
+        transform: translateZ(0) !important;
+    }
+}
+</style>
+<script id="schoolhub-dropdown-rebuild-stop-final-fix">
+(function(){
+  if(window.__schoolhubDropdownRebuildStopFinalFix) return;
+  window.__schoolhubDropdownRebuildStopFinalFix = true;
+
+  function byId(id){ return document.getElementById(id); }
+  function hideLoaderSoon(){
+    setTimeout(function(){
+      try{
+        var loader = byId('global-loader');
+        if(loader && !(document.body && document.body.dataset && document.body.dataset.keepGlobalLoader === '1')) loader.style.display = 'none';
+      }catch(e){}
+    }, 250);
+  }
+  function getWeekLimit(){
+    try{
+      if(typeof window.getCurrentPlanWeekLimit === 'function') return Math.max(1, Number(window.getCurrentPlanWeekLimit() || 20));
+    }catch(e){}
+    return 20;
+  }
+  function setOptionsIfChanged(el, html){
+    if(!el) return;
+    if(el.dataset.schoolhubFinalOptionsHtml === html) return;
+    if(document.activeElement === el) return;
+    var oldVal = el.value;
+    el.innerHTML = html;
+    el.dataset.schoolhubFinalOptionsHtml = html;
+    if(oldVal && Array.prototype.some.call(el.options, function(o){ return o.value === oldVal; })) el.value = oldVal;
+  }
+  function buildWeekOptions(maxWeeks, hasBlank){
+    var html = hasBlank ? '<option value="">-- เลือกสัปดาห์ --</option>' : '';
+    for(var i=1;i<=maxWeeks;i++) html += '<option value="'+i+'">สัปดาห์ที่ '+i+'</option>';
+    return html;
+  }
+
+  // ตัวนี้แทน initStaticDropdowns เก่าที่ rebuild innerHTML หลายชั้นจน select หน่วง
+  window.initStaticDropdowns = function(){
+    var maxWeeks = getWeekLimit();
+    setOptionsIfChanged(byId('plan-week'), buildWeekOptions(maxWeeks, false));
+    setOptionsIfChanged(byId('score-week'), buildWeekOptions(maxWeeks, true));
+  };
+
+  function updateGradeDropdownText(){
+    var sel = byId('grade-type-select');
+    if(!sel) return;
+    var num = sel.querySelector('option[value="number"]');
+    var letOpt = sel.querySelector('option[value="letter"]');
+    if(num) num.textContent = 'รูปแบบตัวเลข (4, 3.5)';
+    if(letOpt) letOpt.textContent = 'รูปแบบตัวอักษร (A, B+)';
+  }
+  function syncGradeModalLabels(){
+    updateGradeDropdownText();
+    var sel = byId('grade-type-select');
+    if(!sel) return;
+    var type = sel.value || 'number';
+    var rows = [
+      ['grade-crit-4','เกรด 4','A'], ['grade-crit-35','เกรด 3.5','B+'],
+      ['grade-crit-3','เกรด 3','B'], ['grade-crit-25','เกรด 2.5','C+'],
+      ['grade-crit-2','เกรด 2','C'], ['grade-crit-15','เกรด 1.5','D+'],
+      ['grade-crit-1','เกรด 1','D'], ['grade-crit-0','เกรด 0','F']
+    ];
+    rows.forEach(function(r){
+      var input = byId(r[0]); if(!input) return;
+      var wrap = input.closest('.flex') || input.parentElement;
+      var lab = wrap ? wrap.querySelector('label') : null;
+      if(lab) lab.textContent = type === 'letter' ? r[2] : r[1];
+    });
+  }
+
+  // ลด lag: ไม่ดัก pointermove/mousemove ของ select แล้ว เพราะทำให้ native dropdown หน่วงบนมือถือ
+  ['pointerdown','mousedown','touchstart'].forEach(function(type){
+    document.addEventListener(type, function(e){
+      var t = e.target;
+      if(t && t.closest && t.closest('select')) hideLoaderSoon();
+    }, {capture:true, passive:true});
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    try{ window.initStaticDropdowns(); }catch(e){}
+    setTimeout(syncGradeModalLabels, 150);
+  });
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.id === 'grade-type-select') syncGradeModalLabels();
+  }, true);
+
+  var oldOpenModal = window.openModal;
+  if(typeof oldOpenModal === 'function' && !oldOpenModal.__gradeScrollFinalWrapped){
+    window.openModal = function(id){
+      var r = oldOpenModal.apply(this, arguments);
+      if(id === 'grade-criteria-modal'){
+        setTimeout(function(){
+          syncGradeModalLabels();
+          var modal = byId('grade-criteria-modal');
+          if(modal) modal.scrollTop = 0;
+          var form = modal ? modal.querySelector('form') : null;
+          if(form) form.scrollTop = 0;
+        }, 30);
+      }
+      return r;
+    };
+    window.openModal.__gradeScrollFinalWrapped = true;
+  }
+})();
+</script>
+
+
+
+<!-- =========================================================
+     SchoolHub Grade Modal No Overlay + Select Smooth Final
+     - ปุ่มบันทึก/ยกเลิกไม่ทับช่องเกรดด้านหลัง
+     - popup เลื่อนในจอได้จริง
+     - ลดงานซ้ำตอนแตะ/เลื่อนผ่าน dropdown
+     - จัดตำแหน่งชื่อชั้นปีในการ์ดวิชาให้ติดเส้นด้านล่างเสมอ
+     ========================================================= -->
+<style id="schoolhub-grade-modal-no-overlay-course-card-align-final">
+#grade-criteria-modal{
+    z-index:2147483000 !important;
+    align-items:flex-start !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    padding:max(.75rem, env(safe-area-inset-top)) .75rem max(.75rem, env(safe-area-inset-bottom)) !important;
+    -webkit-overflow-scrolling:touch !important;
+}
+#grade-criteria-modal.hidden{display:none !important;}
+#grade-criteria-modal:not(.hidden){display:flex !important;}
+#grade-criteria-modal > div{
+    width:min(100%,34rem) !important;
+    max-width:34rem !important;
+    max-height:calc(100dvh - 1.5rem) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+    border-radius:1.55rem !important;
+}
+#grade-criteria-modal > div > .p-6.border-b{
+    flex:0 0 auto !important;
+    padding:1rem 1.15rem !important;
+}
+#grade-criteria-modal form{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior:contain !important;
+    padding:1rem 1.15rem 1.15rem !important;
+}
+#grade-criteria-modal form .pt-4.flex.gap-3{
+    position:static !important;
+    bottom:auto !important;
+    z-index:auto !important;
+    background:#fff !important;
+    margin-top:1rem !important;
+    padding-top:1rem !important;
+    padding-bottom:0 !important;
+    border-top:1px solid #eef2f7 !important;
+}
+#grade-criteria-modal input,
+#grade-criteria-modal select,
+#grade-criteria-modal button,
+select,
+select option{
+    transition:none !important;
+    animation:none !important;
+    filter:none !important;
+    will-change:auto !important;
+}
+select{touch-action:manipulation !important;-webkit-tap-highlight-color:transparent !important;}
+#course-grid > div{min-height:21rem !important;}
+#course-grid .schoolhub-course-room-preview{
+    margin-top:auto !important;
+    margin-bottom:.65rem !important;
+    flex:0 0 auto !important;
+}
+#course-grid .text-sm.mt-auto{
+    margin-top:0 !important;
+    padding-top:.9rem !important;
+    flex:0 0 auto !important;
+}
+@media(max-width:767px){
+    #grade-criteria-modal{padding:calc(env(safe-area-inset-top) + .6rem) .6rem calc(env(safe-area-inset-bottom) + .6rem) !important;}
+    #grade-criteria-modal > div{max-width:100% !important;max-height:calc(100dvh - 1.2rem) !important;border-radius:1.25rem !important;}
+    #grade-criteria-modal .grid.grid-cols-2{grid-template-columns:1fr !important;gap:.7rem !important;}
+    #grade-criteria-modal form .pt-4.flex.gap-3{flex-direction:column !important;}
+    #grade-criteria-modal form .pt-4.flex.gap-3 button{width:100% !important;min-height:44px !important;}
+    select{font-size:16px !important;}
+}
+</style>
+<script id="schoolhub-select-lag-hard-stop-final">
+(function(){
+  if(window.__schoolhubSelectLagHardStopFinal) return;
+  window.__schoolhubSelectLagHardStopFinal = true;
+  var lastSelectOpen = 0;
+  function isSelectTarget(e){
+    var t=e && e.target;
+    return !!(t && t.closest && t.closest('select'));
+  }
+  ['pointerdown','touchstart','mousedown'].forEach(function(type){
+    document.addEventListener(type,function(e){ if(isSelectTarget(e)) lastSelectOpen=Date.now(); }, {capture:true, passive:true});
+  });
+  var oldInit = window.initStaticDropdowns;
+  if(typeof oldInit === 'function' && !oldInit.__schoolhubSelectHardStopWrapped){
+    var wrapped=function(){
+      var active=document.activeElement;
+      if(active && active.tagName === 'SELECT') return;
+      if(Date.now() - lastSelectOpen < 1800) return;
+      return oldInit.apply(this, arguments);
+    };
+    wrapped.__schoolhubSelectHardStopWrapped=true;
+    window.initStaticDropdowns=wrapped;
+  }
+  function alignCourseRooms(){
+    var grid=document.getElementById('course-grid');
+    if(!grid) return;
+    Array.prototype.forEach.call(grid.children||[], function(card){
+      var room=card.querySelector('.schoolhub-course-room-preview');
+      var foot=card.querySelector('.text-sm.mt-auto');
+      if(room && foot && room.nextElementSibling !== foot){
+        card.insertBefore(room, foot);
+      }
+    });
+  }
+  if(typeof window.renderCourseGrid === 'function' && !window.renderCourseGrid.__schoolhubRoomBottomAlignWrapped){
+    var oldGrid=window.renderCourseGrid;
+    var wrap=function(){
+      var r=oldGrid.apply(this,arguments);
+      setTimeout(alignCourseRooms,0);
+      setTimeout(alignCourseRooms,180);
+      return r;
+    };
+    wrap.__schoolhubRoomBottomAlignWrapped=true;
+    window.renderCourseGrid=wrap;
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(alignCourseRooms,250);});
+  document.addEventListener('click',function(e){ if(!isSelectTarget(e)) setTimeout(alignCourseRooms,120); }, true);
+})();
+</script>
+
 </body>
 </html>
+
+<!-- =========================================================
+     SchoolHub Final Grade Plus + Real MS Fix
+     - เพิ่มเกรดตัวอักษร A / B+ / B / C+ / C / D+ / D / F
+     - แก้ มส. ให้อ่านข้อมูลเช็คชื่อจริงจาก attendance[date].records
+     - บังคับแก้ผลเกรดในตารางภาพรวมหลัง render ทุกครั้ง
+     ========================================================= -->
+<style id="schoolhub-final-grade-plus-ms-style">
+.schoolhub-grade-plus-note{font-size:.74rem;color:#64748b;line-height:1.55;margin-top:.5rem;}
+.schoolhub-grade-ms{color:#dc2626!important;font-weight:1000!important;}
+</style>
+<script id="schoolhub-final-grade-plus-ms-script">
+(function(){
+  if(window.__schoolhubFinalGradePlusMsFix) return;
+  window.__schoolhubFinalGradePlusMsFix = true;
+
+  var NUM_DEFAULT = {'4':80,'3.5':75,'3':70,'2.5':65,'2':60,'1.5':55,'1':50,'0':0,gradeType:'number',lateToAbsent:3,msAbsentLimit:5,msAbsentPercent:20,msEnabled:true};
+  var LETTER_PLUS_DEFAULT = {A:80,'B+':75,B:70,'C+':65,C:60,'D+':55,D:50,F:0,gradeType:'letter',lateToAbsent:3,msAbsentLimit:5,msAbsentPercent:20,msEnabled:true};
+
+  function byId(id){ return document.getElementById(id); }
+  function num(v,fb){ v=Number(v); return Number.isFinite(v)?v:(fb||0); }
+  function cid(){ try{return window.currentActiveCourseId || (typeof currentActiveCourseId!=='undefined'?currentActiveCourseId:'') || '';}catch(e){return '';} }
+  function ensureState(){ if(!window.state) window.state={}; if(!state.courseGrades) state.courseGrades={}; return state; }
+  function criteria(courseId){ ensureState(); return (state.courseGrades && state.courseGrades[courseId]) || window.defaultGradeCriteria || NUM_DEFAULT; }
+  function val(c,k,fb){ return (c && c[k]!==undefined && c[k]!==null && c[k]!=='' ) ? num(c[k],fb) : fb; }
+
+  // ใช้เป็น default ใหม่ โดยไม่ทำลายข้อมูลรายวิชาที่บันทึกไว้แล้ว
+  window.defaultGradeCriteria = window.defaultGradeCriteria || NUM_DEFAULT;
+  if(window.defaultGradeCriteria && !('B+' in window.defaultGradeCriteria)){
+    window.defaultGradeCriteria['B+'] = 75;
+    window.defaultGradeCriteria['C+'] = 65;
+    window.defaultGradeCriteria['D+'] = 55;
+    window.defaultGradeCriteria.lateToAbsent = window.defaultGradeCriteria.lateToAbsent ?? 3;
+    window.defaultGradeCriteria.msAbsentLimit = window.defaultGradeCriteria.msAbsentLimit ?? 5;
+    window.defaultGradeCriteria.msAbsentPercent = window.defaultGradeCriteria.msAbsentPercent ?? 20;
+    window.defaultGradeCriteria.msEnabled = window.defaultGradeCriteria.msEnabled !== false;
+  }
+
+  function enhanceGradeModalUI(){
+    var form = byId('grade-criteria-modal') && byId('grade-criteria-modal').querySelector('form');
+    if(!form) return;
+    var typeSel = byId('grade-type-select');
+    if(typeSel){
+      var opt = typeSel.querySelector('option[value="letter"]');
+      if(opt) opt.textContent = 'รูปแบบตัวอักษร (A, B+)';
+    }
+    var oldHint = form.querySelector('#schoolhub-grade-plus-hint');
+    if(!oldHint){
+      var box = byId('schoolhub-grade-extra-rules');
+      if(box) box.insertAdjacentHTML('beforeend','<div id="schoolhub-grade-plus-hint" class="schoolhub-grade-plus-note">โหมดตัวอักษรจะใช้ช่องเกรดเดิมเป็น A, B+, B, C+, C, D+, D, F ตามลำดับ</div>');
+    }
+  }
+
+  function syncGradeTypeUIPlus(){
+    enhanceGradeModalUI();
+    var type = (byId('grade-type-select')||{}).value || 'number';
+    var pairs = [
+      ['grade-crit-4','เกรด 4','A'],
+      ['grade-crit-35','เกรด 3.5','B+'],
+      ['grade-crit-3','เกรด 3','B'],
+      ['grade-crit-25','เกรด 2.5','C+'],
+      ['grade-crit-2','เกรด 2','C'],
+      ['grade-crit-15','เกรด 1.5','D+'],
+      ['grade-crit-1','เกรด 1','D'],
+      ['grade-crit-0','เกรด 0','F']
+    ];
+    pairs.forEach(function(p){
+      var input=byId(p[0]); if(!input) return;
+      var wrap=input.closest('.flex');
+      var lab=wrap && wrap.querySelector('label');
+      if(wrap) wrap.style.display='';
+      if(lab) lab.textContent = (type==='letter'?p[2]:p[1]);
+      input.disabled = p[0]==='grade-crit-0';
+      input.required = p[0]!=='grade-crit-0';
+    });
+  }
+
+  function fillPlusValues(){
+    var courseId = cid();
+    var c = criteria(courseId);
+    var type = c.gradeType || 'number';
+    var set=function(id,v){ var el=byId(id); if(el) el.value=v; };
+    var chk=function(id,v){ var el=byId(id); if(el) el.checked=!!v; };
+    if(byId('grade-type-select')) byId('grade-type-select').value = type;
+    set('grade-late-to-absent', c.lateToAbsent ?? 3);
+    set('grade-ms-absent-limit', c.msAbsentLimit ?? 5);
+    set('grade-ms-absent-percent', c.msAbsentPercent ?? 20);
+    chk('grade-ms-enabled', c.msEnabled !== false);
+    if(type==='letter'){
+      set('grade-crit-4',  c.A ?? c['4'] ?? 80);
+      set('grade-crit-35', c['B+'] ?? c['3.5'] ?? 75);
+      set('grade-crit-3',  c.B ?? c['3'] ?? 70);
+      set('grade-crit-25', c['C+'] ?? c['2.5'] ?? 65);
+      set('grade-crit-2',  c.C ?? c['2'] ?? 60);
+      set('grade-crit-15', c['D+'] ?? c['1.5'] ?? 55);
+      set('grade-crit-1',  c.D ?? c['1'] ?? 50);
+      set('grade-crit-0', 0);
+    }
+    syncGradeTypeUIPlus();
+  }
+
+  var oldOpen = window.openGradeCriteriaModalForCurrentCourse;
+  window.openGradeCriteriaModalForCurrentCourse = function(){
+    var r = typeof oldOpen==='function' ? oldOpen.apply(this,arguments) : undefined;
+    setTimeout(function(){enhanceGradeModalUI(); fillPlusValues();},50);
+    setTimeout(function(){enhanceGradeModalUI(); fillPlusValues();},250);
+    return r;
+  };
+
+  document.addEventListener('change',function(e){
+    if(e.target && e.target.id==='grade-type-select') setTimeout(syncGradeTypeUIPlus,0);
+  },true);
+
+  // เกรดตัวอักษรแบบมี +
+  window.calculateGrade = function(score,c){
+    c = c || window.defaultGradeCriteria || NUM_DEFAULT;
+    var s = num(score,0);
+    if((c.gradeType || 'number') === 'letter'){
+      if(s >= val(c,'A',80)) return 'A';
+      if(s >= val(c,'B+',75)) return 'B+';
+      if(s >= val(c,'B',70)) return 'B';
+      if(s >= val(c,'C+',65)) return 'C+';
+      if(s >= val(c,'C',60)) return 'C';
+      if(s >= val(c,'D+',55)) return 'D+';
+      if(s >= val(c,'D',50)) return 'D';
+      return 'F';
+    }
+    if(s >= val(c,'4',80)) return '4';
+    if(s >= val(c,'3.5',75)) return '3.5';
+    if(s >= val(c,'3',70)) return '3';
+    if(s >= val(c,'2.5',65)) return '2.5';
+    if(s >= val(c,'2',60)) return '2';
+    if(s >= val(c,'1.5',55)) return '1.5';
+    if(s >= val(c,'1',50)) return '1';
+    return '0';
+  };
+
+  function readAttendanceValue(entry, studentId){
+    if(!entry) return '';
+    if(entry.records && Object.prototype.hasOwnProperty.call(entry.records, studentId)) return entry.records[studentId];
+    if(Object.prototype.hasOwnProperty.call(entry, studentId)) return entry[studentId];
+    return '';
+  }
+
+  function attendanceStats(courseId, studentId){
+    var hist=(window.state && state.attendance && state.attendance[courseId]) || {};
+    var present=0, late=0, absent=0, total=0;
+    Object.keys(hist).forEach(function(date){
+      var v = readAttendanceValue(hist[date], studentId);
+      if(!v) return;
+      total++;
+      if(v==='present') present++;
+      else if(v==='late') late++;
+      else if(v==='absent') absent++;
+    });
+    return {present:present,late:late,absent:absent,total:total};
+  }
+
+  function msInfo(courseId, studentId, c){
+    c = c || criteria(courseId);
+    var lateToAbsent = Math.max(0, num(c.lateToAbsent,3));
+    var limit = Math.max(0, num(c.msAbsentLimit,5));
+    var percentLimit = Math.max(0, num(c.msAbsentPercent,20));
+    var enabled = c.msEnabled !== false;
+    var a = attendanceStats(courseId, studentId);
+    var converted = lateToAbsent > 0 ? Math.floor(a.late / lateToAbsent) : 0;
+    var effective = a.absent + converted;
+    var percent = a.total > 0 ? (effective / a.total) * 100 : 0;
+    var byCount = limit > 0 && effective >= limit;
+    var byPercent = percentLimit > 0 && percent >= percentLimit;
+    return {isMS:!!(enabled && (byCount || byPercent)),present:a.present,late:a.late,absent:a.absent,total:a.total,converted:converted,effective:effective,percent:percent};
+  }
+  window.schoolhubGradeMsInfo = msInfo;
+  window.schoolhubCalculateFinalGrade = function(score,c,courseId,studentId){
+    var info = (courseId && studentId) ? msInfo(courseId, studentId, c) : {isMS:false};
+    return info.isMS ? 'มส.' : window.calculateGrade(score,c);
+  };
+
+  function savePlusCriteria(){
+    var courseId = cid(); if(!courseId) return false;
+    ensureState();
+    var type=(byId('grade-type-select')||{}).value || 'number';
+    var base={
+      gradeType:type,
+      lateToAbsent:num((byId('grade-late-to-absent')||{}).value,3),
+      msAbsentLimit:num((byId('grade-ms-absent-limit')||{}).value,5),
+      msAbsentPercent:num((byId('grade-ms-absent-percent')||{}).value,20),
+      msEnabled:!!(byId('grade-ms-enabled')||{}).checked
+    };
+    if(type==='letter'){
+      base.A=num(byId('grade-crit-4').value,80);
+      base['B+']=num(byId('grade-crit-35').value,75);
+      base.B=num(byId('grade-crit-3').value,70);
+      base['C+']=num(byId('grade-crit-25').value,65);
+      base.C=num(byId('grade-crit-2').value,60);
+      base['D+']=num(byId('grade-crit-15').value,55);
+      base.D=num(byId('grade-crit-1').value,50);
+      base.F=0;
+      if(!(base.A>base['B+'] && base['B+']>base.B && base.B>base['C+'] && base['C+']>base.C && base.C>base['D+'] && base['D+']>base.D)){
+        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนขั้นต่ำเรียงจาก A > B+ > B > C+ > C > D+ > D',true);
+        return false;
+      }
+    }else{
+      base['4']=num(byId('grade-crit-4').value,80);
+      base['3.5']=num(byId('grade-crit-35').value,75);
+      base['3']=num(byId('grade-crit-3').value,70);
+      base['2.5']=num(byId('grade-crit-25').value,65);
+      base['2']=num(byId('grade-crit-2').value,60);
+      base['1.5']=num(byId('grade-crit-15').value,55);
+      base['1']=num(byId('grade-crit-1').value,50);
+      base['0']=0;
+      if(!(base['4']>base['3.5'] && base['3.5']>base['3'] && base['3']>base['2.5'] && base['2.5']>base['2'] && base['2']>base['1.5'] && base['1.5']>base['1'])){
+        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนขั้นต่ำเรียงจาก 4 > 3.5 > 3 > 2.5 > 2 > 1.5 > 1',true);
+        return false;
+      }
+    }
+    state.courseGrades[courseId]=base;
+    return true;
+  }
+
+  window.handleGradeCriteriaSubmit = async function(){
+    if(!savePlusCriteria()) return;
+    if(typeof window.saveStateToDB==='function') await window.saveStateToDB();
+    if(typeof window.closeModal==='function') window.closeModal('grade-criteria-modal');
+    if(window.showCustomAlert) showCustomAlert('สำเร็จ','บันทึกเกณฑ์เกรด พร้อมเกรด + และเงื่อนไข มส. แล้ว');
+    try{ if(typeof window.renderCourseOverview==='function') window.renderCourseOverview(); }catch(e){}
+    setTimeout(patchOverviewGrades,120);
+  };
+
+  function gradeColor(g){
+    g=String(g);
+    if(g==='มส.' || g==='F' || g==='0') return 'text-rose-600 schoolhub-grade-ms';
+    if(['4','3.5','A','B+'].includes(g)) return 'text-emerald-500';
+    if(['3','2.5','B','C+','C'].includes(g)) return 'text-blue-500';
+    if(['2','1.5','D+','D'].includes(g)) return 'text-amber-500';
+    if(['1'].includes(g)) return 'text-rose-500';
+    return 'text-slate-400';
+  }
+
+  function getVisibleStudents(courseId){
+    var list=[];
+    try{ list = (typeof window.getCourseStudents==='function') ? window.getCourseStudents(courseId) : []; }catch(e){ list=[]; }
+    return Array.isArray(list)?list:[];
+  }
+
+  function patchOverviewGrades(){
+    var courseId = cid(); if(!courseId || !window.state) return;
+    var c = criteria(courseId);
+    var students = getVisibleStudents(courseId);
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#course-summary-table tbody tr'));
+    rows.forEach(function(tr,i){
+      var st = students[i]; if(!st) return;
+      var cells=tr.querySelectorAll('td');
+      var gradeCell=cells[cells.length-1], totalCell=cells[cells.length-2];
+      if(!gradeCell || !totalCell) return;
+      var score = num((totalCell.textContent||'').replace(/[^0-9.\-]/g,''),0);
+      var g = window.schoolhubCalculateFinalGrade(score,c,courseId,st.id);
+      gradeCell.textContent = g;
+      gradeCell.className = 'text-center font-bold '+gradeColor(g)+' bg-amber-50/30 summary-grade-col';
+      var info = msInfo(courseId, st.id, c);
+      if(info.isMS){
+        gradeCell.title = 'มส. จากขาดรวม '+info.effective+' ครั้ง (ขาดจริง '+info.absent+' ครั้ง, สาย '+info.late+' ครั้ง, สายแปลงเป็นขาด '+info.converted+' ครั้ง)';
+      }
+    });
+  }
+
+  function wrapRender(){
+    if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__plusMsFinalWrapped){
+      var old=window.renderCourseOverview;
+      window.renderCourseOverview=function(){
+        var r=old.apply(this,arguments);
+        setTimeout(patchOverviewGrades,0);
+        setTimeout(patchOverviewGrades,250);
+        setTimeout(patchOverviewGrades,800);
+        return r;
+      };
+      window.renderCourseOverview.__plusMsFinalWrapped=true;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender(); setTimeout(patchOverviewGrades,500);
+  });
+  document.addEventListener('click',function(e){
+    if(e.target && e.target.closest && e.target.closest('select')) return;
+    setTimeout(function(){ enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender(); patchOverviewGrades(); },120);
+  },true);
+  // ปิด polling เกรดซ้ำทุก 1 วิ เพื่อลดอาการ dropdown ค้าง/หน่วงบนมือถือ
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub Grade Dropdown Wording + Select Lag Final Fix
+     - เปลี่ยนชื่อหมวดเกรดใน dropdown เป็นคำเขียน
+     - ตัดการทำงานซ้ำบน dropdown เกรด เพื่อลดอาการหน่วง/ค้างบนมือถือ
+     ========================================================= -->
+<style id="schoolhub-select-lag-safe-final-style">
+select,
+#grade-type-select {
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+@media (max-width: 767px) {
+  select {
+    font-size: 16px !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+</style>
+<script id="schoolhub-grade-dropdown-wording-safe-final-fix">
+(function(){
+  if(window.__schoolhubGradeDropdownSafeFinalFix) return;
+  window.__schoolhubGradeDropdownSafeFinalFix = true;
+
+  function byId(id){ return document.getElementById(id); }
+  function setGradeTypeOptionText(){
+    var sel = byId('grade-type-select');
+    if(!sel) return;
+    var n = sel.querySelector('option[value="number"]');
+    var l = sel.querySelector('option[value="letter"]');
+    if(n && n.textContent.trim() !== 'รูปแบบตัวเลข (4, 3.5)') n.textContent = 'รูปแบบตัวเลข (4, 3.5)';
+    if(l && l.textContent.trim() !== 'รูปแบบตัวอักษร (A, B+)') l.textContent = 'รูปแบบตัวอักษร (A, B+)';
+  }
+  function syncGradeLabels(){
+    var sel = byId('grade-type-select');
+    if(!sel) return;
+    var type = sel.value || 'number';
+    var pairs = [
+      ['grade-crit-4','เกรด 4','A'],
+      ['grade-crit-35','เกรด 3.5','B+'],
+      ['grade-crit-3','เกรด 3','B'],
+      ['grade-crit-25','เกรด 2.5','C+'],
+      ['grade-crit-2','เกรด 2','C'],
+      ['grade-crit-15','เกรด 1.5','D+'],
+      ['grade-crit-1','เกรด 1','D'],
+      ['grade-crit-0','เกรด 0','F']
+    ];
+    pairs.forEach(function(p){
+      var input = byId(p[0]);
+      if(!input) return;
+      var wrap = input.closest('.flex') || input.parentElement;
+      var lab = wrap ? wrap.querySelector('label') : null;
+      if(wrap) wrap.style.display = '';
+      if(lab) lab.textContent = (type === 'letter' ? p[2] : p[1]);
+      input.disabled = p[0] === 'grade-crit-0';
+      input.required = p[0] !== 'grade-crit-0';
+    });
+  }
+  function applyOnce(){
+    setGradeTypeOptionText();
+    syncGradeLabels();
+  }
+
+  // ห้าม rebuild dropdown ตอนผู้ใช้กำลังกด/เปิด select เพราะจะทำให้มือถือค้างและ loader หมุน
+  var lastSelectTouch = 0;
+  document.addEventListener('pointerdown', function(e){
+    if(e.target && e.target.closest && e.target.closest('select')) lastSelectTouch = Date.now();
+  }, true);
+  document.addEventListener('touchstart', function(e){
+    if(e.target && e.target.closest && e.target.closest('select')) lastSelectTouch = Date.now();
+  }, {capture:true, passive:true});
+
+  var oldInit = window.initStaticDropdowns;
+  if(typeof oldInit === 'function' && !oldInit.__schoolhubSafeSelectWrapped){
+    var safeInit = function(){
+      var active = document.activeElement;
+      if(active && active.tagName === 'SELECT') return;
+      if(Date.now() - lastSelectTouch < 1200) return;
+      return oldInit.apply(this, arguments);
+    };
+    safeInit.__schoolhubSafeSelectWrapped = true;
+    window.initStaticDropdowns = safeInit;
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(applyOnce, 80);
+    setTimeout(applyOnce, 500);
+  });
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.id === 'grade-type-select'){
+      setGradeTypeOptionText();
+      syncGradeLabels();
+    }
+  }, true);
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.closest && e.target.closest('#grade-criteria-modal')){
+      setTimeout(applyOnce, 60);
+    }
+  }, true);
+
+  // กัน loader ค้างจาก error ระหว่าง dropdown/render โดยไม่รบกวนตอน login ช่วงแรก
+  function hideStuckLoader(){
+    var loader = byId('global-loader');
+    if(!loader) return;
+    var isShowing = loader.style.display !== 'none' && !loader.classList.contains('hidden');
+    if(!isShowing) return;
+    if(document.body && document.body.dataset && document.body.dataset.keepGlobalLoader === '1') return;
+    loader.style.display = 'none';
+  }
+  window.addEventListener('error', function(){ setTimeout(hideStuckLoader, 300); });
+  window.addEventListener('unhandledrejection', function(){ setTimeout(hideStuckLoader, 300); });
+  document.addEventListener('pointerdown', function(e){
+    if(e.target && e.target.closest && e.target.closest('select')) setTimeout(hideStuckLoader, 1500);
+  }, true);
+  setTimeout(hideStuckLoader, 9000);
+})();
+</script>
