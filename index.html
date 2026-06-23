@@ -2677,7 +2677,7 @@ document.addEventListener('click',function(){
                     <button onclick="switchCourseTab('scores')" class="course-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50" data-tab="scores">
                         <i class="fas fa-star w-5 text-center"></i> บันทึกคะแนน
                     </button>
-                    <button onclick="openPlanModalForCurrentCourse()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50 mt-2 border border-slate-200 border-dashed">
+                    <button type="button" data-schoolhub-plan-open-btn="1" onclick="return schoolhubOpenPlanModalSafe(event)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50 mt-2 border border-slate-200 border-dashed">
                         <i class="fas fa-cog w-5 text-center"></i> จัดการแผนเก็บคะแนน
                     </button>
                     <button onclick="openGradeCriteriaModalForCurrentCourse()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50 mt-2 border border-slate-200 border-dashed">
@@ -2923,7 +2923,7 @@ document.addEventListener('click',function(){
                             <button onclick="switchCourseTab('overview')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-indigo-50 text-primary border border-indigo-100" data-tab="overview"><i class="fas fa-chart-pie"></i> ภาพรวม</button>
                             <button onclick="switchCourseTab('attendance')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="attendance"><i class="fas fa-calendar-check"></i> เช็คชื่อ</button>
                             <button onclick="switchCourseTab('scores')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="scores"><i class="fas fa-star"></i> คะแนน</button>
-                            <button onclick="openPlanModalForCurrentCourse()" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100"><i class="fas fa-cog"></i> แผนคะแนน</button>
+                            <button type="button" data-schoolhub-plan-open-btn="1" onclick="return schoolhubOpenPlanModalSafe(event)" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100"><i class="fas fa-cog"></i> แผนคะแนน</button>
                         </div>
                     </div>
 
@@ -3045,7 +3045,7 @@ document.addEventListener('click',function(){
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
                             <div class="flex justify-between items-center mb-5">
                                 <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-clipboard-list text-primary mr-2"></i> เลือกงาน / การสอบ</h3>
-                                <button onclick="openPlanModalForCurrentCourse()" class="text-primary font-medium text-sm hover:underline"><i class="fas fa-cog"></i> จัดการแผนเก็บคะแนน</button>
+                                <button type="button" data-schoolhub-plan-open-btn="1" onclick="return schoolhubOpenPlanModalSafe(event)" class="text-primary font-medium text-sm hover:underline"><i class="fas fa-cog"></i> จัดการแผนเก็บคะแนน</button>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 p-5 rounded-xl border border-slate-100">
                                 <div>
@@ -18833,7 +18833,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     const s=(el.getAttribute('onclick')||'')+' '+(el.textContent||'')+' '+(el.id||'');
     const rules = [
       [/openShareStudentModal|แชร์ให้นักเรียน|share-student/i,'studentShare','แชร์ให้นักเรียน'],
-      [/openPlanModalForCurrentCourse|แผนคะแนน|จัดการแผนเก็บคะแนน/i,'planScores','จัดการแผนคะแนน'],
       [/openGradeCriteria|เกณฑ์เกรด/i,'gradeCriteria','ตั้งค่าเกณฑ์เกรด'],
       [/export|Excel|ส่งออก|โหลดตาราง/i,'export','Export Excel'],
       [/CourseTeachers|จัดการครูในรายวิชา|ครูผู้สอนร่วม/i,'team','จัดการครูในรายวิชา']
@@ -21099,8 +21098,6 @@ label:has(#plan-sub-allow-team){
   }
 
   function install(){
-    guardFunction('openPlanModalForCurrentCourse','planScores');
-    guardFunction('openPlanModal','planScores');
     guardFunction('openGradeCriteriaModalForCurrentCourse','gradeCriteria');
     guardFunction('openGradeCriteria','gradeCriteria');
     schedule();
@@ -21632,68 +21629,90 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
 
 
 
-<!-- SchoolHub Patch: Mobile tap fix for score plan buttons only -->
-<style id="schoolhub-mobile-score-plan-tap-fix-style">
-@media (max-width: 768px){
-  button[onclick*="openPlanModalForCurrentCourse"],
-  a[onclick*="openPlanModalForCurrentCourse"]{
+<!-- SchoolHub Patch: Mobile plan-score buttons click fix only -->
+<style id="schoolhub-mobile-plan-score-click-fix-only">
+@media (max-width: 767px){
+  [data-schoolhub-plan-open-btn="1"],
+  button[onclick*="schoolhubOpenPlanModalSafe"]{
     pointer-events:auto !important;
-    touch-action:manipulation;
-    -webkit-tap-highlight-color:rgba(79,70,229,.12);
+    touch-action:manipulation !important;
+    position:relative !important;
+    z-index:2147483001 !important;
+    opacity:1 !important;
+    filter:none !important;
+    cursor:pointer !important;
+  }
+  #plan-modal{
+    z-index:2147483000 !important;
+    pointer-events:auto !important;
+  }
+  #plan-modal:not(.hidden){
+    display:flex !important;
   }
 }
 </style>
-<script id="schoolhub-mobile-score-plan-tap-fix-script">
+<script id="schoolhub-mobile-plan-score-click-fix-only">
 (function(){
-  if(window.__schoolhubMobileScorePlanTapFix) return;
-  window.__schoolhubMobileScorePlanTapFix = true;
+  if(window.__schoolhubMobilePlanScoreClickFixOnly) return;
+  window.__schoolhubMobilePlanScoreClickFixOnly = true;
 
-  function isMobile(){
-    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  function byId(id){ return document.getElementById(id); }
+  function getCourseId(){
+    return window.currentActiveCourseId ||
+      (byId('plan-course-id') && byId('plan-course-id').value) ||
+      (byId('score-course-select') && byId('score-course-select').value) ||
+      (byId('att-course-select') && byId('att-course-select').value) || '';
   }
-
-  function isScorePlanButton(el){
-    if(!el || !el.closest) return null;
-    var btn = el.closest('button,a,[role="button"]');
-    if(!btn) return null;
-    var s = String(
-      (btn.getAttribute('onclick') || '') + ' ' +
-      (btn.textContent || '') + ' ' +
-      (btn.id || '') + ' ' +
-      (btn.className || '') + ' ' +
-      (btn.getAttribute('title') || '')
-    );
-    return /openPlanModalForCurrentCourse|จัดการแผนเก็บคะแนน|จัดการแผนคะแนน|แผนคะแนน/i.test(s) ? btn : null;
-  }
-
-  function openScorePlan(e){
-    if(!isMobile()) return;
-    var btn = isScorePlanButton(e.target);
-    if(!btn) return;
-
-    var now = Date.now();
-    if(window.__schoolhubLastMobileScorePlanTap && now - window.__schoolhubLastMobileScorePlanTap < 450){
-      if(e && e.preventDefault) e.preventDefault();
+  function openPlanDirect(){
+    var cid = getCourseId();
+    if(!cid){
+      if(typeof window.showCustomAlert === 'function') window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
+      else alert('กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน');
       return false;
     }
-    window.__schoolhubLastMobileScorePlanTap = now;
-
-    if(e && e.preventDefault) e.preventDefault();
-    if(e && e.stopPropagation) e.stopPropagation();
-
-    btn.disabled = false;
-    btn.style.pointerEvents = 'auto';
-
-    if(typeof window.openPlanModalForCurrentCourse === 'function'){
-      window.openPlanModalForCurrentCourse();
+    window.currentActiveCourseId = cid;
+    var course = null;
+    try{ course = (window.state && Array.isArray(window.state.courses) ? window.state.courses : []).find(function(c){ return String(c.id) === String(cid); }); }catch(e){}
+    var title = byId('plan-modal-title');
+    if(title) title.textContent = course && course.code ? '(' + course.code + ')' : '';
+    var hidden = byId('plan-course-id');
+    if(hidden) hidden.value = cid;
+    try{ if(typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); }catch(e){}
+    try{ if(typeof window.renderPlanList === 'function') window.renderPlanList(cid); }catch(e){}
+    var modal = byId('plan-modal');
+    if(modal){
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.pointerEvents = 'auto';
+      modal.style.zIndex = '2147483000';
+      document.body.style.overflow = 'hidden';
+      var box = modal.querySelector('div');
+      if(box) box.scrollTop = 0;
     }else if(typeof window.openModal === 'function'){
       window.openModal('plan-modal');
     }
     return false;
   }
 
-  document.addEventListener('touchend', openScorePlan, {capture:true, passive:false});
-  document.addEventListener('click', openScorePlan, true);
+  window.schoolhubOpenPlanModalSafe = function(e){
+    if(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
+    return openPlanDirect();
+  };
+
+  // Override only this opener because older wrappers/permission stabilizers were swallowing mobile taps.
+  window.openPlanModalForCurrentCourse = function(){ return openPlanDirect(); };
+
+  ['touchstart','pointerup','click'].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      var btn = e.target && e.target.closest ? e.target.closest('[data-schoolhub-plan-open-btn="1"],button[onclick*="schoolhubOpenPlanModalSafe"]') : null;
+      if(!btn) return;
+      window.schoolhubOpenPlanModalSafe(e);
+    }, true);
+  });
 })();
 </script>
 
