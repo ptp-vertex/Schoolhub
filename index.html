@@ -2879,6 +2879,18 @@ document.addEventListener('click',function(){
                     </div>
                     <div id="user-current-plan-box" class="mb-5"></div>
                     <div id="user-plan-list" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
+                    <div id="user-payment-history-box" class="mt-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-slate-50/60">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-900"><i class="fas fa-receipt text-primary mr-2"></i>ประวัติการชำระเงิน / คำขอแผน</h3>
+                                <p class="text-sm text-slate-500 mt-1">แสดงสถานะทั้งหมด: รอตรวจสอบ, อนุมัติ, ไม่อนุมัติ และอนุมัติอัตโนมัติ</p>
+                            </div>
+                            <button type="button" onclick="loadUserPaymentHistory(true)" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-sync-alt mr-1"></i> รีเฟรช</button>
+                        </div>
+                        <div id="user-payment-history-list" class="p-5 space-y-3">
+                            <div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดประวัติ...</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- View 3: Inside a Course -->
@@ -4545,6 +4557,76 @@ document.addEventListener('click',function(){
                 </div>`;
             }).join('');
         }
+
+        function planRequestStatusText(status, autoApproved){
+            const s = String(status || 'pending').toLowerCase();
+            if(s === 'approved') return autoApproved ? ['อนุมัติอัตโนมัติ','emerald','fa-circle-check'] : ['อนุมัติแล้ว','emerald','fa-circle-check'];
+            if(s === 'rejected' || s === 'denied') return ['ไม่อนุมัติ','rose','fa-circle-xmark'];
+            if(s === 'cancelled' || s === 'canceled') return ['ยกเลิกแล้ว','slate','fa-ban'];
+            return ['รอตรวจสอบ','amber','fa-hourglass-half'];
+        }
+        function formatSchoolHubDateTime(value){
+            if(!value) return '-';
+            let d;
+            if(typeof value === 'number') d = new Date(value);
+            else if(value && typeof value.toDate === 'function') d = value.toDate();
+            else d = new Date(value);
+            if(!d || Number.isNaN(d.getTime())) return '-';
+            return d.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
+        }
+        window.loadUserPaymentHistory = async (showToast=false) => {
+            const box = document.getElementById('user-payment-history-list');
+            if(!box) return;
+            if(!currentUser || currentUser.uid === 'admin-bypass'){
+                box.innerHTML = `<div class="text-center text-slate-400 py-6"><i class="fas fa-user-lock text-2xl mb-2 block"></i>กรุณาเข้าสู่ระบบผู้ใช้ก่อนดูประวัติ</div>`;
+                return;
+            }
+            box.innerHTML = `<div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดประวัติ...</div>`;
+            try{
+                const userKey = getUserKey(currentUser);
+                const snap = await withTimeout(getDocs(collection(db,'subscription_requests')), 9000, 'loadPaymentHistory');
+                const rows = snap.docs.map(d => ({ id:d.id, ...(d.data()||{}) }))
+                    .filter(r => String(r.userKey||'').toLowerCase() === userKey || String(r.email||'').toLowerCase() === userKey || String(r.uid||'') === String(currentUser.uid||''))
+                    .sort((a,b) => Number(b.createdAt||b.updatedAt||0) - Number(a.createdAt||a.updatedAt||0));
+                if(!rows.length){
+                    box.innerHTML = `<div class="text-center text-slate-400 py-8"><i class="fas fa-receipt text-4xl text-slate-200 mb-3 block"></i>ยังไม่มีประวัติการชำระเงินหรือคำขอแผน</div>`;
+                    return;
+                }
+                box.innerHTML = rows.map(r => {
+                    const [label,color,icon] = planRequestStatusText(r.status, r.autoApproved);
+                    const amount = r.planAmount || extractPlanAmount(r.planPrice || '');
+                    const paid = r.paymentTime || r.paidAt || '';
+                    const ref = r.paymentReference || r.slipReference || '-';
+                    const reason = r.rejectReason || r.rejectedReason || r.reason || '';
+                    return `<div class="rounded-2xl border border-${color}-100 bg-${color}-50/45 p-4">
+                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-${color}-100 text-${color}-700"><i class="fas ${icon}"></i> ${label}</span>
+                                    ${r.autoApproved ? '<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700"><i class="fas fa-bolt"></i> Auto</span>' : ''}
+                                </div>
+                                <div class="mt-2 text-lg font-black text-slate-900">${escapeHTML(r.planName || '-')}</div>
+                                <div class="mt-1 text-sm text-slate-600 leading-7">
+                                    ยอดชำระ: <b>${amount ? Number(amount).toLocaleString('th-TH') + ' บาท' : escapeHTML(r.planPrice || '-')}</b><br>
+                                    ผู้ชำระ: <b>${escapeHTML(r.payerName || r.name || '-')}</b><br>
+                                    เวลาที่แจ้งชำระ: <b>${escapeHTML(paid || '-')}</b><br>
+                                    เลขอ้างอิง: <b>${escapeHTML(ref)}</b>
+                                </div>
+                                ${reason ? `<div class="mt-2 text-sm text-rose-700 bg-white/70 border border-rose-100 rounded-xl p-3"><b>เหตุผล:</b> ${escapeHTML(reason)}</div>` : ''}
+                            </div>
+                            <div class="text-xs text-slate-500 md:text-right shrink-0 leading-6">
+                                ส่งคำขอ: <b>${formatSchoolHubDateTime(r.createdAt)}</b><br>
+                                อัปเดตล่าสุด: <b>${formatSchoolHubDateTime(r.updatedAt || r.approvedAt || r.rejectedAt)}</b>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+                if(showToast) showCustomAlert('โหลดประวัติแล้ว','อัปเดตประวัติการชำระเงินล่าสุดเรียบร้อย');
+            }catch(e){
+                box.innerHTML = `<div class="text-center text-rose-500 py-6"><i class="fas fa-triangle-exclamation mr-1"></i> โหลดประวัติไม่ได้: ${escapeHTML(getFirebaseErrorText(e))}</div>`;
+            }
+        };
+
         window.openUserPlanSelector=async()=>{
             if(isAdmin) return window.switchView('admin-plans');
             currentActiveCourseId=null;
@@ -4562,6 +4644,7 @@ document.addEventListener('click',function(){
             }
             renderUserPlans();
             window.switchView('user-plans');
+            try { await loadUserPaymentHistory(); } catch(e) { console.warn('load payment history failed:', e); }
         };
 
         function extractPlanAmount(priceText){
@@ -5097,6 +5180,7 @@ document.addEventListener('click',function(){
                 }
                 localStorage.removeItem(PENDING_PLAN_KEY);
                 closePlanPaymentModal();
+                try { if(document.getElementById('view-user-plans') && !document.getElementById('view-user-plans').classList.contains('hidden')) await loadUserPaymentHistory(); } catch(e) {}
                 if(verification?.autoApproved){
                     showCustomAlert('อนุมัติอัตโนมัติแล้ว','ระบบตรวจสลิปผ่านครบทุกเงื่อนไข\n- เป็นสลิปจริง\n- ยอดเงินตรง\n- เลขอ้างอิงไม่ซ้ำ\n- ชื่อผู้ชำระเงินใกล้เคียง\n- เวลาตรงหรือใกล้เคียง\n\nสิทธิ์การใช้งานเริ่มนับทันที');
                 }else{
@@ -5908,13 +5992,51 @@ async function submitPlanRequest(planId){
             }
         };
 
+        function setGoogleLoginButtonLoading(isLoading, text){
+            const btn = document.querySelector('.auth-google-btn, button[onclick*=\"handleSocialLogin\"]');
+            if(!btn) return;
+            if(!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+            btn.disabled = !!isLoading;
+            btn.classList.toggle('opacity-70', !!isLoading);
+            btn.classList.toggle('cursor-wait', !!isLoading);
+            if(isLoading){
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin text-primary text-lg"></i><span>${escapeHTML(text||'กำลังเข้าสู่ระบบ...')}</span>`;
+            }else{
+                btn.innerHTML = btn.dataset.originalHtml;
+            }
+        }
+        window.setGoogleLoginButtonLoading = setGoogleLoginButtonLoading;
+
         window.handleSocialLogin = async (providerType) => {
             if (location.protocol === 'file:') {
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
             }
-            let provider = new GoogleAuthProvider(); window.isSocialAuthenticating = true; toggleLoader(true);
-            try { const result = await signInWithPopup(auth, provider); const email = normalizeSchoolHubEmail(result.user && result.user.email); if(!isSchoolHubValidEmail(email)){ await signOut(auth); window.isSocialAuthenticating = false; toggleLoader(false); return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true); } await addUserToDirectory(result.user, result.user.displayName || email, 'user'); window.isSocialAuthenticating = false; }
-            catch (error) { window.isSocialAuthenticating = false; toggleLoader(false); showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true); }
+            const provider = new GoogleAuthProvider();
+            window.isSocialAuthenticating = true;
+            window.__schoolhubGoogleLoginWaiting = true;
+            setGoogleLoginButtonLoading(true, 'กำลังเชื่อมต่อ Google...');
+            // ไม่เปิด global-loader เพื่อให้ค้างอยู่ที่หน้าล็อกอินเดิม ระหว่างรอ Google / Firebase
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const email = normalizeSchoolHubEmail(result.user && result.user.email);
+                if(!isSchoolHubValidEmail(email)){
+                    await signOut(auth);
+                    window.isSocialAuthenticating = false;
+                    window.__schoolhubGoogleLoginWaiting = false;
+                    setGoogleLoginButtonLoading(false);
+                    return showCustomAlert('ไม่พบอีเมลผู้ใช้ กรุณาเข้าสู่ระบบด้วยอีเมล','ระบบหยุดการสร้างข้อมูลผู้ใช้ เพราะบัญชี Google นี้ไม่มีอีเมล',true);
+                }
+                setGoogleLoginButtonLoading(true, 'กำลังเตรียมข้อมูล...');
+                await addUserToDirectory(result.user, result.user.displayName || email, 'user');
+                window.isSocialAuthenticating = false;
+            }
+            catch (error) {
+                window.isSocialAuthenticating = false;
+                window.__schoolhubGoogleLoginWaiting = false;
+                setGoogleLoginButtonLoading(false);
+                toggleLoader(false);
+                showCustomAlert(`เข้าสู่ระบบ Google ไม่ได้`, getFirebaseErrorText(error), true);
+            }
         };
 
         onAuthStateChanged(auth, async (user) => {
@@ -5931,12 +6053,13 @@ async function submitPlanRequest(planId){
                 // Google login fix: ห้าม return ระหว่าง signInWithPopup เพราะบางครั้ง Auth state ยิงก่อนปิด flag แล้วค้างหน้าเปล่า/ต้องรีเฟรช
                 if (window.isSocialAuthenticating) { window.isSocialAuthenticating = false; }
                 try {
-                    toggleLoader(true);
                     currentUser = user; isAdmin = false;
                     saveSchoolHubSession(user, 'user');
-                    document.getElementById('landing-view').classList.add('hidden');
-                    document.getElementById('auth-view').classList.add('hidden');
-                    document.getElementById('main-app').classList.remove('hidden');
+                    if (window.__schoolhubGoogleLoginWaiting && typeof setGoogleLoginButtonLoading === 'function') {
+                        setGoogleLoginButtonLoading(true, 'กำลังโหลดข้อมูลผู้ใช้...');
+                    } else {
+                        toggleLoader(true);
+                    }
 
                     const dName = user.displayName || 'ผู้ใช้งาน';
                     document.getElementById('user-display-name').textContent = dName;
@@ -5946,11 +6069,23 @@ async function submitPlanRequest(planId){
                     setAdminNavigationMode(false);
 
                     await loadSchoolHubDataAfterAuth(user);
+
+                    // เปิดหน้าเข้าใช้งานเฉพาะหลังโหลดข้อมูลสำเร็จจริง ๆ
+                    document.getElementById('landing-view').classList.add('hidden');
+                    document.getElementById('auth-view').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    window.__schoolhubGoogleLoginWaiting = false;
+                    if (typeof setGoogleLoginButtonLoading === 'function') setGoogleLoginButtonLoading(false);
+
                     const planFlow = await processPendingPlanRequestAfterLogin();
                     if(!planFlow) {
                         window.goToHome();
                     }
-                } catch (error) { showCustomAlert("ผิดพลาด", error.message, true); }
+                } catch (error) {
+                    window.__schoolhubGoogleLoginWaiting = false;
+                    if (typeof setGoogleLoginButtonLoading === 'function') setGoogleLoginButtonLoading(false);
+                    showCustomAlert("ผิดพลาด", error.message, true);
+                }
                 finally { toggleLoader(false); }
             } else {
                 currentUser = null; isAdmin = false;
@@ -9465,189 +9600,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <script>
-/* ============================================================
-   SchoolHub Google Login Loader Unstuck Patch
-   แก้ปัญหา Login ด้วย Google แล้วขึ้น "กำลังเชื่อมต่อ..." ค้าง
-   - ไม่ยุ่งกับระบบ Login เดิม
-   - ถ้ามีผู้ใช้ login แล้ว แต่ loader ยังบังจอ จะปล่อยหน้าเว็บออก
-   - ทำให้ระบบสถิติ/แอดมินที่โหลดช้าไม่บล็อกการเข้าหน้าหลัก
-   ============================================================ */
-(function () {
-    let lastAuthSuccessAt = 0;
-    let releasedOnce = false;
-
-    function isVisible(el) {
-        if (!el) return false;
-        const style = window.getComputedStyle(el);
-        return style.display !== 'none' && style.visibility !== 'hidden' && !el.classList.contains('hidden');
-    }
-
-    function hideLoader() {
-        const loader = document.getElementById('global-loader');
-        if (loader) {
-            loader.classList.add('hidden');
-            loader.style.display = 'none';
-            loader.style.pointerEvents = 'none';
-        }
-    }
-
-    function showMainAppIfPossible() {
-        const app = document.getElementById('main-app');
-        const auth = document.getElementById('auth-view');
-        const landing = document.getElementById('landing-view');
-
-        // ถ้า main-app ถูกสร้างไว้แล้ว ให้โชว์ main-app เป็นหลัก
-        if (app) {
-            app.classList.remove('hidden');
-            app.style.display = '';
-            if (auth) auth.classList.add('hidden');
-            if (landing) landing.classList.add('hidden');
-            return true;
-        }
-
-        return false;
-    }
-
-    function releaseStuckLoader(reason) {
-        const loader = document.getElementById('global-loader');
-        if (!loader || !isVisible(loader)) return;
-
-        hideLoader();
-        showMainAppIfPossible();
-
-        if (!releasedOnce) {
-            releasedOnce = true;
-            console.warn('SchoolHub: released stuck loader after Google login:', reason);
-        }
-    }
-
-    function markAuthSuccess(reason) {
-        lastAuthSuccessAt = Date.now();
-
-        // ปล่อย loader แบบหน่วงนิดหนึ่ง เพื่อให้โค้ดเดิมมีโอกาสโหลดข้อมูลก่อน
-        setTimeout(() => releaseStuckLoader(reason + ' / 2s'), 2000);
-        setTimeout(() => releaseStuckLoader(reason + ' / 5s'), 5000);
-        setTimeout(() => releaseStuckLoader(reason + ' / 8s'), 8000);
-    }
-
-    // ดัก Firebase Auth callbacks จากโค้ดเดิม
-    function hookAuthFunctions() {
-        const candidates = [
-            'handleSocialLogin',
-            'loginWithGoogle',
-            'signInWithGoogle',
-            'googleLogin',
-            'handleGoogleLogin'
-        ];
-
-        candidates.forEach(function (name) {
-            const fn = window[name];
-            if (typeof fn !== 'function' || fn.__loaderUnstuckHooked) return;
-
-            const wrapped = async function () {
-                try {
-                    const result = fn.apply(this, arguments);
-                    if (result && typeof result.then === 'function') {
-                        const awaited = await result;
-                        markAuthSuccess(name);
-                        return awaited;
-                    }
-                    markAuthSuccess(name);
-                    return result;
-                } catch (error) {
-                    hideLoader();
-                    console.error('Google login function error:', error);
-                    throw error;
-                }
-            };
-
-            wrapped.__loaderUnstuckHooked = true;
-            window[name] = wrapped;
-        });
-    }
-
-    // ดักคลิกปุ่ม Google เผื่อฟังก์ชันอยู่ inline หรือชื่อไม่ตรง
-    document.addEventListener('click', function (event) {
-        const target = event.target && event.target.closest ? event.target.closest('button, a, div') : event.target;
-        if (!target) return;
-
-        const txt = (target.innerText || target.textContent || target.getAttribute?.('onclick') || '').toString().toLowerCase();
-        const cls = (target.className || '').toString().toLowerCase();
-
-        if (txt.includes('google') || txt.includes('กูเกิล') || cls.includes('google')) {
-            markAuthSuccess('google button click');
-        }
-    }, true);
-
-    // ถ้า Firebase auth currentUser มีแล้ว แต่ loader ยังบังจอ ให้ปล่อย
-    function checkKnownLoggedInState() {
-        try {
-            const hasFirebaseUser =
-                (window.auth && window.auth.currentUser) ||
-                (window.firebaseAuth && window.firebaseAuth.currentUser) ||
-                window.currentUser ||
-                window.currentUserEmail ||
-                localStorage.getItem('schoolhub_user') ||
-                localStorage.getItem('schoolhub_current_user') ||
-                localStorage.getItem('schoolhub_user_email');
-
-            if (hasFirebaseUser) {
-                markAuthSuccess('known logged-in state');
-            }
-        } catch (e) {}
-    }
-
-    // กัน Promise error หลัง login แล้ว loader ค้าง
-    window.addEventListener('unhandledrejection', function (event) {
-        const msg = String(event.reason && (event.reason.message || event.reason) || '');
-        if (
-            msg.includes('Firebase') ||
-            msg.includes('Firestore') ||
-            msg.includes('permission') ||
-            msg.includes('auth') ||
-            msg.includes('INTERNAL ASSERTION')
-        ) {
-            console.warn('SchoolHub: non-blocking async error after login:', event.reason);
-            if (Date.now() - lastAuthSuccessAt < 15000) {
-                hideLoader();
-                showMainAppIfPossible();
-            }
-        }
-    });
-
-    window.addEventListener('error', function (event) {
-        const msg = String(event.message || '');
-        if (
-            msg.includes('Firebase') ||
-            msg.includes('Firestore') ||
-            msg.includes('INTERNAL ASSERTION')
-        ) {
-            console.warn('SchoolHub: non-blocking runtime error after login:', event.error || event.message);
-            if (Date.now() - lastAuthSuccessAt < 15000) {
-                hideLoader();
-                showMainAppIfPossible();
-            }
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        hookAuthFunctions();
-        checkKnownLoggedInState();
-
-        setTimeout(hookAuthFunctions, 1000);
-        setTimeout(hookAuthFunctions, 3000);
-        setInterval(hookAuthFunctions, 5000);
-
-        // fallback: ถ้า loader ค้างนานเกินไปและมีหน้าจอหลักอยู่แล้ว ให้ปล่อย
-        setTimeout(function () {
-            const loader = document.getElementById('global-loader');
-            const app = document.getElementById('main-app');
-            if (loader && isVisible(loader) && app) {
-                releaseStuckLoader('hard fallback 9s');
-            }
-        }, 9000);
-    });
-})();
+/* SchoolHub Google login safe-wait patch
+   ปิดแพตช์เก่าที่เคยบังคับเปิด main-app หลังคลิก Google เพราะทำให้หลุดเข้าหน้าหลักก่อนโหลดจริง
+   ใช้ปุ่ม Google แบบ spinner และรอ onAuthStateChanged โหลดข้อมูลสำเร็จก่อนค่อยเปิดหน้าเข้าใช้งานแทน
+*/
 </script>
 
 
@@ -15729,10 +15685,18 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   function ensureTeamLimitText(){
     const currentBox=document.getElementById('user-current-plan-box');
     if(!currentBox) return;
+    const d=getDir();
+    const p=getPlan();
+    const isTeamPlan = !!(d.teamStatus==='accepted' || d.teamOwnerUid || d.allowTeam === true || p.allowTeam === true);
+    const limit = isTeamPlan ? teamLimit() : 0;
+    let line=document.getElementById('schoolhub-current-plan-team-limit-text');
+    // ถ้ายังไม่ได้เลือกแผน หรือเป็นแผนใช้คนเดียว ห้ามสร้าง/แสดงบรรทัดนี้เด็ดขาด
+    if(!hasRealPlan() || !isTeamPlan || limit <= 1){
+      if(line) line.remove();
+      return;
+    }
     const mainCard=currentBox.firstElementChild;
     if(!mainCard) return;
-    let line=document.getElementById('schoolhub-current-plan-team-limit-text');
-    const limit=teamLimit();
     const text='ใช้ร่วมกันได้สูงสุด '+limit+' คน';
     if(line){ line.textContent=text; return; }
     const target=mainCard.querySelector('div div') || mainCard;
@@ -15918,10 +15882,16 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   async function ensureTeamBox(){
     const currentBox=document.getElementById('user-current-plan-box');
     if(!currentBox) return;
+    // แสดงคำเชิญได้ แต่ไม่แสดงข้อความจำกัดทีมเมื่อยังไม่มีแผน/แผนใช้คนเดียว
     ensureTeamLimitText();
     let inviteHolder=document.getElementById('schoolhub-team-incoming-invites-box');
     if(!inviteHolder){ inviteHolder=document.createElement('div'); inviteHolder.id='schoolhub-team-incoming-invites-box'; inviteHolder.style.marginTop='16px'; currentBox.appendChild(inviteHolder); }
     await refreshIncomingInvites();
+    if(!allowTeam()){
+      const oldTeamBox=document.getElementById('schoolhub-team-plan-box');
+      if(oldTeamBox) oldTeamBox.remove();
+      return;
+    }
     if(document.getElementById('schoolhub-team-plan-box')) return;
     const holder=document.createElement('div'); holder.id='schoolhub-team-plan-box'; currentBox.appendChild(holder); await loadAndRenderTeamPanel();
   }
@@ -15991,7 +15961,7 @@ window.allowTeam=function(){
    const s=(window.currentUserStatus||'');
    if(s==='declined') return false;
  }catch(e){}
- return oldAllow?oldAllow():true;
+ return oldAllow?oldAllow():false;
 }
 })();
 </script>
@@ -21028,6 +20998,76 @@ label:has(#plan-sub-allow-team){
       try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e) {}
     }
   };
+})();
+</script>
+
+
+
+<!-- =========================================================
+     SchoolHub Ultimate No-Plan / Team-Limit Cleanup
+     - ตรวจ DOM ทุกครั้งหลัง render เพื่อกันโค้ดเก่าซ้อน
+     - ไม่มีแผน = แสดงการ์ดแดงเดียว และลบคำว่า ใช้ร่วมกันได้สูงสุด 1 คน
+     ========================================================= -->
+<style id="schoolhub-ultimate-no-plan-cleanup-style">
+#schoolhub-current-plan-team-limit-text.schoolhub-force-hidden,
+.schoolhub-force-hidden-team-limit{display:none!important;}
+#user-current-plan-box.schoolhub-ultimate-no-plan{border:0!important;background:transparent!important;padding:0!important;color:inherit!important;}
+</style>
+<script id="schoolhub-ultimate-no-plan-cleanup-script">
+(function(){
+  if(window.__schoolhubUltimateNoPlanCleanup) return;
+  window.__schoolhubUltimateNoPlanCleanup = true;
+
+  function dir(){ return window.__currentUserDir || {}; }
+  function hasRealSelectedPlan(){
+    var d = dir();
+    return !!(d && d.planId && d.planId !== 'team_shared' && d.status !== 'plan_locked');
+  }
+  function hasRealTeam(){
+    var d = dir();
+    return !!(d && (d.effectivePlanSource === 'team' || d.teamStatus === 'accepted' || d.teamOwnerUid || d.teamPlanId));
+  }
+  function cleanup(){
+    var box = document.getElementById('user-current-plan-box');
+    if(!box) return;
+    var noPlan = !hasRealSelectedPlan() && !hasRealTeam();
+    if(!noPlan){ box.classList.remove('schoolhub-ultimate-no-plan'); return; }
+
+    box.classList.add('schoolhub-ultimate-no-plan');
+
+    // ลบจุดที่โค้ดทีมเก่า append แทรกเข้ามา
+    var line = document.getElementById('schoolhub-current-plan-team-limit-text');
+    if(line) line.remove();
+    var teamBox = document.getElementById('schoolhub-team-plan-box');
+    if(teamBox) teamBox.remove();
+
+    // ถ้ามีคำว่าใช้ร่วมกันได้สูงสุดหลุดในกล่อง current plan ให้ render ใหม่เป็นแผนไม่มีแพ็กเกจแบบเดียวเท่านั้น
+    if(/ใช้ร่วมกันได้สูงสุด\s*1\s*คน|ใช้ร่วมกันได้สูงสุด/.test(box.textContent || '') || !box.querySelector('.schoolhub-no-plan-card-proper')){
+      var invite = document.getElementById('schoolhub-team-incoming-invites-box');
+      box.innerHTML =
+        '<div class="schoolhub-no-plan-card-proper">' +
+          '<div class="no-plan-label"><i class="fas fa-circle-exclamation mr-1"></i>แผนปัจจุบัน</div>' +
+          '<div class="no-plan-title">ยังไม่ได้เลือกแผน</div>' +
+          '<div class="meta-grid">' +
+            '<div class="meta-item">สถานะ: ยังไม่มีแผน</div>' +
+            '<div class="meta-item">รอบชำระเงินครั้งต่อไป: ไม่มี</div>' +
+          '</div>' +
+          '<p class="no-plan-desc">เลือกแผนเมื่อเริ่มใช้งาน คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</p>' +
+        '</div>';
+      if(invite) box.appendChild(invite);
+    }
+  }
+
+  function schedule(){ setTimeout(cleanup,0); setTimeout(cleanup,80); setTimeout(cleanup,300); }
+  document.addEventListener('DOMContentLoaded', schedule);
+  document.addEventListener('click', schedule, true);
+  document.addEventListener('change', schedule, true);
+  var obs = new MutationObserver(function(){ schedule(); });
+  document.addEventListener('DOMContentLoaded', function(){
+    var root = document.getElementById('view-user-plans') || document.body;
+    if(root) obs.observe(root,{childList:true,subtree:true,characterData:true});
+  });
+  window.schoolhubUltimateNoPlanCleanupNow = cleanup;
 })();
 </script>
 
