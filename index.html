@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -5200,7 +5201,7 @@ async function submitPlanRequest(planId){
         window.editAdminPlan=(id)=>{const p=(subscriptionPlans||[]).find(x=>x.id===id);if(!p)return;document.getElementById('plan-sub-edit-id').value=p.id;document.getElementById('plan-sub-name').value=p.name||'';document.getElementById('plan-sub-price').value=p.price||'';document.getElementById('plan-sub-promptpay').value=p.promptpay||'';document.getElementById('plan-sub-desc').value=p.desc||'';document.getElementById('plan-sub-features').value=(p.features||[]).join('\n');document.getElementById('plan-sub-order').value=Number(p.order||1);document.getElementById('plan-sub-featured').checked=!!p.featured;document.getElementById('plan-sub-active').checked=p.active!==false;};
         window.saveAdminPlanForm=async()=>{if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true);const editId=document.getElementById('plan-sub-edit-id').value;const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()};if(!item.name||!item.price)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับและราคา',true);subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id);subscriptionPlans.push(item);writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();resetAdminPlanForm();await new Promise(resolve=>requestAnimationFrame(resolve));try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}};
         window.deleteAdminPlan=(id)=>window.showCustomConfirm('ลบแผนการใช้งาน','ต้องการลบแผนนี้หรือไม่?',async()=>{subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==id);writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('ลบในเครื่องแล้ว','แต่ยังลบจาก Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);});
-        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
+        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
 
         // --- Timed Student Share ---
         function buildStudentSharePayload(studentId,expireMinutes,note){const student=state.students.find(s=>s.id===studentId);const course=state.courses.find(c=>c.id===currentActiveCourseId);if(!student||!course)return null;const cid=currentActiveCourseId;const plans=(state.coursePlans[cid]||[]).sort((a,b)=>a.week-b.week);const courseScores=state.scores.filter(x=>x.courseId===cid);const attendanceHistory=state.attendance[cid]||{};const attDates=Object.keys(attendanceHistory).sort();let present=0,late=0,absent=0;attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[studentId];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});let totalScore=0,totalMax=0;const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>ts.week===p.week&&ts.title===p.title);const raw=task&&task.records?task.records[studentId]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax+=Number(p.maxScore||0);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''){totalScore+=Number(raw);display=`${raw}/${p.maxScore}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});return{student,course,note,expireMinutes:Number(expireMinutes||60),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore,totalMax},scoreRows};}
@@ -7486,7 +7487,7 @@ ${resetUrl.toString()}
         window.resetAdminPlanForm=()=>{['plan-sub-edit-id','plan-sub-name','plan-sub-price','plan-sub-promptpay','plan-sub-desc','plan-sub-features','plan-sub-monthly-price','plan-sub-yearly-price'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';}); const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v}; set('plan-sub-order','1'); set('plan-sub-course-limit','1'); set('plan-sub-billing-cycle','monthly'); ['plan-sub-featured','plan-sub-active','plan-sub-free-first-month'].forEach(id=>{const el=document.getElementById(id); if(el)el.checked=(id==='plan-sub-active');});};
         window.editAdminPlan=(id)=>{const p=(subscriptionPlans||[]).find(x=>x.id===id);if(!p)return; const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v??''}; set('plan-sub-edit-id',p.id);set('plan-sub-name',p.name||'');set('plan-sub-price',p.price||planDisplayPrice(p));set('plan-sub-promptpay',p.promptpay||'');set('plan-sub-desc',p.desc||'');set('plan-sub-features',(p.features||[]).join('\n'));set('plan-sub-order',Number(p.order||1));set('plan-sub-course-limit',Number(p.courseLimit||0));set('plan-sub-monthly-price',Number(p.monthlyPrice||0));set('plan-sub-yearly-price',Number(p.yearlyPrice||0));set('plan-sub-billing-cycle',p.freeForever?'forever':(p.billingCycle||'monthly')); const chk=(id,v)=>{const e=document.getElementById(id); if(e)e.checked=!!v}; chk('plan-sub-featured',p.featured);chk('plan-sub-active',p.active!==false);chk('plan-sub-free-first-month',p.freeFirstMonth);};
         window.saveAdminPlanForm=async()=>{if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true); const editId=document.getElementById('plan-sub-edit-id').value; const monthly=Number(document.getElementById('plan-sub-monthly-price')?.value||0); const yearly=Number(document.getElementById('plan-sub-yearly-price')?.value||0); const cycle=document.getElementById('plan-sub-billing-cycle')?.value||'monthly'; const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),monthlyPrice:monthly,yearlyPrice:yearly,billingCycle:cycle,freeForever:cycle==='forever',freeFirstMonth:document.getElementById('plan-sub-free-first-month')?.checked||false,courseLimit:Number(document.getElementById('plan-sub-course-limit')?.value||0),price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()}; if(!item.price)item.price=planDisplayPrice(item); if(!item.name)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับ',true); subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id); subscriptionPlans.push(item); writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans); toggleLoader(true); try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true}); resetAdminPlanForm(); renderAdminPlans(); renderLandingPlans(); showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){resetAdminPlanForm();renderAdminPlans();renderLandingPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);} toggleLoader(false);};
-        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 4 ระดับขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
+        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
         function updatePlanPaymentRequirementUI(plan, cycle){
             const amount = getPlanChargeAmount(plan, cycle);
             const canvas = document.getElementById('payment-qr-canvas');
@@ -7873,7 +7874,7 @@ ${resetUrl.toString()}
             subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id); subscriptionPlans.push(item); writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans); toggleLoader(true);
             try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true}); resetAdminPlanForm(); renderAdminPlans(); renderLandingPlans(); showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){resetAdminPlanForm();renderAdminPlans();renderLandingPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);} toggleLoader(false);
         };
-        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 4 ระดับขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
+        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
         const __oldSwitchCourseTabPlanLimit = window.switchCourseTab;
         window.switchCourseTab = (tabId) => {
             if(tabId === 'attendance' && !currentPlanAllows('attendance')) return showCustomAlert('แผนนี้ไม่รองรับเช็คชื่อ','กรุณาอัปเกรดแผนเพื่อใช้งานเช็คชื่อ',true);
@@ -9841,9 +9842,35 @@ function planDisplay(p) {
 window.planDisplayPrice = window.planDisplayPrice || planDisplay;
 
 function localDefaultPlans() {
+    const now = Date.now();
     return [
-        {id:'standard', name:'มาตรฐาน', price:'99 บาทต่อเดือน', monthlyPrice:99, yearlyPrice:990, billingCycle:'monthly', freeFirstMonth:true, courseLimit:3, studentLimit:0, weekLimit:20, teamMemberLimit:1, desc:'เหมาะสำหรับเริ่มใช้งาน ฟรีเดือนแรก เดือนถัดไปชำระตามราคาที่ตั้ง', features:['เพิ่มรายวิชาได้ 3 วิชา','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมและแชร์ผลคะแนน'], order:1, featured:true, active:true, updatedAt:Date.now()},
-        {id:'pro', name:'โปร', price:'199 บาทต่อเดือน', monthlyPrice:199, yearlyPrice:1990, billingCycle:'monthly', freeFirstMonth:false, courseLimit:10, studentLimit:0, weekLimit:20, teamMemberLimit:1, desc:'เหมาะสำหรับครูที่ใช้หลายรายวิชาและต้องการความยืดหยุ่น', features:['เพิ่มรายวิชาได้ 10 วิชา','ส่งออก Excel','จัดการนักเรียนและแผนคะแนนได้มากขึ้น'], order:2, featured:false, active:true, updatedAt:Date.now()}
+        {
+            id:'standard', name:'มาตรฐาน', price:'99 บาทต่อเดือน', monthlyPrice:99, yearlyPrice:990,
+            billingCycle:'monthly', freeFirstMonth:true, freeForever:false,
+            courseLimit:3, studentLimit:120, weekLimit:20,
+            allowAttendance:true, allowExport:false, allowTeam:false, teamMemberLimit:1,
+            desc:'เหมาะสำหรับครูเริ่มใช้งานรายบุคคล ใช้เช็คชื่อและบันทึกคะแนนได้ครบ',
+            features:['เพิ่มรายวิชาได้ 3 วิชา','นักเรียนสูงสุด 120 คน','ใช้งาน 20 สัปดาห์','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมคะแนน','ไม่รองรับ Export Excel'],
+            order:1, featured:true, active:true, updatedAt:now
+        },
+        {
+            id:'pro', name:'โปร', price:'199 บาทต่อเดือน', monthlyPrice:199, yearlyPrice:1990,
+            billingCycle:'monthly', freeFirstMonth:false, freeForever:false,
+            courseLimit:10, studentLimit:0, weekLimit:30,
+            allowAttendance:true, allowExport:true, allowTeam:false, teamMemberLimit:1,
+            desc:'เหมาะสำหรับครูที่มีหลายรายวิชา ต้องการส่งออก Excel และจัดการข้อมูลมากขึ้น',
+            features:['เพิ่มรายวิชาได้ 10 วิชา','นักเรียนไม่จำกัด','ใช้งาน 30 สัปดาห์','เช็คชื่อและบันทึกคะแนน','Export Excel ได้','จัดการแผนคะแนนและเกณฑ์เกรด'],
+            order:2, featured:false, active:true, updatedAt:now
+        },
+        {
+            id:'team', name:'ทีม', price:'499 บาทต่อเดือน', monthlyPrice:499, yearlyPrice:4990,
+            billingCycle:'monthly', freeFirstMonth:false, freeForever:false,
+            courseLimit:0, studentLimit:0, weekLimit:52,
+            allowAttendance:true, allowExport:true, allowTeam:true, teamMemberLimit:5,
+            desc:'เหมาะสำหรับใช้งานร่วมกันในแผนกหรือทีมครู แชร์สิทธิ์ให้สมาชิกได้',
+            features:['เพิ่มรายวิชาไม่จำกัด','นักเรียนไม่จำกัด','ใช้งาน 52 สัปดาห์','ใช้งานแบบทีมได้ 5 คน','เช็คชื่อและ Export ได้ครบ','เหมาะสำหรับแผนก/ทีมครู'],
+            order:3, featured:false, active:true, updatedAt:now
+        }
     ];
 }
 
@@ -10120,7 +10147,7 @@ window.seedDefaultPlans = async function(){
     try {
         await saveItemsToFirebase();
         if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
-        if (typeof showCustomAlert === 'function') showCustomAlert('สำเร็จ', 'สร้างแผนตัวอย่างลง /system_settings/subscription_plans แล้ว');
+        if (typeof showCustomAlert === 'function') showCustomAlert('สำเร็จ', 'สร้างแผนตัวอย่าง 3 แบบ (มาตรฐาน / โปร / ทีม) ลง /system_settings/subscription_plans แล้ว');
     } catch(e) {
         alert('สร้างตัวอย่างแล้ว แต่บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
     }
@@ -20961,6 +20988,46 @@ label:has(#plan-sub-allow-team){
   document.addEventListener('change', function(){ setTimeout(schedule, 80); }, true);
 
   window.schoolhubFixReadonlyNoPermissionButtonsNow = install;
+})();
+</script>
+
+
+
+<!-- SchoolHub Patch: seed sample plans = มาตรฐาน / โปร / ทีม only -->
+<script id="schoolhub-seed-3-default-plans-patch">
+(function(){
+  function make3DefaultPlans(){
+    var now = Date.now();
+    return [
+      {id:'standard',name:'มาตรฐาน',price:'99 บาทต่อเดือน',monthlyPrice:99,yearlyPrice:990,billingCycle:'monthly',freeFirstMonth:true,freeForever:false,courseLimit:3,studentLimit:120,weekLimit:20,allowAttendance:true,allowExport:false,allowTeam:false,teamMemberLimit:1,desc:'เหมาะสำหรับครูเริ่มใช้งานรายบุคคล ใช้เช็คชื่อและบันทึกคะแนนได้ครบ',features:['เพิ่มรายวิชาได้ 3 วิชา','นักเรียนสูงสุด 120 คน','ใช้งาน 20 สัปดาห์','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมคะแนน','ไม่รองรับ Export Excel'],order:1,featured:true,active:true,updatedAt:now},
+      {id:'pro',name:'โปร',price:'199 บาทต่อเดือน',monthlyPrice:199,yearlyPrice:1990,billingCycle:'monthly',freeFirstMonth:false,freeForever:false,courseLimit:10,studentLimit:0,weekLimit:30,allowAttendance:true,allowExport:true,allowTeam:false,teamMemberLimit:1,desc:'เหมาะสำหรับครูที่มีหลายรายวิชา ต้องการส่งออก Excel และจัดการข้อมูลมากขึ้น',features:['เพิ่มรายวิชาได้ 10 วิชา','นักเรียนไม่จำกัด','ใช้งาน 30 สัปดาห์','เช็คชื่อและบันทึกคะแนน','Export Excel ได้','จัดการแผนคะแนนและเกณฑ์เกรด'],order:2,featured:false,active:true,updatedAt:now},
+      {id:'team',name:'ทีม',price:'499 บาทต่อเดือน',monthlyPrice:499,yearlyPrice:4990,billingCycle:'monthly',freeFirstMonth:false,freeForever:false,courseLimit:0,studentLimit:0,weekLimit:52,allowAttendance:true,allowExport:true,allowTeam:true,teamMemberLimit:5,desc:'เหมาะสำหรับใช้งานร่วมกันในแผนกหรือทีมครู แชร์สิทธิ์ให้สมาชิกได้',features:['เพิ่มรายวิชาไม่จำกัด','นักเรียนไม่จำกัด','ใช้งาน 52 สัปดาห์','ใช้งานแบบทีมได้ 5 คน','เช็คชื่อและ Export ได้ครบ','เหมาะสำหรับแผนก/ทีมครู'],order:3,featured:false,active:true,updatedAt:now}
+    ];
+  }
+  window.getDefaultPlans = make3DefaultPlans;
+  window.schoolhubGet3DefaultPlans = make3DefaultPlans;
+  window.seedDefaultPlans = async function(){
+    var plans = make3DefaultPlans();
+    window.subscriptionPlans = plans;
+    try { if (typeof localStorage !== 'undefined') { localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(plans)); localStorage.setItem('schoolhub_public_plans', JSON.stringify(plans)); } } catch(e) {}
+    if (Array.isArray(window.patchPlans)) window.patchPlans = plans;
+    try { if (typeof syncGlobalPlans === 'function') syncGlobalPlans(); } catch(e) {}
+    try { if (typeof renderAdminPlans === 'function') renderAdminPlans(); } catch(e) {}
+    try { if (typeof renderLandingPlans === 'function') renderLandingPlans(); } catch(e) {}
+    try { if (typeof renderUserPlans === 'function') renderUserPlans(); } catch(e) {}
+    try { if (typeof window.toggleLoader === 'function') window.toggleLoader(true); } catch(e) {}
+    try {
+      if (typeof saveItemsToFirebase === 'function') await saveItemsToFirebase();
+      else if (typeof setDoc === 'function' && typeof getPlansDocRef === 'function') await setDoc(getPlansDocRef(), {items:plans, updatedAt:Date.now()}, {merge:true});
+      if (typeof showCustomAlert === 'function') showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 แบบ: มาตรฐาน, โปร, ทีม เรียบร้อยแล้ว');
+      else alert('สร้างแผนตัวอย่าง 3 แบบเรียบร้อยแล้ว');
+    } catch(e) {
+      if (typeof showCustomAlert === 'function') showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+(e.message||e),true);
+      else alert('สร้างในเครื่องแล้ว แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+(e.message||e));
+    } finally {
+      try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e) {}
+    }
+  };
 })();
 </script>
 
