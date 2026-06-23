@@ -21844,6 +21844,78 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
 })();
 </script>
 
+
+
+<!-- SchoolHub patch: เปิดหน้าเลือก/เปลี่ยนแผนทันที ลดอาการหน่วงตอนกดเมนู -->
+<script id="schoolhub-open-user-plan-fast-view-only">
+(function(){
+  function setPlanLoadingUI(){
+    try{
+      var list=document.getElementById('user-plan-list');
+      if(list){
+        list.innerHTML='<div class="col-span-full bg-white border border-slate-100 rounded-3xl p-8 text-center text-slate-500 shadow-sm"><i class="fas fa-spinner fa-spin text-2xl text-primary mb-3"></i><div class="font-bold text-slate-700">กำลังโหลดแผนการใช้งาน...</div><div class="text-sm mt-1">รอสักครู่ ระบบกำลังตรวจสอบแผนและสิทธิ์ล่าสุด</div></div>';
+      }
+      var current=document.getElementById('user-current-plan-box');
+      if(current){
+        current.innerHTML='<div class="bg-white border border-slate-100 rounded-2xl p-4 text-slate-500 shadow-sm"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>กำลังตรวจสอบสถานะแผนปัจจุบัน...</div>';
+      }
+      var hist=document.getElementById('user-payment-history-list');
+      if(hist){
+        hist.innerHTML='<div class="text-center text-slate-500 py-6"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>กำลังโหลดประวัติ...</div>';
+      }
+    }catch(e){}
+  }
+  function installFastPlanOpen(){
+    if(window.openUserPlanSelector && window.openUserPlanSelector.__schoolhubFastOpenInstalled) return;
+    window.openUserPlanSelector = async function(){
+      try{
+        if(window.isAdmin || (typeof isAdmin!=='undefined' && isAdmin)){
+          if(typeof window.switchView==='function') return window.switchView('admin-plans');
+          return;
+        }
+        try{ window.currentActiveCourseId=null; }catch(e){ try{ currentActiveCourseId=null; }catch(_e){} }
+        document.getElementById('course-context-menu')?.classList.add('hidden');
+        var title=document.getElementById('page-title'); if(title) title.textContent='เลือก / เปลี่ยนแผน';
+        var sub=document.getElementById('page-subtitle'); if(sub) sub.textContent='เลือกแผนที่ต้องการ แล้วกรอกข้อมูลการชำระเงิน';
+        var acts=document.getElementById('header-actions'); if(acts) acts.innerHTML='';
+
+        if(typeof window.switchView==='function') window.switchView('user-plans');
+        setPlanLoadingUI();
+
+        try{ if(typeof window.schoolhubEnsureTeamBox==='function') window.schoolhubEnsureTeamBox(); }catch(e){}
+
+        setTimeout(function(){
+          try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){}
+        },120);
+
+        try{ if(typeof window.loadPublicPlans==='function') await window.loadPublicPlans(); else if(typeof loadPublicPlans==='function') await loadPublicPlans(); }catch(e){ console.warn('loadPublicPlans fast open failed:', e); }
+        try{
+          var u = window.currentUser || (typeof currentUser!=='undefined' ? currentUser : null);
+          if(u && u.uid !== 'admin-bypass' && typeof window.refreshCurrentUserPlanLock==='function') await window.refreshCurrentUserPlanLock();
+        }catch(e){ console.warn('refreshCurrentUserPlanLock fast open failed:', e); }
+        try{
+          var u2 = window.currentUser || (typeof currentUser!=='undefined' ? currentUser : null);
+          if(u2 && u2.uid !== 'admin-bypass' && typeof db!=='undefined' && typeof doc==='function' && typeof getDoc==='function' && typeof getPublicPath==='function' && typeof getUserKey==='function'){
+            var snap = await (typeof withTimeout==='function' ? withTimeout(getDoc(doc(db, getPublicPath(), getUserKey(u2))), 6000, 'loadUserDirFast') : getDoc(doc(db, getPublicPath(), getUserKey(u2))));
+            if(snap && snap.exists()) window.__currentUserDir = snap.data() || {};
+          }
+        }catch(e){ console.warn('loadUserDir fast open failed:', e); }
+        try{ if(typeof window.renderUserPlans==='function') window.renderUserPlans(); else if(typeof renderUserPlans==='function') renderUserPlans(); }catch(e){ console.warn('renderUserPlans fast open failed:', e); }
+        try{ if(typeof window.schoolhubEnsureTeamBox==='function') window.schoolhubEnsureTeamBox(); }catch(e){}
+        setTimeout(function(){ try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){} },80);
+        setTimeout(function(){ try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){} },1200);
+      }catch(err){
+        console.warn('openUserPlanSelector fast open error:', err);
+        try{ if(typeof showCustomAlert==='function') showCustomAlert('เกิดข้อผิดพลาด', (typeof getFirebaseErrorText==='function'?getFirebaseErrorText(err):String(err)), true); }catch(e){}
+      }
+    };
+    window.openUserPlanSelector.__schoolhubFastOpenInstalled=true;
+  }
+  installFastPlanOpen();
+  document.addEventListener('DOMContentLoaded', function(){ installFastPlanOpen(); setTimeout(installFastPlanOpen,500); setTimeout(installFastPlanOpen,1500); });
+})();
+</script>
+
 </body>
 </html>
 
