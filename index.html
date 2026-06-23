@@ -5454,7 +5454,7 @@ async function submitPlanRequest(planId){
         function renderAdminPlans(){const tbody=document.getElementById('admin-plan-list');if(!tbody)return;const items=(subscriptionPlans||[]).sort((a,b)=>Number(a.order||0)-Number(b.order||0));if(!items.length){tbody.innerHTML='<tr><td colspan="5" class="text-center p-8 text-slate-400">ยังไม่มีแผนการใช้งาน</td></tr>';return;}tbody.innerHTML=items.map(p=>`<tr><td class="font-bold text-slate-700">${escapeHTML(p.name||'')}${p.featured?'<div class="text-xs text-primary mt-1"><i class="fas fa-star"></i> แนะนำ</div>':''}</td><td class="font-black text-primary">${escapeHTML(p.price||'')}<div class="text-xs font-normal text-slate-400">${escapeHTML(p.desc||'')}</div></td><td class="text-sm text-slate-500">${(p.features||[]).slice(0,5).map(f=>`<div>• ${escapeHTML(f)}</div>`).join('')}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${p.active!==false?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${p.active!==false?'แสดง':'ซ่อน'}</span></td><td class="text-right whitespace-nowrap"><button onclick="editAdminPlan('${p.id}')" class="bg-amber-50 text-amber-600 border border-amber-100 px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fas fa-pen"></i></button><button onclick="deleteAdminPlan('${p.id}')" class="bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-lg text-sm font-bold ml-1"><i class="fas fa-trash"></i></button></td></tr>`).join('');}
         window.resetAdminPlanForm=()=>{['plan-sub-edit-id','plan-sub-name','plan-sub-price','plan-sub-promptpay','plan-sub-desc','plan-sub-features'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('plan-sub-order').value='1';document.getElementById('plan-sub-featured').checked=false;document.getElementById('plan-sub-active').checked=true;};
         window.editAdminPlan=(id)=>{const p=(subscriptionPlans||[]).find(x=>x.id===id);if(!p)return;document.getElementById('plan-sub-edit-id').value=p.id;document.getElementById('plan-sub-name').value=p.name||'';document.getElementById('plan-sub-price').value=p.price||'';document.getElementById('plan-sub-promptpay').value=p.promptpay||'';document.getElementById('plan-sub-desc').value=p.desc||'';document.getElementById('plan-sub-features').value=(p.features||[]).join('\n');document.getElementById('plan-sub-order').value=Number(p.order||1);document.getElementById('plan-sub-featured').checked=!!p.featured;document.getElementById('plan-sub-active').checked=p.active!==false;};
-        window.saveAdminPlanForm=async()=>{if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true);const editId=document.getElementById('plan-sub-edit-id').value;const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()};if(!item.name||!item.price)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับและราคา',true);subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id);subscriptionPlans.push(item);writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();resetAdminPlanForm();await new Promise(resolve=>requestAnimationFrame(resolve));try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}};
+        window.saveAdminPlanForm=async()=>{if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true);const editId=document.getElementById('plan-sub-edit-id').value;const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()};if(!item.name||!item.price)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับและราคา',true);subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id);subscriptionPlans.push(item);writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();resetAdminPlanForm();await new Promise(resolve=>requestAnimationFrame(resolve));const __adminPlanLoaderText=document.querySelector('#global-loader p');const __adminPlanLoaderOldText=__adminPlanLoaderText?__adminPlanLoaderText.textContent:'';if(__adminPlanLoaderText)__adminPlanLoaderText.textContent='กำลังบันทึกการตั้งค่าแผนการใช้งาน...';toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});toggleLoader(false);if(__adminPlanLoaderText)__adminPlanLoaderText.textContent=__adminPlanLoaderOldText;renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){toggleLoader(false);if(__adminPlanLoaderText)__adminPlanLoaderText.textContent=__adminPlanLoaderOldText;renderAdminPlans();renderLandingPlans();if(typeof renderUserPlans==='function')renderUserPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}};
         window.deleteAdminPlan=(id)=>window.showCustomConfirm('ลบแผนการใช้งาน','ต้องการลบแผนนี้หรือไม่?',async()=>{subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==id);writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('ลบในเครื่องแล้ว','แต่ยังลบจาก Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);});
         window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
 
@@ -10020,7 +10020,7 @@ function normalizePlan(p) {
         courseLimit: Number(p.courseLimit || 0),
         studentLimit: Number(p.studentLimit || 0),
         weekLimit: Math.max(1, Number(p.weekLimit || p.maxWeeks || 20)),
-        teamMemberLimit: Math.max(1, Number(p.teamMemberLimit || p.maxTeamMembers || 1)),
+        teamMemberLimit: Math.max(1, Number(p.teamMemberLimit || p.teamLimit || p.maxTeamMembers || 1)),
         allowTeam: !!p.allowTeam,
         allowAttendance: p.allowAttendance !== false,
         allowExport: p.allowExport !== false,
@@ -10568,24 +10568,16 @@ window.saveAdminPlanForm = async function() {
     const name = $('plan-sub-name')?.value.trim() || '';
     if (!name) return alert('กรุณากรอกชื่อแผน');
 
-    const loaderText = document.querySelector('#global-loader p');
-    const oldLoaderText = loaderText ? loaderText.textContent : '';
-    const saveBtn = document.getElementById('admin-plan-popup-save-btn') || document.querySelector('form[onsubmit*="saveAdminPlanForm"] button[type="submit"]');
-    const oldSaveBtnHTML = saveBtn ? saveBtn.innerHTML : '';
+    const item = getItemFromForm();
+    const plans = await loadPlans();
+    const nextPlans = plans.filter(p => String(p.id) !== String(item.id));
+    nextPlans.push(item);
+    nextPlans.sort((a,b) => Number(a.order || 0) - Number(b.order || 0));
+
+    window.subscriptionPlans = nextPlans;
 
     try {
-        if (loaderText) loaderText.textContent = 'กำลังบันทึกการตั้งค่าแผนการใช้งาน...';
-        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> กำลังบันทึก...'; }
         if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
-        await new Promise(resolve => requestAnimationFrame(resolve));
-
-        const item = getItemFromForm();
-        const plans = await loadPlans();
-        const nextPlans = plans.filter(p => String(p.id) !== String(item.id));
-        nextPlans.push(item);
-        nextPlans.sort((a,b) => Number(a.order || 0) - Number(b.order || 0));
-
-        window.subscriptionPlans = nextPlans;
 
         await setDoc(plansRef, { items: nextPlans, updatedAt: Date.now() }, { merge: true });
 
@@ -10605,8 +10597,6 @@ window.saveAdminPlanForm = async function() {
         console.error(e);
         alert('บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
     } finally {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = oldSaveBtnHTML; }
-        if (loaderText) loaderText.textContent = oldLoaderText;
         if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
     }
 };
@@ -15761,8 +15751,8 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   function getDir(){return window.__currentUserDir || {};}
   function getPlans(){return Array.isArray(window.subscriptionPlans)?window.subscriptionPlans:JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');}
   function getPlan(){const d=getDir(); return getPlans().find(p=>p.id===d.planId)||{};}
-  function teamLimit(){const d=getDir(),p=getPlan(); return Math.max(1,Number(d.teamMemberLimit||d.maxTeamMembers||p.teamMemberLimit||p.maxTeamMembers||p.teamLimit||1));}
-  function allowTeam(){const d=getDir(),p=getPlan(),limit=teamLimit(); return !!(d.teamStatus==='accepted' || d.teamOwnerUid || d.allowTeam || p.allowTeam || limit>1);}
+  function teamLimit(){const d=getDir(),p=getPlan(); return Math.max(1,Number(d.teamLimit||d.teamMemberLimit||d.maxTeamMembers||p.teamLimit||p.teamMemberLimit||p.maxTeamMembers||1));}
+  function allowTeam(){const d=getDir(),p=getPlan(),limit=teamLimit(); return !!(limit>1 && (d.teamStatus==='accepted' || d.teamOwnerUid || d.allowTeam === true || p.allowTeam === true));}
   function ownerUid(){const u=getUser(); const d=getDir(); return d.teamOwnerUid || d.ownerUid || u?.uid || d.uid || '';}
   function ownerDocRef(){const id=ownerUid(); return id?doc(db,COL,id):null;}
   function fmt(ts){try{const n=Number(ts?.toMillis?ts.toMillis():ts); if(!n) return '-'; return new Date(n).toLocaleString('th-TH');}catch(e){return '-';}}
@@ -15925,7 +15915,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       let team=await getTeamDoc();
       team=await cleanupExpiredClosedInvites(team);
       const members=visibleMembers(Array.isArray(team.members)?team.members:[]);
-      const limit=Math.max(2, Number(team.teamLimit||teamLimit()||2));
+      const limit=Math.max(2, Number(teamLimit()||team.teamLimit||2));
       const acceptedCount=1+members.filter(m=>String(m.status||'pending')==='accepted').length;
       const reservedCount=1+activeMembers(members).length;
       const used=acceptedCount;
@@ -20530,9 +20520,9 @@ label:has(#plan-sub-allow-team){
     // ใช้ค่าจากแผนจริงเป็นหลัก ไม่ใช้ค่าค้างจากทีมถ้าเป็นแผนส่วนตัว
     var raw;
     if(team){
-      raw = d.teamMemberLimit || d.maxTeamMembers || d.teamLimit || p.teamMemberLimit || p.maxTeamMembers || p.teamLimit;
+      raw = d.teamLimit || d.teamMemberLimit || d.maxTeamMembers || p.teamLimit || p.teamMemberLimit || p.maxTeamMembers;
     }else{
-      raw = p.teamMemberLimit || p.maxTeamMembers || p.teamLimit || d.teamMemberLimit || d.maxTeamMembers || d.teamLimit;
+      raw = p.teamLimit || p.teamMemberLimit || p.maxTeamMembers || d.teamLimit || d.teamMemberLimit || d.maxTeamMembers;
     }
     return Math.max(1, n(raw, 1));
   }
@@ -21851,6 +21841,264 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
       window.schoolhubOpenPlanModalSafe(e);
     }, true);
   });
+})();
+</script>
+
+
+
+<!-- SchoolHub patch: เปิดหน้าเลือก/เปลี่ยนแผนทันที ลดอาการหน่วงตอนกดเมนู -->
+<script id="schoolhub-open-user-plan-fast-view-only">
+(function(){
+  function setPlanLoadingUI(){
+    try{
+      var list=document.getElementById('user-plan-list');
+      if(list){
+        list.innerHTML='<div class="col-span-full bg-white border border-slate-100 rounded-3xl p-8 text-center text-slate-500 shadow-sm"><i class="fas fa-spinner fa-spin text-2xl text-primary mb-3"></i><div class="font-bold text-slate-700">กำลังโหลดแผนการใช้งาน...</div><div class="text-sm mt-1">รอสักครู่ ระบบกำลังตรวจสอบแผนและสิทธิ์ล่าสุด</div></div>';
+      }
+      var current=document.getElementById('user-current-plan-box');
+      if(current){
+        current.innerHTML='<div class="bg-white border border-slate-100 rounded-2xl p-4 text-slate-500 shadow-sm"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>กำลังตรวจสอบสถานะแผนปัจจุบัน...</div>';
+      }
+      var hist=document.getElementById('user-payment-history-list');
+      if(hist){
+        hist.innerHTML='<div class="text-center text-slate-500 py-6"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>กำลังโหลดประวัติ...</div>';
+      }
+    }catch(e){}
+  }
+  function installFastPlanOpen(){
+    if(window.openUserPlanSelector && window.openUserPlanSelector.__schoolhubFastOpenInstalled) return;
+    window.openUserPlanSelector = async function(){
+      try{
+        if(window.isAdmin || (typeof isAdmin!=='undefined' && isAdmin)){
+          if(typeof window.switchView==='function') return window.switchView('admin-plans');
+          return;
+        }
+        try{ window.currentActiveCourseId=null; }catch(e){ try{ currentActiveCourseId=null; }catch(_e){} }
+        document.getElementById('course-context-menu')?.classList.add('hidden');
+        var title=document.getElementById('page-title'); if(title) title.textContent='เลือก / เปลี่ยนแผน';
+        var sub=document.getElementById('page-subtitle'); if(sub) sub.textContent='เลือกแผนที่ต้องการ แล้วกรอกข้อมูลการชำระเงิน';
+        var acts=document.getElementById('header-actions'); if(acts) acts.innerHTML='';
+
+        if(typeof window.switchView==='function') window.switchView('user-plans');
+        setPlanLoadingUI();
+
+        try{ if(typeof window.schoolhubEnsureTeamBox==='function') window.schoolhubEnsureTeamBox(); }catch(e){}
+
+        setTimeout(function(){
+          try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){}
+        },120);
+
+        try{ if(typeof window.loadPublicPlans==='function') await window.loadPublicPlans(); else if(typeof loadPublicPlans==='function') await loadPublicPlans(); }catch(e){ console.warn('loadPublicPlans fast open failed:', e); }
+        try{
+          var u = window.currentUser || (typeof currentUser!=='undefined' ? currentUser : null);
+          if(u && u.uid !== 'admin-bypass' && typeof window.refreshCurrentUserPlanLock==='function') await window.refreshCurrentUserPlanLock();
+        }catch(e){ console.warn('refreshCurrentUserPlanLock fast open failed:', e); }
+        try{
+          var u2 = window.currentUser || (typeof currentUser!=='undefined' ? currentUser : null);
+          if(u2 && u2.uid !== 'admin-bypass' && typeof db!=='undefined' && typeof doc==='function' && typeof getDoc==='function' && typeof getPublicPath==='function' && typeof getUserKey==='function'){
+            var snap = await (typeof withTimeout==='function' ? withTimeout(getDoc(doc(db, getPublicPath(), getUserKey(u2))), 6000, 'loadUserDirFast') : getDoc(doc(db, getPublicPath(), getUserKey(u2))));
+            if(snap && snap.exists()) window.__currentUserDir = snap.data() || {};
+          }
+        }catch(e){ console.warn('loadUserDir fast open failed:', e); }
+        try{ if(typeof window.renderUserPlans==='function') window.renderUserPlans(); else if(typeof renderUserPlans==='function') renderUserPlans(); }catch(e){ console.warn('renderUserPlans fast open failed:', e); }
+        try{ if(typeof window.schoolhubEnsureTeamBox==='function') window.schoolhubEnsureTeamBox(); }catch(e){}
+        setTimeout(function(){ try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){} },80);
+        setTimeout(function(){ try{ if(typeof window.loadUserPaymentHistory==='function') window.loadUserPaymentHistory(false); }catch(e){} },1200);
+      }catch(err){
+        console.warn('openUserPlanSelector fast open error:', err);
+        try{ if(typeof showCustomAlert==='function') showCustomAlert('เกิดข้อผิดพลาด', (typeof getFirebaseErrorText==='function'?getFirebaseErrorText(err):String(err)), true); }catch(e){}
+      }
+    };
+    window.openUserPlanSelector.__schoolhubFastOpenInstalled=true;
+  }
+  installFastPlanOpen();
+  document.addEventListener('DOMContentLoaded', function(){ installFastPlanOpen(); setTimeout(installFastPlanOpen,500); setTimeout(installFastPlanOpen,1500); });
+})();
+</script>
+
+
+
+<!-- SchoolHub patch: แก้หน้าเลือก/เปลี่ยนแผนไม่ให้ค้างที่กำลังตรวจสอบสถานะแผนปัจจุบัน -->
+<script id="schoolhub-open-user-plan-always-load-fix">
+(function(){
+  if(window.__schoolhubOpenUserPlanAlwaysLoadFix) return;
+  window.__schoolhubOpenUserPlanAlwaysLoadFix = true;
+
+  function safeCall(fn){ try{ return typeof fn === 'function' ? fn() : undefined; }catch(e){ console.warn(e); } }
+  function timeout(ms){ return new Promise(function(resolve){ setTimeout(function(){ resolve('__timeout__'); }, ms); }); }
+  function runMax(promise, ms){
+    try{ return Promise.race([Promise.resolve(promise), timeout(ms)]); }
+    catch(e){ return Promise.resolve(null); }
+  }
+  function getU(){ try{ return window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null); }catch(e){ return null; } }
+  function switchToPlanView(){
+    try{ if(window.isAdmin || (typeof isAdmin !== 'undefined' && isAdmin)){ if(typeof window.switchView === 'function') window.switchView('admin-plans'); return false; } }catch(e){}
+    try{ window.currentActiveCourseId = null; }catch(e){ try{ currentActiveCourseId = null; }catch(_e){} }
+    try{ document.getElementById('course-context-menu')?.classList.add('hidden'); }catch(e){}
+    var title=document.getElementById('page-title'); if(title) title.textContent='เลือก / เปลี่ยนแผน';
+    var sub=document.getElementById('page-subtitle'); if(sub) sub.textContent='เลือกแผนที่ต้องการ แล้วกรอกข้อมูลการชำระเงิน';
+    var acts=document.getElementById('header-actions'); if(acts) acts.innerHTML='';
+    try{ if(typeof window.switchView === 'function') window.switchView('user-plans'); }catch(e){}
+    return true;
+  }
+  function renderFromCacheNow(){
+    try{
+      if((!window.subscriptionPlans || !window.subscriptionPlans.length) && typeof readLocalJSON === 'function' && typeof PLANS_CACHE_KEY !== 'undefined'){
+        var cached = readLocalJSON(PLANS_CACHE_KEY, typeof getDefaultPlans === 'function' ? getDefaultPlans() : []);
+        if(Array.isArray(cached) && cached.length) window.subscriptionPlans = cached;
+      }
+    }catch(e){}
+    try{ if(typeof window.renderUserPlans === 'function') window.renderUserPlans(); else if(typeof renderUserPlans === 'function') renderUserPlans(); }catch(e){ console.warn('render cached plans failed:', e); }
+    try{ if(typeof window.schoolhubCurrentPlanTeamShareStableRender === 'function') window.schoolhubCurrentPlanTeamShareStableRender(); }catch(e){}
+    try{ if(typeof window.schoolhubEnsureTeamBox === 'function') window.schoolhubEnsureTeamBox(); }catch(e){}
+  }
+  function showSmallUpdating(){
+    var current=document.getElementById('user-current-plan-box');
+    if(current && /กำลังตรวจสอบสถานะแผนปัจจุบัน/.test(current.textContent||'')){
+      renderFromCacheNow();
+    }
+    var list=document.getElementById('user-plan-list');
+    if(list && !list.innerHTML.trim()){
+      list.innerHTML='<div class="col-span-full bg-white border border-slate-100 rounded-3xl p-6 text-center text-slate-500"><i class="fas fa-spinner fa-spin text-primary mr-2"></i>กำลังโหลดแผนการใช้งาน...</div>';
+    }
+  }
+  async function loadLatestButNeverBlock(){
+    var u=getU();
+    try{ await runMax((typeof window.loadPublicPlans === 'function' ? window.loadPublicPlans() : (typeof loadPublicPlans === 'function' ? loadPublicPlans() : null)), 5000); }catch(e){ console.warn('load plans skipped:', e); }
+    try{
+      if(u && u.uid !== 'admin-bypass' && typeof db !== 'undefined' && typeof doc === 'function' && typeof getDoc === 'function' && typeof getPublicPath === 'function' && typeof getUserKey === 'function'){
+        var snap = await runMax(getDoc(doc(db, getPublicPath(), getUserKey(u))), 5000);
+        if(snap && snap !== '__timeout__' && snap.exists && snap.exists()) window.__currentUserDir = snap.data() || {};
+      }
+    }catch(e){ console.warn('load current plan skipped:', e); }
+    try{ if(u && u.uid !== 'admin-bypass' && typeof window.refreshCurrentUserPlanLock === 'function') await runMax(window.refreshCurrentUserPlanLock(), 4000); }catch(e){ console.warn('refresh plan lock skipped:', e); }
+    renderFromCacheNow();
+    try{ if(typeof window.loadUserPaymentHistory === 'function') runMax(window.loadUserPaymentHistory(false), 5000); }catch(e){}
+  }
+
+  window.openUserPlanSelector = function(){
+    if(!switchToPlanView()) return;
+    showSmallUpdating();
+    renderFromCacheNow();
+    setTimeout(renderFromCacheNow, 120);
+    setTimeout(function(){
+      var current=document.getElementById('user-current-plan-box');
+      if(current && /กำลังตรวจสอบสถานะแผนปัจจุบัน/.test(current.textContent||'')) renderFromCacheNow();
+    }, 1200);
+    loadLatestButNeverBlock();
+  };
+  window.openUserPlanSelector.__schoolhubAlwaysLoadInstalled = true;
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ window.openUserPlanSelector.__schoolhubAlwaysLoadInstalled = true; }, 300);
+  });
+})();
+</script>
+
+
+
+<script id="schoolhub-plan-page-reopen-and-team-limit1-final-fix">
+(function(){
+  if(window.__schoolhubPlanReopenAndTeamLimit1FinalFix) return;
+  window.__schoolhubPlanReopenAndTeamLimit1FinalFix = true;
+
+  function esc(v){
+    try{ return (window.escapeHTML ? window.escapeHTML(v) : String(v||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];})); }
+    catch(e){ return String(v||''); }
+  }
+  function safeTimeout(promise, ms, label){
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(function(_, reject){ setTimeout(function(){ reject(new Error(label || 'timeout')); }, ms || 8000); })
+    ]);
+  }
+  function getDir(){ return window.__currentUserDir || {}; }
+  function getPlans(){ return Array.isArray(window.subscriptionPlans) ? window.subscriptionPlans : []; }
+  function getPlan(){
+    var d=getDir();
+    return getPlans().find(function(p){ return String(p && p.id || '') === String(d.planId || ''); }) || {};
+  }
+  function strictTeamLimit(){
+    var d=getDir(), p=getPlan();
+    var n = Number(d.teamLimit || d.teamMemberLimit || d.maxTeamMembers || p.teamLimit || p.teamMemberLimit || p.maxTeamMembers || 1);
+    return isFinite(n) && n > 0 ? n : 1;
+  }
+  function strictTeamAllowed(){
+    var d=getDir(), p=getPlan(), limit=strictTeamLimit();
+    return !!(limit > 1 && (d.teamStatus === 'accepted' || d.teamOwnerUid || d.allowTeam === true || p.allowTeam === true));
+  }
+  function removeTeamInviteBoxWhenSingle(){
+    if(strictTeamAllowed()) return;
+    var ids=['schoolhub-team-plan-box','schoolhub-current-plan-team-limit-text'];
+    ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
+  }
+  function setPlanPageLoadingText(text){
+    var box=document.getElementById('user-current-plan-box');
+    if(!box) return;
+    box.innerHTML='<div class="bg-slate-50 border border-slate-200 text-slate-700 rounded-3xl p-5"><div class="text-sm font-black text-slate-500"><i class="fas fa-spinner fa-spin mr-1"></i>'+esc(text || 'กำลังตรวจสอบสถานะแผนปัจจุบัน...')+'</div></div>';
+  }
+  function showPlanPage(){
+    try{ if(window.isAdmin) return window.switchView && window.switchView('admin-plans'); }catch(e){}
+    try{ window.currentActiveCourseId=null; }catch(e){}
+    try{ document.getElementById('course-context-menu')?.classList.add('hidden'); }catch(e){}
+    var title=document.getElementById('page-title'); if(title) title.textContent='เลือก / เปลี่ยนแผน';
+    var sub=document.getElementById('page-subtitle'); if(sub) sub.textContent='เลือกแผนที่ต้องการ แล้วกรอกข้อมูลการชำระเงิน';
+    var actions=document.getElementById('header-actions'); if(actions) actions.innerHTML='';
+    if(window.switchView) window.switchView('user-plans');
+  }
+  async function refreshPlanPageData(){
+    try{ if(typeof window.loadPublicPlans === 'function') await safeTimeout(window.loadPublicPlans(), 8000, 'load plans timeout'); }catch(e){ console.warn('loadPublicPlans timeout/fail:', e); }
+    try{
+      var user = window.currentUser || (window.auth && window.auth.currentUser);
+      if(user && user.uid !== 'admin-bypass'){
+        if(typeof window.refreshCurrentUserPlanLock === 'function') await safeTimeout(window.refreshCurrentUserPlanLock(), 8000, 'refresh plan timeout');
+        else if(window.db && window.getPublicPath && window.getUserKey && window.doc && window.getDoc){
+          var snap = await safeTimeout(window.getDoc(window.doc(window.db, window.getPublicPath(), window.getUserKey(user))), 8000, 'load user dir timeout');
+          if(snap && snap.exists && snap.exists()) window.__currentUserDir = snap.data() || {};
+        }
+      }
+    }catch(e){ console.warn('refresh current plan timeout/fail:', e); }
+    try{ if(typeof window.renderUserPlans === 'function') window.renderUserPlans(); }catch(e){ console.warn(e); }
+    setTimeout(function(){
+      removeTeamInviteBoxWhenSingle();
+      if(strictTeamAllowed() && typeof window.schoolhubEnsureTeamBox === 'function') window.schoolhubEnsureTeamBox();
+    }, 80);
+  }
+
+  window.openUserPlanSelector = function(){
+    showPlanPage();
+    try{
+      if(typeof window.renderUserPlans === 'function') window.renderUserPlans();
+      else setPlanPageLoadingText('กำลังตรวจสอบสถานะแผนปัจจุบัน...');
+    }catch(e){ setPlanPageLoadingText('กำลังตรวจสอบสถานะแผนปัจจุบัน...'); }
+    removeTeamInviteBoxWhenSingle();
+    refreshPlanPageData();
+    return false;
+  };
+
+  var oldEnsure = window.schoolhubEnsureTeamBox;
+  window.schoolhubEnsureTeamBox = function(){
+    if(!strictTeamAllowed()){
+      removeTeamInviteBoxWhenSingle();
+      return Promise.resolve();
+    }
+    return typeof oldEnsure === 'function' ? oldEnsure.apply(this, arguments) : Promise.resolve();
+  };
+
+  var oldLoadPanel = window.loadAndRenderTeamPanel;
+  window.loadAndRenderTeamPanel = function(){
+    if(!strictTeamAllowed()){
+      removeTeamInviteBoxWhenSingle();
+      return Promise.resolve();
+    }
+    return typeof oldLoadPanel === 'function' ? oldLoadPanel.apply(this, arguments) : Promise.resolve();
+  };
+
+  document.addEventListener('click', function(e){
+    var t=e.target && e.target.closest && e.target.closest('[onclick*="openUserPlanSelector"],#nav-user-plans,#mobile-nav-user-plans');
+    if(t) setTimeout(removeTeamInviteBoxWhenSingle, 120);
+  }, true);
+  setInterval(removeTeamInviteBoxWhenSingle, 1200);
 })();
 </script>
 
