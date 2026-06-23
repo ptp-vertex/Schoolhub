@@ -2262,6 +2262,25 @@ document.addEventListener('click',function(){
 }
 </style>
 
+
+<style id="schoolhub-slip-popup-top-layer-final">
+#slip-result-popup{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:2147483647 !important;
+    isolation:isolate !important;
+    pointer-events:auto !important;
+    background:rgba(15,23,42,.72) !important;
+    backdrop-filter:blur(8px) !important;
+}
+#slip-result-popup.hidden{display:none !important;}
+#slip-result-popup:not(.hidden){display:flex !important;}
+#slip-result-popup > div{
+    position:relative !important;
+    z-index:2147483647 !important;
+    box-shadow:0 34px 110px rgba(15,23,42,.38) !important;
+}
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -4568,12 +4587,28 @@ document.addEventListener('click',function(){
         function formatSchoolHubDateTime(value){
             if(!value) return '-';
             let d;
-            if(typeof value === 'number') d = new Date(value);
-            else if(value && typeof value.toDate === 'function') d = value.toDate();
-            else d = new Date(value);
+            try{
+                if(value && typeof value.toDate === 'function') d = value.toDate();
+                else if(typeof value === 'number') d = new Date(value);
+                else if(typeof value === 'string'){
+                    const v = value.trim();
+                    // รองรับค่าจาก input datetime-local เช่น 2026-06-23T15:18
+                    d = new Date(v);
+                    if(Number.isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)){
+                        const [datePart,timePart] = v.split('T');
+                        const [y,m,day] = datePart.split('-').map(Number);
+                        const [hh,mm] = timePart.split(':').map(Number);
+                        d = new Date(y, m - 1, day, hh, mm);
+                    }
+                } else d = new Date(value);
+            }catch(_){ return '-'; }
             if(!d || Number.isNaN(d.getTime())) return '-';
-            return d.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' });
+            return d.toLocaleString('th-TH', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
         }
+        // alias กลาง ป้องกัน error จากแพตช์/โค้ดเก่าที่เรียกชื่อ formatThaiDateTime
+        window.formatSchoolHubDateTime = formatSchoolHubDateTime;
+        window.formatThaiDateTime = formatSchoolHubDateTime;
+        const formatThaiDateTime = formatSchoolHubDateTime;
         window.loadUserPaymentHistory = async (showToast=false) => {
             const box = document.getElementById('user-payment-history-list');
             if(!box) return;
@@ -4595,7 +4630,7 @@ document.addEventListener('click',function(){
                 box.innerHTML = rows.map(r => {
                     const [label,color,icon] = planRequestStatusText(r.status, r.autoApproved);
                     const amount = r.planAmount || extractPlanAmount(r.planPrice || '');
-                    const paid = r.paymentTime || r.paidAt || '';
+                    const paid = formatSchoolHubDateTime(r.paymentTime || r.paidAt || r.paymentDate || r.submittedAt || r.createdAt);
                     const ref = r.paymentReference || r.slipReference || '-';
                     const reason = r.rejectReason || r.rejectedReason || r.reason || '';
                     return `<div class="rounded-2xl border border-${color}-100 bg-${color}-50/45 p-4">
@@ -4609,7 +4644,7 @@ document.addEventListener('click',function(){
                                 <div class="mt-1 text-sm text-slate-600 leading-7">
                                     ยอดชำระ: <b>${amount ? Number(amount).toLocaleString('th-TH') + ' บาท' : escapeHTML(r.planPrice || '-')}</b><br>
                                     ผู้ชำระ: <b>${escapeHTML(r.payerName || r.name || '-')}</b><br>
-                                    เวลาที่แจ้งชำระ: <b>${escapeHTML(paid || '-')}</b><br>
+                                    เวลาที่แจ้งชำระ: <b>${escapeHTML(paid)}</b><br>
                                     เลขอ้างอิง: <b>${escapeHTML(ref)}</b>
                                 </div>
                                 ${reason ? `<div class="mt-2 text-sm text-rose-700 bg-white/70 border border-rose-100 rounded-xl p-3"><b>เหตุผล:</b> ${escapeHTML(reason)}</div>` : ''}
@@ -4644,7 +4679,8 @@ document.addEventListener('click',function(){
             }
             renderUserPlans();
             window.switchView('user-plans');
-            try { await loadUserPaymentHistory(); } catch(e) { console.warn('load payment history failed:', e); }
+            setTimeout(()=>{ try{ loadUserPaymentHistory(false); }catch(e){ console.warn('load payment history after open plans failed:', e); } }, 80);
+            setTimeout(()=>{ try{ loadUserPaymentHistory(false); }catch(e){} }, 1200);
         };
 
         function extractPlanAmount(priceText){
@@ -4674,6 +4710,46 @@ document.addEventListener('click',function(){
                 reader.onload=()=>resolve(reader.result);
                 reader.onerror=()=>reject(reader.error||new Error('อ่านไฟล์ไม่ได้'));
                 reader.readAsDataURL(file);
+            });
+        }
+
+        // Firestore เก็บ field ได้ไม่เกินประมาณ 1MB ต่อค่า
+        // จึงต้องย่อ/บีบอัดสลิปก่อนบันทึกลง subscription_requests
+        function dataUrlByteLength(dataUrl){
+            try{ return Math.ceil(String(dataUrl||'').length * 0.75); }catch(e){ return 999999999; }
+        }
+        async function compressSlipForFirestore(file){
+            const MAX_BYTES = 760000; // เผื่อพื้นที่ให้ field อื่น ๆ ใน document
+            const rawDataUrl = await readFileAsDataURL(file);
+            if(dataUrlByteLength(rawDataUrl) <= MAX_BYTES) return rawDataUrl;
+
+            return new Promise((resolve,reject)=>{
+                const img = new Image();
+                img.onload = () => {
+                    try{
+                        let maxSide = 1400;
+                        let quality = 0.82;
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d', { alpha:false });
+                        let result = rawDataUrl;
+
+                        for(let round=0; round<12; round++){
+                            const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+                            canvas.width = Math.max(1, Math.round(img.width * ratio));
+                            canvas.height = Math.max(1, Math.round(img.height * ratio));
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0,0,canvas.width,canvas.height);
+                            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+                            result = canvas.toDataURL('image/jpeg', quality);
+                            if(dataUrlByteLength(result) <= MAX_BYTES) break;
+                            quality = Math.max(0.45, quality - 0.08);
+                            maxSide = Math.max(720, Math.floor(maxSide * 0.84));
+                        }
+                        resolve(result);
+                    }catch(e){ reject(e); }
+                };
+                img.onerror = () => reject(new Error('บีบอัดรูปสลิปไม่ได้ กรุณาเลือกรูปใหม่'));
+                img.src = rawDataUrl;
             });
         }
         window.closePlanPaymentModal=()=>{
@@ -4823,6 +4899,103 @@ document.addEventListener('click',function(){
             if(pct) pct.textContent=safe+'%';
             if(lab && label) lab.textContent=label;
         }
+        let __slipCheckPopupActive = false;
+        let __slipDecisionResolver = null;
+        function getSlipResultPopupParts(){
+            return {
+                popup: document.getElementById('slip-result-popup'),
+                body: document.getElementById('slip-result-popup-body'),
+                title: document.querySelector('#slip-result-popup h3'),
+                footer: document.querySelector('#slip-result-popup .p-4.border-t'),
+                closeBtn: document.querySelector('#slip-result-popup .p-5 button'),
+                leftBtn: document.querySelector('#slip-result-popup .p-4.border-t button:first-child'),
+                rightBtn: document.getElementById('slip-result-confirm-btn')
+            };
+        }
+        function bringSlipResultPopupToFront(){
+            const parts=getSlipResultPopupParts();
+            if(!parts.popup) return;
+            // ย้ายไปท้าย body ทุกครั้ง เพื่อให้เป็น modal ชั้นบนสุดจริง ๆ ไม่โดน plan-payment-modal / alert / calendar บัง
+            if(parts.popup.parentElement !== document.body || document.body.lastElementChild !== parts.popup){
+                document.body.appendChild(parts.popup);
+            }
+            parts.popup.style.position='fixed';
+            parts.popup.style.inset='0';
+            parts.popup.style.zIndex='2147483647';
+            parts.popup.style.pointerEvents='auto';
+            parts.popup.style.isolation='isolate';
+            // ลดชั้น modal อื่นเฉพาะตอนตรวจสลิป เพื่อให้ลำดับชัดเจน
+            ['plan-payment-modal','custom-alert','custom-confirm','user-profile-modal','admin-plan-request-popup','public-announcement-popup','course-modal','student-edit-modal','grade-criteria-modal','multi-student-modal','share-student-modal'].forEach(id=>{
+                const el=document.getElementById(id);
+                if(el && el!==parts.popup && !el.classList.contains('hidden')) el.style.zIndex='900000';
+            });
+        }
+        function openSlipCheckPopup(mode='checking'){
+            const parts=getSlipResultPopupParts();
+            const box=document.getElementById('payment-slip-check-box');
+            if(!parts.popup||!parts.body||!box) return;
+            __slipCheckPopupActive = true;
+            parts.popup.classList.remove('hidden');
+            bringSlipResultPopupToFront();
+            parts.body.innerHTML = '';
+            parts.body.appendChild(box);
+            box.classList.remove('hidden');
+            if(parts.title) parts.title.innerHTML = '<i class="fas fa-shield-halved text-primary mr-2"></i>ระบบตรวจสลิป';
+            if(parts.closeBtn) parts.closeBtn.classList.add('hidden');
+            if(parts.footer) parts.footer.classList.add('hidden');
+            setTimeout(bringSlipResultPopupToFront,0);
+            setTimeout(bringSlipResultPopupToFront,80);
+        }
+        function closeSlipCheckPopup(){
+            const parts=getSlipResultPopupParts();
+            if(parts.popup) parts.popup.classList.add('hidden');
+            __slipCheckPopupActive = false;
+            __slipDecisionResolver = null;
+        }
+        function setSlipPopupButtons({leftText='', rightText='ตกลง', rightClass='bg-primary hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200', onRight=null, onLeft=null, showLeft=false}={}){
+            bringSlipResultPopupToFront();
+            const parts=getSlipResultPopupParts();
+            if(!parts.footer||!parts.rightBtn||!parts.leftBtn) return;
+            parts.footer.classList.remove('hidden');
+            parts.leftBtn.className='flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl';
+            parts.leftBtn.textContent=leftText||'ยกเลิก';
+            parts.leftBtn.classList.toggle('hidden', !showLeft);
+            parts.leftBtn.onclick=()=>{ if(onLeft) onLeft(); };
+            parts.rightBtn.className='flex-1 font-bold py-3 rounded-2xl '+rightClass;
+            parts.rightBtn.textContent=rightText||'ตกลง';
+            parts.rightBtn.onclick=()=>{ if(onRight) onRight(); };
+        }
+        function waitSlipReviewDecision(verification){
+            return new Promise(resolve=>{
+                __slipDecisionResolver = resolve;
+                if(verification?.autoApproved){
+                    setSlipPopupButtons({
+                        rightText:'ตกลง เพื่อยืนยันและเปิดใช้งาน',
+                        rightClass:'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200',
+                        onRight:()=>resolve('approve')
+                    });
+                }else{
+                    setSlipPopupButtons({
+                        rightText:'ส่งตรวจสอบ',
+                        rightClass:'bg-primary hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200',
+                        onRight:()=>resolve('pending')
+                    });
+                }
+            });
+        }
+        function showSlipFinalMessage(status,title,message){
+            return new Promise(resolve=>{
+                const icon=status==='pass'?'fa-circle-check text-emerald-500':status==='fail'?'fa-clock text-amber-500':'fa-circle-info text-primary';
+                setSlipCheckBox(status==='pass'?'pass':status==='fail'?'fail':'idle', title, message, {}, []);
+                const parts=getSlipResultPopupParts();
+                if(parts.title) parts.title.innerHTML = `<i class="fas ${icon} mr-2"></i>${escapeHTML(title||'แจ้งเตือน')}`;
+                setSlipPopupButtons({
+                    rightText:'ตกลง',
+                    rightClass:'bg-primary hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200',
+                    onRight:()=>{ closeSlipCheckPopup(); resolve(); }
+                });
+            });
+        }
         function setSlipCheckSteps(steps){
             const el=document.getElementById('payment-slip-check-steps');
             if(!el) return;
@@ -4846,12 +5019,17 @@ document.addEventListener('click',function(){
             }
         }
         function setSlipCheckBox(status,title,message,details,steps){
+            if(__slipCheckPopupActive) bringSlipResultPopupToFront();
             const box=document.getElementById('payment-slip-check-box');
             const icon=document.getElementById('payment-slip-check-icon');
             const ttl=document.getElementById('payment-slip-check-title');
             const msg=document.getElementById('payment-slip-check-message');
             const det=document.getElementById('payment-slip-check-details');
             if(!box||!icon||!ttl||!msg) return;
+            if(!__slipCheckPopupActive){
+                box.classList.add('hidden');
+                return;
+            }
             box.classList.remove('hidden','border-emerald-200','border-rose-200','border-amber-200','border-slate-200','bg-emerald-50','bg-rose-50','bg-amber-50','bg-slate-50');
             icon.className='w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ';
             const map={
@@ -4916,7 +5094,8 @@ document.addEventListener('click',function(){
         }
         async function verifySlipBeforeSubmit({file, plan, payerName, paidAt}){
             currentSlipVerification=null;
-            setSlipCheckBox('checking','กำลังอ่านและตรวจสอบสลิป','ระบบกำลังตรวจรูปว่าเป็นสลิปจริง อ่านยอดเงิน เลขอ้างอิง ชื่อ และเวลา...',{},[{status:'checking',text:'เริ่มตรวจสอบรูปสลิป'}]);
+            openSlipCheckPopup('checking');
+            setSlipCheckBox('checking','กำลังอ่านและตรวจสอบสลิป','ระบบกำลังตรวจรูปว่าเป็นสลิปจริง อ่านยอดเงิน เลขอ้างอิง ชื่อ และเวลา กรุณารอสักครู่ ห้ามปิดหน้านี้ระหว่างตรวจสอบ',{},[{status:'checking',text:'เริ่มตรวจสอบรูปสลิป'}]);
             setSlipCheckProgress(5,'เริ่มตรวจสอบ');
             const amountExpected=extractPlanAmount(plan.price);
             const imageMeta=await readImageMeta(file);
@@ -5074,7 +5253,8 @@ document.addEventListener('click',function(){
 
             const payer=document.getElementById('payment-payer-name');
             if(payer) payer.value=(currentUser.displayName||'');
-            setSlipCheckBox('idle','ระบบตรวจสลิปพร้อมทำงาน','เลือกไฟล์สลิปแล้วกดส่ง ระบบจะแสดงสถานะตรวจสอบแบบทีละขั้นตอนตรงช่องนี้',{},[{status:'idle',text:'รอเลือกไฟล์สลิป'},{status:'idle',text:'ยังไม่มีการอนุมัติอัตโนมัติ'}]);
+            document.getElementById('payment-slip-check-box')?.classList.add('hidden');
+            __slipCheckPopupActive = false;
             setPaymentSubmitBusy(false);
             setNowToPaymentTime();
             document.getElementById('plan-payment-modal')?.classList.remove('hidden');
@@ -5088,16 +5268,13 @@ document.addEventListener('click',function(){
             const img  = document.getElementById('payment-slip-preview-img');
             if(!file){
                 wrap.classList.add('hidden'); img.src='';
-                setSlipCheckBox('idle','รอตรวจสอบสลิป','เลือกไฟล์สลิปเพื่อให้ระบบตรวจสอบ');
                 return;
             }
             if(!file.type.startsWith('image/')){
                 showCustomAlert('ไฟล์ไม่ถูกต้อง','กรุณาอัปโหลดรูปภาพเท่านั้น',true);
                 event.target.value='';
-                setSlipCheckBox('fail','ไฟล์ไม่ถูกต้อง','ต้องอัปโหลดเป็นรูปภาพสลิปเท่านั้น');
                 return;
             }
-            setSlipCheckBox('idle','พร้อมตรวจสอบสลิป','เลือกไฟล์แล้ว กด “ส่งหลักฐานการชำระเงิน” เพื่อเริ่มอ่านสลิปและตรวจข้อมูลแบบอัตโนมัติ',{},[{status:'idle',text:'รอเริ่มตรวจสอบ'}]);
             const reader=new FileReader();
             reader.onload=e=>{ img.src=e.target.result; wrap.classList.remove('hidden'); };
             reader.readAsDataURL(file);
@@ -5133,8 +5310,14 @@ document.addEventListener('click',function(){
                 setSlipCheckProgress(100,'ตรวจสอบไม่สำเร็จ');
                 setSlipCheckBox('fail','ตรวจสลิปอัตโนมัติไม่สำเร็จ',`${verification.verificationError}\n\nระบบจะบันทึกเป็น “รอตรวจสอบ” และจะไม่อนุมัติอัตโนมัติจนกว่าข้อมูลจะถูกต้องจริง`,{ 'สถานะ':'รอตรวจสอบโดยแอดมิน' },[{status:'fail',text:'ระบบ OCR หรือตัวตรวจสอบทำงานไม่สำเร็จ'}]);
             }
+            const slipDecision = await waitSlipReviewDecision(verification);
+            if(!slipDecision){
+                setPaymentSubmitBusy(false);
+                return;
+            }
             try{
-                const slipDataUrl=await readFileAsDataURL(proofFile);
+                setPaymentSubmitBusy(true, slipDecision==='approve' ? 'กำลังยืนยันและเปิดใช้งาน...' : 'กำลังส่งให้แอดมินตรวจสอบ...');
+                const slipDataUrl=await compressSlipForFirestore(proofFile);
                 const userKey=getUserKey(currentUser);
                 const reqId=`${currentUser.uid}_${planId}_${Date.now()}`;
                 const payload={
@@ -5151,7 +5334,10 @@ document.addEventListener('click',function(){
                     slipDataUrl,
                     paymentProofDataUrl:slipDataUrl,
                     paymentProofName:proofFile.name,
-                    paymentProofType:proofFile.type,
+                    paymentProofType:'image/jpeg',
+                    paymentProofOriginalName:proofFile.name,
+                    paymentProofOriginalSize:proofFile.size||0,
+                    paymentProofCompressed:true,
                     slipVerification:verification,
                     paymentReference:verification?.reference||'',
                     slipReference:verification?.reference||'',
@@ -6053,6 +6239,7 @@ async function submitPlanRequest(planId){
                 // Google login fix: ห้าม return ระหว่าง signInWithPopup เพราะบางครั้ง Auth state ยิงก่อนปิด flag แล้วค้างหน้าเปล่า/ต้องรีเฟรช
                 if (window.isSocialAuthenticating) { window.isSocialAuthenticating = false; }
                 try {
+                    toggleLoader(true);
                     currentUser = user; isAdmin = false;
                     saveSchoolHubSession(user, 'user');
                     if (window.__schoolhubGoogleLoginWaiting && typeof setGoogleLoginButtonLoading === 'function') {
@@ -7424,9 +7611,9 @@ ${resetUrl.toString()}
                 body.innerHTML=reqs.map(r=>{
                     const isPending=r.status==='pending';
                     const statusBadge=r.status==='approved'?'<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">อนุมัติแล้ว</span>':(r.status==='rejected'?'<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">ไม่อนุมัติ</span>':'<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">รอตรวจสอบ</span>');
-                    const when=r.createdAt?new Date(r.createdAt).toLocaleString('th-TH'):'-';
-                    const paidAt=r.paymentTime||r.paidAt||r.paymentDate||'-';
-                    const startAt=r.status==='approved'&&r.approvedAt?new Date(r.approvedAt).toLocaleString('th-TH'):null;
+                    const when=formatSchoolHubDateTime(r.createdAt);
+                    const paidAt=formatSchoolHubDateTime(r.paymentTime||r.paidAt||r.paymentDate||r.createdAt);
+                    const startAt=r.status==='approved'&&r.approvedAt?formatSchoolHubDateTime(r.approvedAt):null;
                     const slip=r.slipDataUrl||r.paymentProofDataUrl||r.slipUrl||r.proofUrl||'';
                     const slipHTML=slip?`<div class="mt-3"><p class="text-xs text-slate-400 font-bold mb-1">สลิปการโอนเงิน</p><img src="${escapeHTML(slip)}" class="max-h-72 rounded-2xl border border-slate-200 object-contain bg-slate-50 mx-auto" alt="หลักฐานการชำระเงิน"></div>`:'<div class="mt-3 text-xs text-slate-400 bg-slate-50 border border-dashed rounded-2xl p-4 text-center">ไม่มีรูปหลักฐานในรายการนี้</div>';
                     const actions=isPending?`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4"><button onclick="approvePlanRequest('${r.docId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-2xl text-sm font-bold"><i class="fas fa-check"></i> อนุมัติแผนนี้</button><button onclick="rejectPlanRequest('${r.docId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 px-4 py-3 rounded-2xl text-sm font-bold"><i class="fas fa-times"></i> ไม่อนุมัติ</button></div>`:'<div class="mt-4 text-xs text-slate-400 text-center">รายการนี้ดำเนินการแล้ว</div>';
@@ -7717,7 +7904,8 @@ ${resetUrl.toString()}
             document.getElementById('payment-slip-preview-wrap').classList.add('hidden');
             document.getElementById('payment-slip-preview-img').src='';
             const payer=document.getElementById('payment-payer-name'); if(payer)payer.value=currentUser.displayName||'';
-            setSlipCheckBox('idle','ระบบตรวจสลิปพร้อมทำงาน','เลือกไฟล์สลิปแล้วกดส่ง ระบบจะแสดงสถานะตรวจสอบแบบทีละขั้นตอนตรงช่องนี้',{},[{status:'idle',text:'รอเลือกไฟล์สลิป'}]);
+            document.getElementById('payment-slip-check-box')?.classList.add('hidden');
+            __slipCheckPopupActive = false;
             setPaymentSubmitBusy(false); setNowToPaymentTime();
             document.getElementById('plan-payment-modal')?.classList.remove('hidden');
         };
@@ -21071,5 +21259,61 @@ label:has(#plan-sub-allow-team){
 })();
 </script>
 
+
+<script id="schoolhub-slip-history-final-fix">
+(function(){
+  function isHistoryStillLoading(){
+    const box=document.getElementById('user-payment-history-list');
+    return !!(box && /กำลังโหลดประวัติ/.test(box.textContent||''));
+  }
+  function kickPaymentHistoryLoad(delay){
+    setTimeout(function(){
+      try{
+        const view=document.getElementById('view-user-plans');
+        if(view && !view.classList.contains('hidden') && typeof window.loadUserPaymentHistory==='function'){
+          window.loadUserPaymentHistory(false);
+        }
+      }catch(e){ console.warn('payment history kick failed:', e); }
+    }, delay||0);
+  }
+  function installSwitchWrapper(){
+    if(typeof window.switchView==='function' && !window.switchView.__paymentHistoryWrappedFinal){
+      const old=window.switchView;
+      const wrapped=function(viewId){
+        const r=old.apply(this, arguments);
+        if(viewId==='user-plans'){
+          kickPaymentHistoryLoad(80);
+          kickPaymentHistoryLoad(900);
+          setTimeout(function(){
+            if(isHistoryStillLoading()){
+              const box=document.getElementById('user-payment-history-list');
+              if(box) box.innerHTML='<div class="text-center text-slate-500 py-6"><i class="fas fa-triangle-exclamation text-amber-500 mr-1"></i> โหลดประวัติช้า กำลังกระตุ้นโหลดข้อมูลอีกครั้ง...</div>';
+              kickPaymentHistoryLoad(100);
+            }
+          }, 4500);
+        }
+        return r;
+      };
+      wrapped.__paymentHistoryWrappedFinal=true;
+      window.switchView=wrapped;
+    }
+  }
+  function bringSlipPopup(){
+    const popup=document.getElementById('slip-result-popup');
+    if(!popup || popup.classList.contains('hidden')) return;
+    if(popup.parentElement!==document.body || document.body.lastElementChild!==popup) document.body.appendChild(popup);
+    popup.style.position='fixed'; popup.style.inset='0'; popup.style.zIndex='2147483647'; popup.style.pointerEvents='auto';
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    installSwitchWrapper();
+    setInterval(function(){ installSwitchWrapper(); bringSlipPopup(); }, 500);
+    kickPaymentHistoryLoad(1600);
+  });
+  document.addEventListener('click', function(e){
+    const t=e.target && e.target.closest && e.target.closest('[onclick*="openUserPlanSelector"],[data-target="user-plans"],#slip-result-popup,#payment-submit-btn');
+    if(t){ setTimeout(bringSlipPopup,0); setTimeout(bringSlipPopup,80); }
+  }, true);
+})();
+</script>
 </body>
 </html>
