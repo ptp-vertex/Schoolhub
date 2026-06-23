@@ -15692,6 +15692,11 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-spinner{width:16px;height:16px;border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;border-radius:50%;display:inline-block;vertical-align:-3px;animation:schoolhubTeamSpin .75s linear infinite}
   .schoolhub-team-loading-line{display:flex;align-items:center;justify-content:center;gap:8px;color:#64748b;font-weight:900;font-size:13px;padding:14px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc}
   @keyframes schoolhubTeamSpin{to{transform:rotate(360deg)}}
+
+  #schoolhub-team-invite-popup{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:18px}
+  #schoolhub-team-invite-popup .schoolhub-team-popup-card{width:min(560px,100%);background:white;border-radius:28px;padding:22px;box-shadow:0 30px 80px rgba(15,23,42,.28);border:1px solid #e2e8f0}
+  #schoolhub-team-invite-popup input,#schoolhub-team-invite-popup select{width:100%;border:1px solid #cbd5e1;border-radius:16px;padding:13px;font-weight:800;color:#334155;background:#fff;outline:none}
+  #schoolhub-team-invite-popup input:focus,#schoolhub-team-invite-popup select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
   @media(max-width:768px){.schoolhub-team-member-row,.schoolhub-team-invite-card{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}#schoolhub-team-invite-alert{position:relative;top:auto;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert button{width:100%}}
 </style>
 <script type="module" id="schoolhub-team-plan-current-box-patch">
@@ -15880,6 +15885,27 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     target.appendChild(div);
   }
 
+  function closeTeamInvitePopup(){ document.getElementById('schoolhub-team-invite-popup')?.remove(); }
+  window.schoolhubCloseTeamInvitePopup=closeTeamInvitePopup;
+  window.schoolhubSubmitTeamInvitePopup=async function(){
+    const email=document.getElementById('team-popup-email')?.value||'';
+    const role=document.getElementById('team-popup-role')?.value||'member';
+    const send=document.getElementById('team-popup-sendmail')?.checked;
+    const mainEmail=document.getElementById('team-invite-email');
+    const mainRole=document.getElementById('team-invite-role');
+    const mainSend=document.getElementById('team-invite-sendmail');
+    if(mainEmail) mainEmail.value=email;
+    if(mainRole) mainRole.value=role;
+    if(mainSend) mainSend.checked=!!send;
+    await window.schoolhubInviteTeamMember?.();
+  };
+  function maybeOpenTeamInvitePopup(team, members, limit, canManage){
+    // ไม่เปิดป็อปอัพเชิญเพื่อนอัตโนมัติแล้ว
+    // ให้ใช้กล่องเชิญเพื่อนด้านล่างสถานะแผนอย่างเดียว
+    closeTeamInvitePopup();
+    return;
+  }
+
   async function loadAndRenderTeamPanel(){
     const box=document.getElementById('schoolhub-team-plan-box');
     if(!box) return;
@@ -15889,16 +15915,19 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       let team=await getTeamDoc();
       team=await cleanupExpiredClosedInvites(team);
       const members=visibleMembers(Array.isArray(team.members)?team.members:[]);
-      const limit=team.teamLimit||teamLimit();
-      const used=1+activeMembers(members).length;
+      const limit=Math.max(2, Number(team.teamLimit||teamLimit()||2));
+      const acceptedCount=1+members.filter(m=>String(m.status||'pending')==='accepted').length;
+      const reservedCount=1+activeMembers(members).length;
+      const used=acceptedCount;
+      const pendingCount=Math.max(0, reservedCount-acceptedCount);
       const canManage=canManageTeam(team);
-      const canInvite=canManage && used<limit;
+      const canInvite=canManage && reservedCount<limit;
       const myRole=getMyTeamRole(team);
       const payer=team.lastPayment||{};
       box.innerHTML=`<div class="schoolhub-team-panel">
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
           <div><div class="text-lg font-black text-slate-900"><i class="fas fa-user-plus text-primary mr-2"></i>เชิญเพื่อนในแผนทีม</div>
-          <div class="text-xs font-bold text-slate-500 mt-1">ใช้แล้ว ${used}/${limit} คน • สิทธิ์ของคุณ: ${myRole==='owner'?'เจ้าของหลัก':roleText(myRole)} • เจ้าของ 1 คน + สมาชิกที่เชิญ</div></div>
+          <div class="text-xs font-bold text-slate-500 mt-1">ใช้แล้ว ${used}/${limit} คน${pendingCount?' • รอตอบรับ '+pendingCount+' คน':''} • สิทธิ์ของคุณ: ${myRole==='owner'?'เจ้าของหลัก':roleText(myRole)} • เจ้าของ 1 คน + สมาชิกที่ตอบรับจะใช้แผนนี้ร่วมกัน</div></div>
           <div class="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-2">${esc(getDir().planName||getPlan().name||'แผนปัจจุบัน')}</div>
         </div>
         <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4 text-xs font-bold text-slate-600">
@@ -15915,6 +15944,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
         <div class="space-y-2" id="team-member-list">${members.length?members.map(m=>renderMemberRow(m,canManage)).join(''):'<div class="text-sm font-bold text-slate-400 text-center py-4">ยังไม่มีคำเชิญ</div>'}</div>
         <div class="text-[11px] text-slate-400 mt-3 leading-relaxed">หมายเหตุ: เจ้าของร่วมจะเห็นการแจ้งเตือนชำระเงินร่วมกับเจ้าของ ส่วนผู้ใช้ร่วมจะไม่เห็นการแจ้งเตือนชำระเงิน เมื่อมีการบันทึกว่าคนใดคนหนึ่งชำระแล้ว ระบบจะใช้ข้อมูลการชำระล่าสุดร่วมกันในกล่องนี้</div>
       </div>`;
+      setTimeout(()=>maybeOpenTeamInvitePopup(team,members,limit,canManage),120);
     }catch(e){
       console.warn('โหลดข้อมูลทีมจาก Firestore ไม่สำเร็จ:', e);
       const limit=teamLimit();
@@ -15966,22 +15996,35 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
         displayName:u?.displayName||m.displayName||u?.email||'',
         email:String(u?.email||m.email||'').trim().toLowerCase()
       });
-      if(nextStatus==='accepted') updated.acceptedAt=now;
+      if(nextStatus==='accepted'){ updated.acceptedAt=now; try{ const cd=getDir()||{}; updated.previousPlanSnapshot=cd.previousPlanSnapshot || {planId:cd.planId||null,planName:cd.planName||'',planPrice:cd.planPrice||'',courseLimit:cd.courseLimit??null,allowTeam:cd.allowTeam??false,teamMemberLimit:cd.teamMemberLimit??1,status:cd.status||null}; }catch(e){} }
       if(nextStatus==='cancelled') updated.cancelledAt=now;
       return cleanForFirestore(updated);
     });
     const me=members.find(m=>String(m?.id||'')===String(inviteId||'')) || {};
     await setDoc(ref,cleanForFirestore({members,updatedAt:now}),{merge:true});
     if(nextStatus==='accepted' && u?.uid){
+      const currentDir=getDir()||{};
+      const previousPlanSnapshot=currentDir.previousPlanSnapshot || {
+        planId: currentDir.teamStatus==='accepted' ? null : (currentDir.planId||null),
+        planName: currentDir.teamStatus==='accepted' ? '' : (currentDir.planName||''),
+        planPrice: currentDir.teamStatus==='accepted' ? '' : (currentDir.planPrice||''),
+        courseLimit: currentDir.teamStatus==='accepted' ? null : (currentDir.courseLimit ?? null),
+        allowTeam: currentDir.teamStatus==='accepted' ? false : (currentDir.allowTeam ?? false),
+        teamMemberLimit: currentDir.teamStatus==='accepted' ? 1 : (currentDir.teamMemberLimit ?? 1),
+        status: currentDir.teamStatus==='accepted' ? null : (currentDir.status||null)
+      };
       const payload=cleanForFirestore({
         email:String(u.email||me.email||'').trim().toLowerCase(),
         uid:u.uid,
         displayName:u.displayName||me.displayName||u.email||'',
+        previousPlanSnapshot,
         teamOwnerUid:teamId,
         teamRole:me.role||'member',
         teamStatus:'accepted',
         planId:team.planId||null,
         planName:team.planName||'ทีม',
+        teamMemberLimit: Math.max(2, Number(team.teamLimit||team.teamMemberLimit||2)),
+        allowTeam:true,
         teamJoinedAt:now,
         updatedAt:now,
         status:'active',
@@ -16044,9 +16087,31 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       await loadAndRenderTeamPanel(); setTimeout(()=>show('เชิญแล้ว','บันทึกคำเชิญเรียบร้อย'),80);
     }catch(e){show('เชิญไม่ได้',e.message||String(e),true);}finally{restore();}
   };
+  async function restoreMemberPreviousPlan(member){
+    const now=Date.now();
+    const uid=member?.uid||'';
+    if(!uid) return;
+    const snap=member.previousPlanSnapshot||{};
+    const restorePayload={
+      teamOwnerUid:null, teamRole:null, teamStatus:null, allowTeam:!!snap.allowTeam, teamMemberLimit:snap.teamMemberLimit||1,
+      planId:snap.planId||null, planName:snap.planName||'', planPrice:snap.planPrice||'', courseLimit:snap.courseLimit??null,
+      previousPlanSnapshot:null, updatedAt:now
+    };
+    if(snap.planId){ restorePayload.status=snap.status||'active'; restorePayload.planLockedAt=null; restorePayload.planLockReason=null; }
+    else { restorePayload.status='plan_locked'; restorePayload.planLockedAt=now; restorePayload.planLockReason='ยังไม่ได้เลือกแผน'; }
+    await setDoc(doc(db,PUBLIC,uid),cleanForFirestore(restorePayload),{merge:true});
+  }
   window.schoolhubCancelTeamInvite=async function(id){
     const restore=setTeamActionLoading('team-cancel-'+id,'กำลังยกเลิก...');
-    try{const team=await getTeamDoc(); if(!canManageTeam(team)) return show('ไม่มีสิทธิ์','ผู้ใช้ร่วมไม่สามารถยกเลิกคำเชิญได้',true); const members=(team.members||[]).map(m=>m.id===id?Object.assign({},m,{status:'cancelled',cancelledAt:Date.now(),updatedAt:Date.now()}):m); await saveTeamDoc({members}); await loadAndRenderTeamPanel();}catch(e){show('ยกเลิกไม่ได้',e.message||String(e),true);}finally{restore();}
+    try{
+      const team=await getTeamDoc();
+      if(!canManageTeam(team)) return show('ไม่มีสิทธิ์','ผู้ใช้ร่วมไม่สามารถยกเลิกคำเชิญได้',true);
+      const oldMember=(team.members||[]).find(m=>m.id===id)||{};
+      const members=(team.members||[]).map(m=>m.id===id?Object.assign({},m,{status:'cancelled',cancelledAt:Date.now(),updatedAt:Date.now()}):m);
+      await saveTeamDoc({members});
+      if(String(oldMember.status||'pending')==='accepted') await restoreMemberPreviousPlan(oldMember);
+      await loadAndRenderTeamPanel();
+    }catch(e){show('ยกเลิกไม่ได้',e.message||String(e),true);}finally{restore();}
   };
   window.schoolhubChangeTeamRole=async function(id,role){
     const sel=document.getElementById('team-role-'+id); const oldDisabled=sel?.disabled; if(sel) sel.disabled=true;
@@ -16068,6 +16133,9 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     if(document.getElementById('schoolhub-team-plan-box')) return;
     const holder=document.createElement('div'); holder.id='schoolhub-team-plan-box'; currentBox.appendChild(holder); await loadAndRenderTeamPanel();
   }
+  window.schoolhubEnsureTeamBox = ensureTeamBox;
+  window.loadAndRenderTeamPanel = loadAndRenderTeamPanel;
+
   function patchRender(){
     if(!window.renderUserPlans || window.__schoolhubTeamRenderWrapped) return;
     const old=window.renderUserPlans;
@@ -16086,8 +16154,10 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       const team=snap.data(); const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status:'accepted',acceptedAt:Date.now(),uid:user.uid,displayName:user.displayName||'',email:user.email||m.email}):m);
       const me=members.find(m=>m.id===inviteId);
       await setDoc(ref,cleanForFirestore({members,updatedAt:Date.now()}),{merge:true});
-      await setDoc(doc(db,PUBLIC,user.uid),cleanForFirestore({teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',teamJoinedAt:Date.now(),updatedAt:Date.now(),status:'active'}),{merge:true});
-      try{ window.__currentUserDir=Object.assign(window.__currentUserDir||{},{teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',status:'active'}); window.__schoolhubPlanLocked=false; }catch(e){}
+      const cd=getDir()||{};
+      const previousPlanSnapshot=cd.previousPlanSnapshot || {planId:cd.planId||null,planName:cd.planName||'',planPrice:cd.planPrice||'',courseLimit:cd.courseLimit??null,allowTeam:cd.allowTeam??false,teamMemberLimit:cd.teamMemberLimit??1,status:cd.status||null};
+      await setDoc(doc(db,PUBLIC,user.uid),cleanForFirestore({previousPlanSnapshot,teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',teamMemberLimit:Math.max(2,Number(team.teamLimit||team.teamMemberLimit||2)),allowTeam:true,teamJoinedAt:Date.now(),updatedAt:Date.now(),status:'active'}),{merge:true});
+      try{ window.__currentUserDir=Object.assign(window.__currentUserDir||{},{previousPlanSnapshot,teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',teamMemberLimit:Math.max(2,Number(team.teamLimit||team.teamMemberLimit||2)),allowTeam:true,status:'active'}); window.__schoolhubPlanLocked=false; }catch(e){}
       show('ตอบรับแล้ว','เข้าร่วมแผนทีมเรียบร้อย');
       url.searchParams.delete('teamInvite'); url.searchParams.delete('teamOwner'); url.searchParams.delete('teamEmail'); history.replaceState({},'',url.toString());
     }catch(e){show('ตอบรับไม่ได้',e.message||String(e),true);}
@@ -16101,6 +16171,64 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 
 
 
+
+
+<script id="schoolhub-team-box-open-without-popup-fix">
+(function(){
+  if(window.__schoolhubTeamBoxOpenWithoutPopupFix) return;
+  window.__schoolhubTeamBoxOpenWithoutPopupFix = true;
+
+  function removeInvitePopup(){
+    var p=document.getElementById('schoolhub-team-invite-popup');
+    if(p) p.remove();
+  }
+  function runTeamCheck(delay){
+    setTimeout(function(){
+      removeInvitePopup();
+      try{
+        var view=document.getElementById('view-user-plans');
+        if(view && view.classList.contains('hidden')) return;
+        if(typeof window.schoolhubEnsureTeamBox === 'function') window.schoolhubEnsureTeamBox();
+      }catch(e){}
+    }, delay||0);
+  }
+  function wrap(name){
+    var old=window[name];
+    if(typeof old !== 'function' || old.__teamBoxOpenNoPopupWrapped) return;
+    window[name]=function(){
+      var r=old.apply(this, arguments);
+      runTeamCheck(0);
+      runTeamCheck(250);
+      runTeamCheck(900);
+      return r;
+    };
+    window[name].__teamBoxOpenNoPopupWrapped=true;
+  }
+  function install(){
+    wrap('openUserPlanSelector');
+    var oldSwitch=window.switchView;
+    if(typeof oldSwitch === 'function' && !oldSwitch.__teamBoxOpenNoPopupWrapped){
+      window.switchView=function(viewId){
+        var r=oldSwitch.apply(this, arguments);
+        if(viewId==='user-plans'){
+          runTeamCheck(0);
+          runTeamCheck(250);
+          runTeamCheck(900);
+        }
+        return r;
+      };
+      window.switchView.__teamBoxOpenNoPopupWrapped=true;
+    }
+    runTeamCheck(800);
+  }
+  document.addEventListener('DOMContentLoaded', function(){ install(); setTimeout(install,500); setTimeout(install,1500); });
+  document.addEventListener('click', function(e){
+    var t=e.target && e.target.closest && e.target.closest('[onclick*="openUserPlanSelector"],[data-target="user-plans"],[onclick*="user-plans"]');
+    if(t){ runTeamCheck(80); runTeamCheck(600); }
+    removeInvitePopup();
+  }, true);
+})();
+</script>
 
 <!-- SchoolHub final patch: single team invite flow from teams.members[] only -->
 
