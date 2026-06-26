@@ -89,7 +89,7 @@
         }
 
         function renderWithdrawnGradeCell() {
-            return '<span class="withdrawn-grade-cell">ลาออก</span>';
+            return '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>';
         }
 
         window.normalizeScoreNumber = normalizeScoreNumber;
@@ -2315,6 +2315,7 @@ document.addEventListener('click',function(){
 .schoolhub-withdrawn-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:800; color:#be123c; background:#fff1f2; border:1px solid #fecdd3; border-radius:9999px; padding:.18rem .5rem; margin-left:.35rem; white-space:nowrap; }
 .schoolhub-withdrawn-control { opacity:.55 !important; pointer-events:none !important; cursor:not-allowed !important; }
 .withdrawn-score-cell,
+.withdrawn-grade,
 .withdrawn-grade-cell,
 .score-cell.withdrawn,
 .grade-cell.withdrawn,
@@ -2332,6 +2333,7 @@ document.addEventListener('click',function(){
 .summary-total-col.withdrawn .withdrawn-score-cell,
 .summary-grade-col.withdrawn .withdrawn-grade-cell,
 .summary-mobile-plan.withdrawn span { color:#94a3b8 !important; }
+.withdrawn-grade{color:#94a3b8!important;background:#f1f5f9!important;font-weight:700!important;}
 </style>
 
 
@@ -3581,20 +3583,74 @@ document.addEventListener('click',function(){
                 <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-medal text-amber-500 mr-2"></i> ตั้งค่าเกณฑ์เกรด</h3>
                 <button onclick="closeModal('grade-criteria-modal')" class="w-8 h-8 flex items-center justify-center bg-white border text-slate-500 rounded-full hover:bg-slate-100"><i class="fas fa-times"></i></button>
             </div>
-            <form onsubmit="event.preventDefault(); handleGradeCriteriaSubmit();" class="p-6 space-y-4">
-                <p class="text-sm text-slate-500 mb-4">กำหนดคะแนนขั้นต่ำสำหรับแต่ละเกรด</p>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 4</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-4" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-35" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-3" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-25" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-2" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1.5</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-15" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-1" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
-                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 0</label><input type="number" inputmode="decimal" pattern="[0-9]*" id="grade-crit-0" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-slate-400" value="0" disabled></div>
+            <form class="p-6 space-y-4" data-schoolhub-real-grade-rules-ui="1">
+                <div id="schoolhub-grade-extra-rules" class="schoolhub-grade-main-box">
+                    <div class="schoolhub-grade-main-title"><i class="fas fa-sliders text-primary"></i> เกณฑ์แปลงคะแนนเป็นเกรด</div>
+                    <div class="schoolhub-grade-format-row">
+                        <div>
+                            <label class="block mb-1">รูปแบบเกรด</label>
+                            <select id="grade-type-select" onchange="applyGradePresetFromButton()">
+                                <option value="number">รูปแบบตัวเลข (4, 3.5)</option>
+                                <option value="letter">รูปแบบตัวอักษร (A, B+)</option>
+                                <option value="custom">รูปแบบกำหนดเอง</option>
+                            </select>
+                        </div>
+                        <button type="button" class="schoolhub-grade-mini-btn" onclick="applyGradePresetFromButton()"><i class="fas fa-wand-magic-sparkles mr-1"></i> ใช้รูปแบบนี้</button>
+                        <button type="button" class="schoolhub-grade-mini-btn" onclick="addGradeRuleRow()"><i class="fas fa-plus mr-1"></i> เพิ่มเกรด</button>
+                    </div>
+                    <div class="schoolhub-grade-rule-head"><div>ชื่อเกรด / ผลลัพธ์</div><div>คะแนนขั้นต่ำ</div><div></div></div>
+                    <div id="schoolhub-grade-rules-list"><div class="schoolhub-grade-empty">กำลังโหลดเกณฑ์เกรด...</div></div>
+                    <div class="mt-3">
+                        <label class="block text-xs font-black text-slate-500 mb-1">ค่าเริ่มต้นถ้าคะแนนต่ำกว่าเกณฑ์ทั้งหมด</label>
+                        <input id="schoolhub-default-grade" type="text" placeholder="เช่น 0 หรือ F">
+                    </div>
+                    <div id="schoolhub-grade-legacy-inputs" class="hidden">
+                        <input id="grade-crit-4"><input id="grade-crit-35"><input id="grade-crit-3"><input id="grade-crit-25"><input id="grade-crit-2"><input id="grade-crit-15"><input id="grade-crit-1"><input id="grade-crit-0">
+                    </div>
                 </div>
+
+                <div class="schoolhub-grade-main-box mt-4">
+                    <div class="flex items-center justify-between gap-3 mb-3 schoolhub-special-header-row">
+                        <div class="schoolhub-grade-main-title mb-0"><i class="fas fa-user-clock text-rose-500"></i> เกณฑ์พิเศษจากการเข้าเรียน</div>
+                        <button type="button" onclick="startAddGradeSpecialRule()" class="schoolhub-grade-mini-btn"><i class="fas fa-plus mr-1"></i> เพิ่มเกณฑ์พิเศษ</button>
+                    </div>
+                    <div id="schoolhub-special-rules-list"><div class="schoolhub-grade-empty">ยังไม่มีเกณฑ์พิเศษ</div></div>
+                    <p class="text-xs text-slate-400 font-semibold mt-2">ถ้าจำนวนสายหรือขาดถึงเกณฑ์อย่างใดอย่างหนึ่ง ระบบจะแสดงผลลัพธ์พิเศษก่อนคำนวณเกรดจากคะแนน</p>
+                </div>
+
                 <div class="pt-4 flex gap-3"><button type="button" onclick="closeModal('grade-criteria-modal')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold shadow-lg shadow-indigo-200">บันทึก</button></div>
             </form>
+        </div>
+    </div>
+
+
+    <!-- Grade Special Rule Modal: must be above the grade criteria popup -->
+    <div id="grade-special-rule-modal-backdrop" class="hidden fixed inset-0 bg-black/40"></div>
+    <div id="grade-special-rule-modal" class="hidden fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="grade-special-rule-modal-title" class="font-bold text-lg text-slate-800">เพิ่มเกณฑ์พิเศษ</h3>
+                <button type="button" onclick="closeGradeSpecialRuleModal()" aria-label="ปิด" class="grade-special-rule-close modal-close w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-black hover:bg-slate-200 flex items-center justify-center">×</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-black text-slate-600 mb-1">ผลลัพธ์ที่จะแสดง</label>
+                    <input id="grade-special-label" type="text" placeholder="เช่น มส., ขร., ไม่มีสิทธิ์สอบ">
+                </div>
+                <div>
+                    <label class="block text-sm font-black text-slate-600 mb-1">สายตั้งแต่กี่ครั้ง</label>
+                    <input id="grade-special-late-count" type="number" min="0" inputmode="numeric" placeholder="0">
+                    <p class="text-xs text-slate-500 mt-1">สายกี่ครั้ง = ขาด 1 ครั้ง และจะนำไปคำนวณเป็นขาดด้วย</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-black text-slate-600 mb-1">ขาดตั้งแต่กี่ครั้ง</label>
+                    <input id="grade-special-absent-count" type="number" min="0" inputmode="numeric" placeholder="0">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeGradeSpecialRuleModal()" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button>
+                    <button type="button" onclick="saveGradeSpecialRule()" class="w-1/2 py-3 bg-primary text-white rounded-xl font-bold">บันทึก</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -5960,14 +6016,20 @@ async function submitPlanRequest(planId){
         window.schoolhubEnsureCourseTeacherButton = schoolhubEnsureCourseTeacherButton;
 
         async function saveStateToDB() {
-            if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return; }
-            if (!currentUser || currentUser.uid === 'admin-bypass') return;
+            if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return false; }
+            if (!currentUser || currentUser.uid === 'admin-bypass') return true;
             try {
                 await withTimeout(setDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state'), schoolhubOwnStateOnly()), 8000, 'saveState');
                 await schoolhubSaveSharedOwnerStatesFromMergedState();
+                return true;
             }
-            catch (error) { showCustomAlert("ผิดพลาด", "ข้อมูลไม่ถูกบันทึกลง Cloud โปรดตรวจสอบอินเทอร์เน็ตหรือ Firestore Rules", true); }
+            catch (error) {
+                console.error('saveStateToDB failed:', error);
+                showCustomAlert("ผิดพลาด", "ข้อมูลไม่ถูกบันทึกลง Cloud โปรดตรวจสอบอินเทอร์เน็ตหรือ Firestore Rules", true);
+                return false;
+            }
         }
+        window.saveStateToDB = saveStateToDB;
 
         async function loadStateFromDB() {
             if (!currentUser || currentUser.uid === 'admin-bypass') { updateGlobalViews(); return; }
@@ -6921,46 +6983,20 @@ async function submitPlanRequest(planId){
             window.openModal('grade-criteria-modal');
         };
 
-        window.handleGradeCriteriaSubmit = async () => {
-            if(!currentActiveCourseId) return;
-            const cid = currentActiveCourseId;
-            if(!state.courseGrades) state.courseGrades = {};
-
-            const newCriteria = {
-                4: Number(document.getElementById('grade-crit-4').value),
-                3.5: Number(document.getElementById('grade-crit-35').value),
-                3: Number(document.getElementById('grade-crit-3').value),
-                2.5: Number(document.getElementById('grade-crit-25').value),
-                2: Number(document.getElementById('grade-crit-2').value),
-                1.5: Number(document.getElementById('grade-crit-15').value),
-                1: Number(document.getElementById('grade-crit-1').value),
-            };
-
-            if (newCriteria['4'] <= newCriteria['3.5'] || newCriteria['3.5'] <= newCriteria['3'] || newCriteria['3'] <= newCriteria['2.5'] || newCriteria['2.5'] <= newCriteria['2'] || newCriteria['2'] <= newCriteria['1.5'] || newCriteria['1.5'] <= newCriteria['1']) {
-                showCustomAlert("ข้อมูลไม่ถูกต้อง", "กรุณากำหนดคะแนนให้ลดหลั่นกันตามลำดับเกรด", true);
-                return;
-            }
-
-            state.courseGrades[cid] = newCriteria;
-            window.closeModal('grade-criteria-modal');
-            await saveStateToDB();
-            showCustomAlert('สำเร็จ', 'บันทึกเกณฑ์คะแนนเรียบร้อยแล้ว');
-
-            if (!document.getElementById('course-tab-overview').classList.contains('hidden')) {
-                renderCourseOverview();
-            }
-        };
+        async function legacyNumericGradeCriteriaSubmitDisabled() {
+            // Legacy numeric-only save is intentionally disabled.
+            // The real save path is the final canonical submit handler, which writes gradeRules/specialRules to course.gradeCriteria.
+            return false;
+        }
 
         function calculateGrade(score, criteria) {
-            if (score >= criteria['4']) return '4';
-            if (score >= criteria['3.5']) return '3.5';
-            if (score >= criteria['3']) return '3';
-            if (score >= criteria['2.5']) return '2.5';
-            if (score >= criteria['2']) return '2';
-            if (score >= criteria['1.5']) return '1.5';
-            if (score >= criteria['1']) return '1';
-            return '0';
+            if (typeof window.calculateGradeFromRules === 'function') {
+                return window.calculateGradeFromRules(score, criteria);
+            }
+            return '';
         }
+
+        // Legacy getFinalGradeForStudent placeholder removed. The canonical implementation is defined once later.
 
         window.editStudent = (id) => {
             const s = state.students.find(x => x.id === id); if(!s) return;
@@ -7058,15 +7094,20 @@ async function submitPlanRequest(planId){
                 });
                 tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${window.formatScoreDisplay(totalScore, 2)}</td>`;
 
-                // Calculate and display grade
+                // Calculate and display grade (single source of truth)
                 let gradeDisplay = '-';
                 let gradeColor = 'text-slate-400';
                 if (totalMax > 0) {
-                     gradeDisplay = calculateGrade(window.normalizeScoreNumber(totalScore, 2), gradeCriteria);
-                     if(gradeDisplay === '4' || gradeDisplay === '3.5') gradeColor = 'text-emerald-500';
-                     else if (gradeDisplay === '3' || gradeDisplay === '2.5') gradeColor = 'text-blue-500';
-                     else if (gradeDisplay === '2' || gradeDisplay === '1.5') gradeColor = 'text-amber-500';
-                     else if (gradeDisplay === '1' || gradeDisplay === '0') gradeColor = 'text-rose-500';
+                     const gradeCourse = (state.courses || []).find(c => String(c.id) === String(cid)) || {id: cid, gradeCriteria: gradeCriteria};
+                     if (gradeCriteria) gradeCourse.gradeCriteria = gradeCriteria;
+                     gradeDisplay = window.getFinalGradeForStudent(gradeCourse, s, window.normalizeScoreNumber(totalScore, 2));
+                     gradeColor = (typeof window.schoolhubGradeColor === 'function') ? window.schoolhubGradeColor(gradeDisplay, gradeCriteria) : gradeColor;
+                     if(gradeColor === 'text-slate-400') {
+                       if(['4','3.5','A','B+'].includes(gradeDisplay)) gradeColor = 'text-emerald-500';
+                       else if (['3','2.5','B','C+','C'].includes(gradeDisplay)) gradeColor = 'text-blue-500';
+                       else if (['2','1.5','D+','D'].includes(gradeDisplay)) gradeColor = 'text-amber-500';
+                       else if (['1','0','F'].includes(gradeDisplay)) gradeColor = 'text-rose-500';
+                     }
                 }
                 tbody += `<td class="text-center font-bold ${gradeColor} bg-amber-50/30 summary-grade-col">${gradeDisplay}</td></tr>`;
             });
@@ -7565,7 +7606,8 @@ async function submitPlanRequest(planId){
         window.exportScoresToExcel = () => {
             const cid = currentActiveCourseId;
             const courseStudents = window.getCourseStudents(cid); if(!cid || courseStudents.length===0) return showCustomAlert("ผิดพลาด", "ไม่มีข้อมูลนักเรียนในวิชานี้", true);
-            const cName = state.courses.find(c=>c.id===cid)?.name || 'Unknown';
+            const course = state.courses.find(c=>c.id===cid) || {id: cid};
+            const cName = course.name || 'Unknown';
             const history = state.attendance[cid] || {}; const attDates = Object.keys(history);
             const plans = (state.coursePlans[cid] || []).sort((a,b) => a.week - b.week);
             const courseScores = state.scores.filter(s => s.courseId === cid);
@@ -7606,8 +7648,11 @@ async function submitPlanRequest(planId){
                 row.push(window.normalizeScoreNumber(totalScore, 2));
 
                 let gradeDisplay = '-';
-                if(tMax > 0) gradeDisplay = calculateGrade(window.normalizeScoreNumber(totalScore, 2), gradeCriteria);
-                row.push(gradeDisplay);
+                if(tMax > 0) {
+                    if (gradeCriteria) course.gradeCriteria = gradeCriteria;
+                    gradeDisplay = window.getFinalGradeForStudent(course, s, window.normalizeScoreNumber(totalScore, 2));
+                }
+                row.push(gradeDisplay || '-');
 
                 aoa.push(row);
             });
@@ -8368,7 +8413,13 @@ async function submitPlanRequest(planId){
       tbody += '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
       var total=0;
       plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { total = window.addScoreToTotal(total, raw, 2); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'<span class="summary-score-cell-content text-rose-600 font-black">X</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(window.formatScoreDisplay(raw,2))+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
-      var grade='-', color='text-slate-400'; if(totalMax>0 && window.calculateGrade){ grade=calculateGrade(window.normalizeScoreNumber(total,2), gradeCriteria); if(['4','3.5'].includes(grade)) color='text-emerald-500'; else if(['3','2.5'].includes(grade)) color='text-blue-500'; else if(['2','1.5'].includes(grade)) color='text-amber-500'; else if(['1','0'].includes(grade)) color='text-rose-500'; }
+      var grade='-', color='text-slate-400';
+      if(totalMax>0){
+        var gradeCourse=(state.courses||[]).find(function(c){return String(c.id)===String(cid);}) || {id:cid, gradeCriteria:gradeCriteria};
+        grade = window.getFinalGradeForStudent(gradeCourse, st, window.normalizeScoreNumber(total,2));
+        color = (typeof window.schoolhubGradeColor === 'function') ? window.schoolhubGradeColor(grade, (window.getCourseGradeCriteria ? window.getCourseGradeCriteria(gradeCourse) : gradeCriteria)) : color;
+        if(color === 'text-slate-400') { if(['4','3.5','A','B+'].includes(grade)) color='text-emerald-500'; else if(['3','2.5','B','C+','C'].includes(grade)) color='text-blue-500'; else if(['2','1.5','D+','D'].includes(grade)) color='text-amber-500'; else if(['1','0','F'].includes(grade)) color='text-rose-500'; }
+      }
       tbody += '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td><td class="text-center font-bold '+color+' bg-amber-50/30 summary-grade-col">'+esc(grade)+'</td></tr>';
     });
     tbody+='</tbody>'; table.innerHTML=thead+tbody;
@@ -8427,7 +8478,7 @@ async function submitPlanRequest(planId){
       var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}));
       var aoa=[[`สรุปภาพรวมวิชา: ${cName}`],[`ชั้น/ห้อง: ${room}`],[]]; var header=['รหัส','ชื่อ','ชั้น/ห้อง','มา','สาย','ขาด']; var tMax=0;
       plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; header.push(`${p.title}(${isChecklist?'เช็คงาน':'เต็ม '+window.formatScoreDisplay(p.maxScore,2)})`); if(!isChecklist) tMax = window.addScoreToTotal(tMax, p.maxScore, 2); }); header.push(`รวมคะแนน(เต็ม ${window.formatScoreDisplay(tMax, 2)})`,'เกรดที่ได้'); aoa.push(header);
-      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }}); row.push(window.normalizeScoreNumber(total,2)); row.push(tMax>0&&window.calculateGrade?calculateGrade(window.normalizeScoreNumber(total,2),gradeCriteria):'-'); aoa.push(row); });
+      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }}); row.push(window.normalizeScoreNumber(total,2)); row.push(tMax>0 ? window.getFinalGradeForStudent(course, st, window.normalizeScoreNumber(total,2)) : '-'); aoa.push(row); });
       var sheetName=String(room||'ชั้น').replace(/[\\/?*\[\]:]/g,' ').slice(0,31) || 'ชั้น'; sheets[sheetName]=aoa;
     });
     window.downloadExcelMultiSheet(sheets, `ภาพรวม_${cName}_แยกชั้น`);
@@ -13287,16 +13338,16 @@ window.requestOwnPasswordReset = function(event){
     return box;
   }
 
-  function scoreAndGrade(total, totalMax, criteria){
-    var grade = '-', color = 'text-slate-300';
-    if (totalMax > 0 && window.calculateGrade) {
-      grade = window.calculateGrade(total, criteria);
-      if(['4','3.5'].includes(grade)) color = 'text-emerald-300';
-      else if(['3','2.5'].includes(grade)) color = 'text-blue-300';
-      else if(['2','1.5'].includes(grade)) color = 'text-amber-300';
-      else if(['1','0'].includes(grade)) color = 'text-rose-300';
-    }
-    return {grade:grade, color:color};
+  function scoreAndGrade(student, total, totalMax, gradeCriteria, cid){
+    var course = (state.courses || []).find(function(c){ return String(c.id) === String(cid); }) || {id:cid, gradeCriteria:gradeCriteria};
+    var grade = totalMax > 0 ? window.getFinalGradeForStudent(course, student, total) : '-';
+    return {
+      grade:grade,
+      value:grade,
+      html:esc(grade),
+      color:(typeof window.schoolhubGradeColor === 'function' ? window.schoolhubGradeColor(grade, window.getCourseGradeCriteria ? window.getCourseGradeCriteria(course) : gradeCriteria) : 'text-slate-600'),
+      isWithdrawn:String(grade) === 'ลาออก'
+    };
   }
 
   window.renderCourseOverview = function(){
@@ -13378,9 +13429,9 @@ window.requestOwnPasswordReset = function(event){
         }
       });
       total = isWithdrawn ? 0 : window.normalizeScoreNumber(total, 2);
-      var gg = isWithdrawn ? {grade:'ลาออก', color:'withdrawn-grade-cell'} : scoreAndGrade(total, totalMax, gradeCriteria);
+      var gg = scoreAndGrade(st, total, totalMax, gradeCriteria, cid);
       var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td>';
-      var gradeCell = isWithdrawn ? '<td class="text-center font-bold bg-amber-50/30 summary-grade-col withdrawn">'+(window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td>';
+      var gradeCell = isWithdrawn ? '<td class="text-center font-bold bg-amber-50/30 summary-grade-col withdrawn">'+(window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold '+gg.color+' bg-amber-50/30 summary-grade-col">'+(gg.html || esc(gg.grade))+'</td>';
       tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+totalCell+gradeCell+'</tr>';
 
       mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
@@ -14883,9 +14934,10 @@ window.requestOwnPasswordReset = function(event){
   function cleanSheetName(name){ return String(name||'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต'; }
   function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
   function getPlans(cid){ return ((state.coursePlans&&state.coursePlans[cid])||[]).slice().sort(function(a,b){return Number(a.week)-Number(b.week);}); }
-  function calcGrade(score, criteria){
-    criteria = criteria || window.defaultGradeCriteria || {'4':80,'3.5':75,'3':70,'2.5':65,'2':60,'1.5':55,'1':50};
-    if(score >= criteria['4']) return '4'; if(score >= criteria['3.5']) return '3.5'; if(score >= criteria['3']) return '3'; if(score >= criteria['2.5']) return '2.5'; if(score >= criteria['2']) return '2'; if(score >= criteria['1.5']) return '1.5'; if(score >= criteria['1']) return '1'; return '0';
+  function calcGrade(score, criteria, course, student){
+    if (typeof window.getFinalGradeForStudent === 'function' && course && student) return window.getFinalGradeForStudent(course, student, score);
+    if (typeof window.calculateGradeFromRules === 'function') return window.calculateGradeFromRules(score, criteria);
+    return '-';
   }
   function buildOverviewAoa(cid, list, roomName){
     var c=(state.courses||[]).find(function(x){return String(x.id)===String(cid);})||{};
@@ -14913,7 +14965,7 @@ window.requestOwnPasswordReset = function(event){
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
         else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria):'-'));
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria,c,st):'-'));
       aoa.push(row);
     });
     return aoa;
@@ -15292,11 +15344,10 @@ window.requestOwnPasswordReset = function(event){
     return String(name || 'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต';
   }
   function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
-  function calcGrade(score, criteria){
-    if(typeof window.calculateGrade === 'function') return window.calculateGrade(score, criteria);
-    var gs=(criteria || window.defaultGradeCriteria || []).slice().sort(function(a,b){return Number(b.min)-Number(a.min);});
-    var g=gs.find(function(x){return Number(score)>=Number(x.min);});
-    return g ? (g.grade || g.name || '-') : '-';
+  function calcGrade(score, criteria, course, student){
+    if (typeof window.getFinalGradeForStudent === 'function' && course && student) return window.getFinalGradeForStudent(course, student, score);
+    if (typeof window.calculateGradeFromRules === 'function') return window.calculateGradeFromRules(score, criteria);
+    return '-';
   }
   function buildOverviewAoa(cid, list, roomName){
     var c=course();
@@ -15335,7 +15386,7 @@ window.requestOwnPasswordReset = function(event){
           row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2)));
         }
       });
-      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria) : '-'));
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria, c, st) : '-'));
       aoa.push(row);
     });
     return aoa;
@@ -15524,7 +15575,11 @@ window.requestOwnPasswordReset = function(event){
     return list.sort(function(a,b){ return String(roomOf(a)).localeCompare(String(roomOf(b)),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'); });
   }
   function safeSheetName(v){ return String(v || 'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต'; }
-  function gradeOf(total, criteria){ return (typeof window.calculateGrade === 'function') ? window.calculateGrade(total, criteria) : '-'; }
+  function gradeOf(total, criteria, course, student){
+    if (typeof window.getFinalGradeForStudent === 'function' && course && student) return window.getFinalGradeForStudent(course, student, total);
+    if (typeof window.calculateGradeFromRules === 'function') return window.calculateGradeFromRules(total, criteria);
+    return '-';
+  }
   function makeAoa(room){
     var cid=getCourseId(), c=getCourse();
     var cName=(c && (c.name || c.code)) || 'รายวิชา';
@@ -15552,7 +15607,7 @@ window.requestOwnPasswordReset = function(event){
         if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
         else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria) : '-'));
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria, c, st) : '-'));
       aoa.push(row);
     });
     return aoa;
@@ -16983,22 +17038,7 @@ import { getFirestore, doc, getDoc, collection, getDocs, setDoc, deleteDoc } fro
   if(window.__schoolhubExcelGradeCalcFix) return;
   window.__schoolhubExcelGradeCalcFix = true;
 
-  window.calculateGrade = function(score, criteria){
-    var c = criteria || window.defaultGradeCriteria || {'4':80,'3.5':75,'3':70,'2.5':65,'2':60,'1.5':55,'1':50};
-    var n = Number(score) || 0;
-    function val(key, fallback){
-      var v = c && c[key];
-      return (v === undefined || v === null || v === '') ? fallback : Number(v);
-    }
-    if(n >= val('4',80)) return '4';
-    if(n >= val('3.5',75)) return '3.5';
-    if(n >= val('3',70)) return '3';
-    if(n >= val('2.5',65)) return '2.5';
-    if(n >= val('2',60)) return '2';
-    if(n >= val('1.5',55)) return '1.5';
-    if(n >= val('1',50)) return '1';
-    return '0';
-  };
+  // Disabled legacy calculateGrade override. Final source of truth is defined in schoolhub-real-grade-rules-special-script.
 })();
 </script>
 
@@ -18993,27 +19033,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     return r;
   };
 
-  window.calculateGrade = function(score, criteria){
-    const c = criteria || window.defaultGradeCriteria || NUM_DEFAULT;
-    const type = c.gradeType || 'number';
-    const s = n(score,0);
-    function val(k,fb){return (c[k]===undefined||c[k]===null||c[k]==='')?fb:n(c[k],fb);}
-    if(type==='letter'){
-      if(s >= val('A', val('4',80))) return 'A';
-      if(s >= val('B', val('3',70))) return 'B';
-      if(s >= val('C', val('2',60))) return 'C';
-      if(s >= val('D', val('1',50))) return 'D';
-      return 'F';
-    }
-    if(s >= val('4',80)) return '4';
-    if(s >= val('3.5',75)) return '3.5';
-    if(s >= val('3',70)) return '3';
-    if(s >= val('2.5',65)) return '2.5';
-    if(s >= val('2',60)) return '2';
-    if(s >= val('1.5',55)) return '1.5';
-    if(s >= val('1',50)) return '1';
-    return '0';
-  };
+  // Disabled legacy calculateGrade override. Final source of truth is defined in schoolhub-real-grade-rules-special-script.
 
   function getAttendanceStats(cid, studentId){
     const hist=(window.state && state.attendance && state.attendance[cid]) || {};
@@ -19029,70 +19049,34 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     return {present,late,absent,total};
   }
   function msInfo(cid, studentId, criteria){
-    const r=getRules(cid);
-    const a=getAttendanceStats(cid, studentId);
-    const converted = r.lateToAbsent > 0 ? Math.floor(a.late / r.lateToAbsent) : 0;
-    const effective = a.absent + converted;
-    const percent = a.total > 0 ? (effective / a.total) * 100 : 0;
-    const byCount = r.msAbsentLimit > 0 && effective >= r.msAbsentLimit;
-    const byPercent = r.msAbsentPercent > 0 && percent >= r.msAbsentPercent;
-    return {isMS: !!(r.msEnabled && (byCount || byPercent)), present:a.present, late:a.late, absent:a.absent, total:a.total, converted, effective, percent};
+    var course = (window.state && state.courses || []).find(function(c){ return String(c.id) === String(cid); }) || {id:cid, gradeCriteria:criteria};
+    var st = studentId && window.state && (state.students || []).find(function(x){ return String(x.id) === String(studentId); });
+    var special = (typeof window.calculateSpecialGradeByAttendance === 'function') ? window.calculateSpecialGradeByAttendance(course, st) : '';
+    return {isMS:!!special, specialLabel:special || '', present:0, late:0, absent:0, total:0, converted:0, effective:0, percent:0};
   }
   window.schoolhubGradeMsInfo = msInfo;
-  window.schoolhubCalculateFinalGrade = function(score, criteria, cid, studentId){
+  window.schoolhubCalculateFinalGrade = function(score, criteria, cid, studentId, student){
+    const st = student || (studentId && window.state && (state.students || []).find(function(x){ return String(x.id) === String(studentId); }));
+    if((window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st)) return 'ลาออก';
     const info = cid && studentId ? msInfo(cid, studentId, criteria) : {isMS:false};
-    if(info.isMS) return 'มส.';
-    return window.calculateGrade(score, criteria);
-  };
-
-  function saveEnhancedCriteria(){
-    const cid=getCid();
-    if(!cid) return false;
-    ensureState();
-    const type=(byId('grade-type-select')||{}).value || 'number';
-    const base = {
-      gradeType:type,
-      lateToAbsent:n((byId('grade-late-to-absent')||{}).value,3),
-      msAbsentLimit:n((byId('grade-ms-absent-limit')||{}).value,5),
-      msAbsentPercent:n((byId('grade-ms-absent-percent')||{}).value,20),
-      msEnabled: !!(byId('grade-ms-enabled')||{}).checked
-    };
-    if(type==='letter'){
-      base.A=n(byId('grade-crit-4').value,80);
-      base.B=n(byId('grade-crit-3').value,70);
-      base.C=n(byId('grade-crit-2').value,60);
-      base.D=n(byId('grade-crit-1').value,50);
-      base.F=0;
-      if(base.A<=base.B || base.B<=base.C || base.C<=base.D){
-        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนขั้นต่ำ A > B > C > D ตามลำดับ',true);
-        return false;
-      }
-    }else{
-      base['4']=n(byId('grade-crit-4').value,80);
-      base['3.5']=n(byId('grade-crit-35').value,75);
-      base['3']=n(byId('grade-crit-3').value,70);
-      base['2.5']=n(byId('grade-crit-25').value,65);
-      base['2']=n(byId('grade-crit-2').value,60);
-      base['1.5']=n(byId('grade-crit-15').value,55);
-      base['1']=n(byId('grade-crit-1').value,50);
-      base['0']=0;
-      if(base['4']<=base['3.5'] || base['3.5']<=base['3'] || base['3']<=base['2.5'] || base['2.5']<=base['2'] || base['2']<=base['1.5'] || base['1.5']<=base['1']){
-        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนให้ลดหลั่นกันตามลำดับเกรด',true);
-        return false;
-      }
+    if(typeof window.getFinalGradeForStudent === 'function' && cid && st) {
+      var course = (state.courses || []).find(function(c){ return String(c.id) === String(cid); }) || {id:cid, gradeCriteria:criteria};
+      return window.getFinalGradeForStudent(course, st, score);
     }
-    state.courseGrades[cid]=base;
-    return true;
-  }
-
-  const oldSubmit=window.handleGradeCriteriaSubmit;
-  window.handleGradeCriteriaSubmit = async function(){
-    if(!saveEnhancedCriteria()) return;
-    if(typeof window.closeModal==='function') window.closeModal('grade-criteria-modal');
-    if(typeof window.saveStateToDB==='function') await window.saveStateToDB();
-    if(window.showCustomAlert) showCustomAlert('สำเร็จ','บันทึกเกณฑ์เกรดและเงื่อนไข มส. เรียบร้อยแล้ว');
-    try{ if(!byId('course-tab-overview').classList.contains('hidden')) renderCourseOverview(); }catch(e){}
+    if(info.isMS){
+      return (info && info.specialLabel) || '';
+    }
+    return window.calculateGrade(score, criteria, st);
   };
+
+  function saveEnhancedCriteria(e){
+    // Redirect legacy save name to the canonical gradeRules/specialRules submit handler only.
+    if (typeof window.handleGradeCriteriaSubmit === 'function') return window.handleGradeCriteriaSubmit(e);
+    return false;
+  }
+  window.saveEnhancedCriteria = saveEnhancedCriteria;
+  // Disabled legacy submit override that used state.courseGrades[cid] = base.
+
 
   function gradeColor(g){
     if(g==='มส.' || g==='F' || g==='0') return 'text-rose-600 schoolhub-grade-ms';
@@ -19104,65 +19088,22 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   }
 
   function patchRenderedGrades(){
-    const cid=getCid();
-    if(!cid || !window.state) return;
-    const criteria=getCriteria(cid);
-    const students = (typeof window.getCourseStudents==='function') ? window.getCourseStudents(cid) : [];
-    const rows=[...document.querySelectorAll('#course-summary-table tbody tr')];
-    rows.forEach((tr,i)=>{
-      const st=students[i]; if(!st) return;
-      const cells=tr.querySelectorAll('td');
-      const gradeCell=cells[cells.length-1];
-      const totalCell=cells[cells.length-2];
-      if(!gradeCell || !totalCell) return;
-      const score=n(totalCell.textContent,0);
-      const g=window.schoolhubCalculateFinalGrade(score, criteria, cid, st.id);
-      gradeCell.textContent=g;
-      gradeCell.className='text-center font-bold '+gradeColor(g)+' bg-amber-50/30 summary-grade-col';
-      const info=msInfo(cid, st.id, criteria);
-      if(info.isMS) gradeCell.title=`มส. จากขาดรวม ${info.effective} ครั้ง (ขาดจริง ${info.absent}, สาย ${info.late}, สายแปลงเป็นขาด ${info.converted})`;
-    });
-    // mobile cards
-    const cards=[...document.querySelectorAll('#course-summary-mobile-cards .summary-mobile-card, #course-summary-mobile-cards [data-student-id]')];
-    cards.forEach(card=>{
-      const sid=card.getAttribute('data-student-id');
-      if(!sid) return;
-      const info=msInfo(cid, sid, criteria);
-      if(!info.isMS) return;
-      const candidates=[...card.querySelectorAll('*')].filter(x=>/เกรด|grade/i.test(x.textContent||''));
-      const target=candidates[candidates.length-1] || card.querySelector('.summary-mobile-grade');
-      if(target){ target.textContent='เกรด: มส.'; target.classList.add('schoolhub-grade-ms'); }
-    });
+    // Disabled: grade cells are rendered only by renderCourseOverview -> schoolhubRenderGrade.
+    return;
   }
 
   function wrapRender(){
-    if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__gradeMsWrapped){
-      const old=window.renderCourseOverview;
-      window.renderCourseOverview=function(){
-        const r=old.apply(this,arguments);
-        setTimeout(patchRenderedGrades,0);
-        setTimeout(patchRenderedGrades,180);
-        return r;
-      };
-      window.renderCourseOverview.__gradeMsWrapped=true;
-    }
-    if(typeof window.exportScoresToExcel==='function' && !window.exportScoresToExcel.__gradeMsWrapped){
-      const old=window.exportScoresToExcel;
-      window.exportScoresToExcel=function(){
-        // ถ้าฟังก์ชัน export เดิมคำนวณเกรดเอง จะยังคงทำงาน แต่ calculateGrade ถูกแทนแล้ว
-        return old.apply(this,arguments);
-      };
-      window.exportScoresToExcel.__gradeMsWrapped=true;
-    }
+    // Disabled: do not patch or rewrite grade cells after render.
+    return;
   }
 
   document.addEventListener('DOMContentLoaded',function(){
-    ensureExtraUI(); wrapRender(); setTimeout(wrapRender,500); setTimeout(patchRenderedGrades,700);
+    ensureExtraUI(); wrapRender();
   });
   document.addEventListener('change',function(e){
     if(e.target && e.target.id==='grade-type-select') syncGradeTypeUI();
   },true);
-  document.addEventListener('click',function(e){ if(e.target && e.target.closest && e.target.closest('select')) return; setTimeout(function(){ensureExtraUI();wrapRender();patchRenderedGrades();},120);},true);
+  document.addEventListener('click',function(e){ if(e.target && e.target.closest && e.target.closest('select')) return; ensureExtraUI(); },true);
   // ปิด polling เกรดซ้ำทุก 1.5 วิ เพื่อลดอาการหน่วงของ dropdown บนมือถือ
 })();
 </script>
@@ -19416,14 +19357,23 @@ label:has(#plan-sub-allow-team){
   }
   function classify(el){
     if(isModalCloseButton(el)) return '';
-    var s = String((el.getAttribute('onclick')||'') + ' ' + (el.textContent||'') + ' ' + (el.id||'') + ' ' + (el.className||'') + ' ' + (el.dataset ? JSON.stringify(el.dataset) : ''));
-    if(/openShareStudentModal|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
-    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|แผนคะแนน|จัดการแผนเก็บคะแนน/i.test(s)) return 'planScores';
-    if(/openGradeCriteria|เกณฑ์เกรด/i.test(s)) return 'gradeCriteria';
+    var s = [
+      el.getAttribute('onclick') || '',
+      el.getAttribute('data-tab') || '',
+      el.getAttribute('data-right') || '',
+      el.id || '',
+      el.className || '',
+      el.textContent || '',
+      el.dataset ? JSON.stringify(el.dataset) : ''
+    ].join(' ');
+    if(/overview|ภาพรวม|ภาพรวมคะแนน|รายงาน/i.test(s)) return 'reports';
+    if(/attendance|เช็คชื่อ/i.test(s)) return 'attendance';
+    if(/openShareStudentModal|studentShare|shareStudent|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
+    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|planScores|planScore|แผนคะแนน|จัดการแผนเก็บคะแนน/i.test(s)) return 'planScores';
+    if(/openGradeCriteria|gradeCriteria|เกณฑ์เกรด/i.test(s)) return 'gradeCriteria';
+    if(/switchCourseTab\(['"]?scores['"]?\)|data-tab["': ]+scores|\bscores\b|\bscore\b|บันทึกคะแนน|^\s*คะแนน\s*$/i.test(s)) return 'scores';
     if(/export|Export|Excel|เอ็ก|ส่งออก|โหลดตาราง/i.test(s)) return 'export';
     if(/CourseTeachers|จัดการครูในรายวิชา|เพิ่มครู|ครูผู้สอนร่วม/i.test(s) || el.id==='course-teachers-manage-btn' || el.id==='course-teachers-btn') return 'team';
-    if(/switchCourseTab\('attendance'\)|เช็คชื่อ/i.test(s)) return 'attendance';
-    if(/switchCourseTab\('scores'\)|บันทึกคะแนน/i.test(s)) return 'scores';
     return '';
   }
 
@@ -21544,7 +21494,7 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
   function num(v,fb){ v=Number(v); return Number.isFinite(v)?v:(fb||0); }
   function cid(){ try{return window.currentActiveCourseId || (typeof currentActiveCourseId!=='undefined'?currentActiveCourseId:'') || '';}catch(e){return '';} }
   function ensureState(){ if(!window.state) window.state={}; if(!state.courseGrades) state.courseGrades={}; return state; }
-  function criteria(courseId){ ensureState(); return (state.courseGrades && state.courseGrades[courseId]) || window.defaultGradeCriteria || NUM_DEFAULT; }
+  function criteria(courseId){ ensureState(); return (typeof window.getCourseGradeCriteria === 'function') ? window.getCourseGradeCriteria(courseId) : ((state.courseGrades && state.courseGrades[courseId]) || window.defaultGradeCriteria || NUM_DEFAULT); }
   function val(c,k,fb){ return (c && c[k]!==undefined && c[k]!==null && c[k]!=='' ) ? num(c[k],fb) : fb; }
 
   // ใช้เป็น default ใหม่ โดยไม่ทำลายข้อมูลรายวิชาที่บันทึกไว้แล้ว
@@ -21635,28 +21585,7 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
   },true);
 
   // เกรดตัวอักษรแบบมี +
-  window.calculateGrade = function(score,c){
-    c = c || window.defaultGradeCriteria || NUM_DEFAULT;
-    var s = num(score,0);
-    if((c.gradeType || 'number') === 'letter'){
-      if(s >= val(c,'A',80)) return 'A';
-      if(s >= val(c,'B+',75)) return 'B+';
-      if(s >= val(c,'B',70)) return 'B';
-      if(s >= val(c,'C+',65)) return 'C+';
-      if(s >= val(c,'C',60)) return 'C';
-      if(s >= val(c,'D+',55)) return 'D+';
-      if(s >= val(c,'D',50)) return 'D';
-      return 'F';
-    }
-    if(s >= val(c,'4',80)) return '4';
-    if(s >= val(c,'3.5',75)) return '3.5';
-    if(s >= val(c,'3',70)) return '3';
-    if(s >= val(c,'2.5',65)) return '2.5';
-    if(s >= val(c,'2',60)) return '2';
-    if(s >= val(c,'1.5',55)) return '1.5';
-    if(s >= val(c,'1',50)) return '1';
-    return '0';
-  };
+  // Disabled legacy calculateGrade override. Final source of truth is defined in schoolhub-real-grade-rules-special-script.
 
   function readAttendanceValue(entry, studentId){
     if(!entry) return '';
@@ -21680,75 +21609,34 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
   }
 
   function msInfo(courseId, studentId, c){
-    c = c || criteria(courseId);
-    var lateToAbsent = Math.max(0, num(c.lateToAbsent,3));
-    var limit = Math.max(0, num(c.msAbsentLimit,5));
-    var percentLimit = Math.max(0, num(c.msAbsentPercent,20));
-    var enabled = c.msEnabled !== false;
-    var a = attendanceStats(courseId, studentId);
-    var converted = lateToAbsent > 0 ? Math.floor(a.late / lateToAbsent) : 0;
-    var effective = a.absent + converted;
-    var percent = a.total > 0 ? (effective / a.total) * 100 : 0;
-    var byCount = limit > 0 && effective >= limit;
-    var byPercent = percentLimit > 0 && percent >= percentLimit;
-    return {isMS:!!(enabled && (byCount || byPercent)),present:a.present,late:a.late,absent:a.absent,total:a.total,converted:converted,effective:effective,percent:percent};
+    var courseObj = (window.state && state.courses || []).find(function(c0){ return String(c0.id) === String(courseId); }) || {id:courseId, gradeCriteria:c};
+    var st = studentId && window.state && (state.students || []).find(function(x){ return String(x.id) === String(studentId); });
+    var special = (typeof window.calculateSpecialGradeByAttendance === 'function') ? window.calculateSpecialGradeByAttendance(courseObj, st) : '';
+    return {isMS:!!special, specialLabel:special || '', present:0, late:0, absent:0, total:0, converted:0, effective:0, percent:0};
   }
   window.schoolhubGradeMsInfo = msInfo;
-  window.schoolhubCalculateFinalGrade = function(score,c,courseId,studentId){
+  window.schoolhubCalculateFinalGrade = function(score,c,courseId,studentId,student){
+    var st = student || (studentId && window.state && (state.students || []).find(function(x){ return String(x.id) === String(studentId); }));
+    if((window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st)) return 'ลาออก';
     var info = (courseId && studentId) ? msInfo(courseId, studentId, c) : {isMS:false};
-    return info.isMS ? 'มส.' : window.calculateGrade(score,c);
-  };
-
-  function savePlusCriteria(){
-    var courseId = cid(); if(!courseId) return false;
-    ensureState();
-    var type=(byId('grade-type-select')||{}).value || 'number';
-    var base={
-      gradeType:type,
-      lateToAbsent:num((byId('grade-late-to-absent')||{}).value,3),
-      msAbsentLimit:num((byId('grade-ms-absent-limit')||{}).value,5),
-      msAbsentPercent:num((byId('grade-ms-absent-percent')||{}).value,20),
-      msEnabled:!!(byId('grade-ms-enabled')||{}).checked
-    };
-    if(type==='letter'){
-      base.A=num(byId('grade-crit-4').value,80);
-      base['B+']=num(byId('grade-crit-35').value,75);
-      base.B=num(byId('grade-crit-3').value,70);
-      base['C+']=num(byId('grade-crit-25').value,65);
-      base.C=num(byId('grade-crit-2').value,60);
-      base['D+']=num(byId('grade-crit-15').value,55);
-      base.D=num(byId('grade-crit-1').value,50);
-      base.F=0;
-      if(!(base.A>base['B+'] && base['B+']>base.B && base.B>base['C+'] && base['C+']>base.C && base.C>base['D+'] && base['D+']>base.D)){
-        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนขั้นต่ำเรียงจาก A > B+ > B > C+ > C > D+ > D',true);
-        return false;
-      }
-    }else{
-      base['4']=num(byId('grade-crit-4').value,80);
-      base['3.5']=num(byId('grade-crit-35').value,75);
-      base['3']=num(byId('grade-crit-3').value,70);
-      base['2.5']=num(byId('grade-crit-25').value,65);
-      base['2']=num(byId('grade-crit-2').value,60);
-      base['1.5']=num(byId('grade-crit-15').value,55);
-      base['1']=num(byId('grade-crit-1').value,50);
-      base['0']=0;
-      if(!(base['4']>base['3.5'] && base['3.5']>base['3'] && base['3']>base['2.5'] && base['2.5']>base['2'] && base['2']>base['1.5'] && base['1.5']>base['1'])){
-        if(window.showCustomAlert) showCustomAlert('ข้อมูลไม่ถูกต้อง','กรุณากำหนดคะแนนขั้นต่ำเรียงจาก 4 > 3.5 > 3 > 2.5 > 2 > 1.5 > 1',true);
-        return false;
-      }
+    if(typeof window.getFinalGradeForStudent === 'function' && courseId && st) {
+      var courseObj = (state.courses || []).find(function(c0){ return String(c0.id) === String(courseId); }) || {id:courseId, gradeCriteria:c};
+      return window.getFinalGradeForStudent(courseObj, st, score);
     }
-    state.courseGrades[courseId]=base;
-    return true;
-  }
-
-  window.handleGradeCriteriaSubmit = async function(){
-    if(!savePlusCriteria()) return;
-    if(typeof window.saveStateToDB==='function') await window.saveStateToDB();
-    if(typeof window.closeModal==='function') window.closeModal('grade-criteria-modal');
-    if(window.showCustomAlert) showCustomAlert('สำเร็จ','บันทึกเกณฑ์เกรด พร้อมเกรด + และเงื่อนไข มส. แล้ว');
-    try{ if(typeof window.renderCourseOverview==='function') window.renderCourseOverview(); }catch(e){}
-    setTimeout(patchOverviewGrades,120);
+    if(info.isMS){
+      return (info && info.specialLabel) || '';
+    }
+    return window.calculateGrade(score,c,st);
   };
+
+  function savePlusCriteria(e){
+    // Redirect legacy save name to the canonical gradeRules/specialRules submit handler only.
+    if (typeof window.handleGradeCriteriaSubmit === 'function') return window.handleGradeCriteriaSubmit(e);
+    return false;
+  }
+  window.savePlusCriteria = savePlusCriteria;
+  // Disabled legacy submit override that used state.courseGrades[courseId] = base.
+
 
   function gradeColor(g){
     g=String(g);
@@ -21767,46 +21655,21 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
   }
 
   function patchOverviewGrades(){
-    var courseId = cid(); if(!courseId || !window.state) return;
-    var c = criteria(courseId);
-    var students = getVisibleStudents(courseId);
-    var rows = Array.prototype.slice.call(document.querySelectorAll('#course-summary-table tbody tr'));
-    rows.forEach(function(tr,i){
-      var st = students[i]; if(!st) return;
-      var cells=tr.querySelectorAll('td');
-      var gradeCell=cells[cells.length-1], totalCell=cells[cells.length-2];
-      if(!gradeCell || !totalCell) return;
-      var score = num((totalCell.textContent||'').replace(/[^0-9.\-]/g,''),0);
-      var g = window.schoolhubCalculateFinalGrade(score,c,courseId,st.id);
-      gradeCell.textContent = g;
-      gradeCell.className = 'text-center font-bold '+gradeColor(g)+' bg-amber-50/30 summary-grade-col';
-      var info = msInfo(courseId, st.id, c);
-      if(info.isMS){
-        gradeCell.title = 'มส. จากขาดรวม '+info.effective+' ครั้ง (ขาดจริง '+info.absent+' ครั้ง, สาย '+info.late+' ครั้ง, สายแปลงเป็นขาด '+info.converted+' ครั้ง)';
-      }
-    });
+    // Disabled: grade cells are rendered only by renderCourseOverview -> schoolhubRenderGrade.
+    return;
   }
 
   function wrapRender(){
-    if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__plusMsFinalWrapped){
-      var old=window.renderCourseOverview;
-      window.renderCourseOverview=function(){
-        var r=old.apply(this,arguments);
-        setTimeout(patchOverviewGrades,0);
-        setTimeout(patchOverviewGrades,250);
-        setTimeout(patchOverviewGrades,800);
-        return r;
-      };
-      window.renderCourseOverview.__plusMsFinalWrapped=true;
-    }
+    // Disabled: do not patch or rewrite grade cells after render.
+    return;
   }
 
   document.addEventListener('DOMContentLoaded',function(){
-    enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender(); setTimeout(patchOverviewGrades,500);
+    enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender();
   });
   document.addEventListener('click',function(e){
     if(e.target && e.target.closest && e.target.closest('select')) return;
-    setTimeout(function(){ enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender(); patchOverviewGrades(); },120);
+    enhanceGradeModalUI(); syncGradeTypeUIPlus(); wrapRender();
   },true);
   // ปิด polling เกรดซ้ำทุก 1 วิ เพื่อลดอาการ dropdown ค้าง/หน่วงบนมือถือ
 })();
@@ -22316,15 +22179,18 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   const FIELD_TO_KEY = Object.fromEntries(RIGHTS.map(r => [r[0], r[1]]));
   const KEY_TO_FIELD = Object.fromEntries(RIGHTS.flatMap(r => [[r[1], r[0]], [r[0], r[0]] ]));
   Object.assign(KEY_TO_FIELD, {
-    attend:'allowAttendance', checkAttendance:'allowAttendance', excel:'allowExport', xlsx:'allowExport',
-    teacher:'allowTeam', teachers:'allowTeam', courseTeachers:'allowTeam', score:'allowScores',
-    planScore:'allowPlanScores', scorePlan:'allowPlanScores', grade:'allowGradeCriteria', grades:'allowGradeCriteria',
-    share:'allowStudentShare', shareStudent:'allowStudentShare', studentShare:'allowStudentShare', student_share:'allowStudentShare', 'share-student':'allowStudentShare',
+    overview:'allowReports', reports:'allowReports', report:'allowReports', dashboard:'allowReports',
+    scores:'allowScores', score:'allowScores',
+    attendance:'allowAttendance', attend:'allowAttendance', checkAttendance:'allowAttendance',
+    studentShare:'allowStudentShare', shareStudent:'allowStudentShare', share:'allowStudentShare', student_share:'allowStudentShare', 'share-student':'allowStudentShare',
     planScores:'allowPlanScores', planScore:'allowPlanScores', scorePlan:'allowPlanScores',
-    course:'allowCourses', addCourse:'allowCourses', editCourse:'allowCourses', student:'allowStudents',
-    addStudent:'allowStudents', editStudent:'allowStudents', update:'allowEdit', modify:'allowEdit',
-    editData:'allowEdit', remove:'allowDelete', del:'allowDelete', deleteData:'allowDelete',
-    report:'allowReports', overview:'allowReports', dashboard:'allowReports'
+    gradeCriteria:'allowGradeCriteria', grade:'allowGradeCriteria', grades:'allowGradeCriteria',
+    export:'allowExport', excel:'allowExport', xlsx:'allowExport',
+    team:'allowTeam', teacher:'allowTeam', teachers:'allowTeam', courseTeachers:'allowTeam',
+    courses:'allowCourses', course:'allowCourses', addCourse:'allowCourses', editCourse:'allowCourses',
+    students:'allowStudents', student:'allowStudents', addStudent:'allowStudents', editStudent:'allowStudents',
+    edit:'allowEdit', update:'allowEdit', modify:'allowEdit', editData:'allowEdit',
+    delete:'allowDelete', remove:'allowDelete', del:'allowDelete', deleteData:'allowDelete'
   });
   const OLD_THREE_INPUTS = {
     allowAttendance:'plan-sub-allow-attendance',
@@ -22388,7 +22254,16 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   }
   function planAllows(key){
     if(isAdmin()) return true;
-    const field = KEY_TO_FIELD[key] || KEY_TO_FIELD[String(key || '')] || key;
+    const map = {
+      overview: 'allowReports',
+      reports: 'allowReports',
+      scores: 'allowScores',
+      attendance: 'allowAttendance',
+      studentShare: 'allowStudentShare',
+      planScores: 'allowPlanScores'
+    };
+    const rawKey = String(key || '').trim();
+    const field = map[rawKey] || KEY_TO_FIELD[rawKey] || KEY_TO_FIELD[key] || rawKey;
     if(!field) return true;
     const d = window.__currentUserDir || {};
     if(!d.planId && !window.currentUserPlan && !window.activePlan && !(d.teamStatus === 'accepted' || d.teamOwnerUid)) return false;
@@ -22663,6 +22538,18 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
       /^(×|x|X|ปิด|ยกเลิก)$/.test(txt) ||
       /closeModal\(|closeCustomAlert\(|closePlanModal\(/.test(String(el.getAttribute('onclick') || ''));
   }
+  function restoreCourseTabVisual(el){
+    if(!el || !el.classList || !el.classList.contains('course-tab-btn')) return;
+    el.classList.remove('text-slate-400','text-gray-400','text-zinc-400','bg-gray-50','bg-gray-100');
+    if(!el.classList.contains('text-primary')){
+      if(el.classList.contains('mobile-course-tab-btn')){
+        el.classList.add('bg-slate-50','text-slate-700');
+      }else{
+        el.classList.add('text-slate-600','hover:bg-slate-50');
+      }
+    }
+  }
+
   function unlockPermissionElement(el){
     if(!el) return;
     el.classList.remove(
@@ -22680,6 +22567,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
       'disabled'
     );
     if(el.matches && el.matches('button,a,[role="button"]')) el.classList.add('schoolhub-unlocked-action-stable');
+    restoreCourseTabVisual(el);
     el.removeAttribute('aria-disabled');
     el.removeAttribute('disabled');
     if(/ไม่รองรับ|ไม่มีสิทธิ์|อัปเกรด|ดูได้อย่างเดียว/.test(el.getAttribute('title') || '')) el.removeAttribute('title');
@@ -22696,15 +22584,23 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   }
   function classifyAction(el){
     if(!el || isModalCloseButton(el)) return '';
-    const s = String((el.getAttribute('onclick') || '') + ' ' + (el.id || '') + ' ' + (el.dataset && JSON.stringify(el.dataset) || '') + ' ' + (el.textContent || '') + ' ' + (el.className || '')).replace(/\s+/g, ' ');
-    if(/openShareStudentModal|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
-    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|แผนคะแนน|แผนเก็บคะแนน|plan-score/i.test(s)) return 'planScores';
-    if(/openGradeCriteria|เกณฑ์เกรด|grade/i.test(s)) return 'gradeCriteria';
+    const s = [
+      el.getAttribute('onclick') || '',
+      el.getAttribute('data-tab') || '',
+      el.getAttribute('data-right') || '',
+      el.id || '',
+      el.dataset && JSON.stringify(el.dataset) || '',
+      el.textContent || '',
+      el.className || ''
+    ].join(' ').replace(/\s+/g, ' ');
+    if(/overview|ภาพรวม|ภาพรวมคะแนน|รายงาน/i.test(s)) return 'reports';
+    if(/attendance|เช็คชื่อ/i.test(s)) return 'attendance';
+    if(/openShareStudentModal|studentShare|shareStudent|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
+    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|planScores|planScore|แผนคะแนน|แผนเก็บคะแนน|plan-score/i.test(s)) return 'planScores';
+    if(/openGradeCriteria|gradeCriteria|เกณฑ์เกรด|grade/i.test(s)) return 'gradeCriteria';
+    if(/switchCourseTab\(['"]?scores['"]?\)|data-tab["': ]+scores|\bscores\b|\bscore\b|บันทึกคะแนน|^\s*คะแนน\s*$/i.test(s)) return 'scores';
     if(/export|Export|Excel|เอ็ก|ส่งออก|โหลดตาราง/i.test(s)) return 'export';
     if(/CourseTeachers|จัดการครูในรายวิชา|เพิ่มครู|ครูผู้สอนร่วม|team/i.test(s) || el.id === 'course-teachers-manage-btn') return 'team';
-    if(/switchCourseTab\(['"]attendance['"]\)|เช็คชื่อ/i.test(s)) return 'attendance';
-    if(/switchCourseTab\(['"]scores['"]\)|บันทึกคะแนน/i.test(s)) return 'scores';
-    if(/switchCourseTab\(['"]overview['"]\)|ภาพรวม|รายงาน/i.test(s)) return 'reports';
     if(/delete|ลบ/i.test(s)) return 'delete';
     if(/edit|แก้ไข/i.test(s)) return 'edit';
     return '';
@@ -22723,10 +22619,25 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     try{ el.disabled = false; }catch(e){}
     el.style.pointerEvents = 'auto';
   }
-  function refreshRightsUI(){
-    document.querySelectorAll('button,a,[role="button"]').forEach(applyPermissionVisual);
+  function refreshRightsUI(root){
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('button,a,[role="button"],.course-tab-btn').forEach(applyPermissionVisual);
     unlockShareStudentControls();
   }
+  let rightsUIRefreshQueued = false;
+  function scheduleRightsUIRefresh(root){
+    if(rightsUIRefreshQueued) return;
+    rightsUIRefreshQueued = true;
+    const run = function(){
+      rightsUIRefreshQueued = false;
+      refreshRightsUI(root || document);
+    };
+    if(window.requestAnimationFrame) requestAnimationFrame(run);
+    else setTimeout(run, 30);
+  }
+  window.applyPermissionUI = refreshRightsUI;
+  window.schoolhubApplyPermissionUI = refreshRightsUI;
+  window.schoolhubSchedulePermissionUIRefresh = scheduleRightsUIRefresh;
   function wrapGuard(name, key, action){
     const old = window[name];
     if(typeof old !== 'function' || old.__schoolhubStableRightsGuard) return;
@@ -22756,9 +22667,11 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   const oldSwitchCourseTab = window.switchCourseTab;
   if(typeof oldSwitchCourseTab === 'function' && !oldSwitchCourseTab.__schoolhubStableRightsGuard){
     window.switchCourseTab = function(tabId){
-      const map = {attendance:'attendance', scores:'scores', overview:'reports'};
+      const map = {overview:'reports', reports:'reports', scores:'scores', score:'scores', attendance:'attendance'};
       if(map[tabId] && !requireRight(map[tabId], 'เปิดเมนู ' + tabId)) return false;
-      return oldSwitchCourseTab.apply(this, arguments);
+      const result = oldSwitchCourseTab.apply(this, arguments);
+      scheduleRightsUIRefresh(document);
+      return result;
     };
     window.switchCourseTab.__schoolhubStableRightsGuard = true;
   }
@@ -22777,10 +22690,38 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     }
   }, true);
 
+  function wrapRefreshAfter(name){
+    const old = window[name];
+    if(typeof old !== 'function' || old.__schoolhubRightsUIRefreshWrapped) return;
+    window[name] = function(){
+      const result = old.apply(this, arguments);
+      if(result && typeof result.then === 'function'){
+        result.finally(function(){ scheduleRightsUIRefresh(document); });
+      }else{
+        scheduleRightsUIRefresh(document);
+      }
+      return result;
+    };
+    window[name].__schoolhubRightsUIRefreshWrapped = true;
+  }
+  ['loadPublicPlans','loadSchoolHubDataAfterAuth','renderUserPlans','renderLandingPlans','renderCourseGrid','updateGlobalViews','enterCourse','switchView','schoolhubApplyReadonlyUI','schoolhubEnsureCourseTeacherButton'].forEach(wrapRefreshAfter);
+
+  function observeCourseMenus(){
+    if(!window.MutationObserver) return;
+    ['course-context-menu','view-course-detail','header-actions'].forEach(function(id){
+      const el = document.getElementById(id);
+      if(!el || el.__schoolhubRightsUIObserver) return;
+      el.__schoolhubRightsUIObserver = true;
+      new MutationObserver(function(){ scheduleRightsUIRefresh(el); }).observe(el, {childList:true, subtree:true, attributes:true, attributeFilter:['class','style','disabled','aria-disabled','data-permission-allowed','data-tab']});
+    });
+  }
+
   function initOnce(){
     ensureSummaryBox();
     renderRightsPreviewStable();
-    refreshRightsUI();
+    observeCourseMenus();
+    refreshRightsUI(document);
+    setTimeout(function(){ observeCourseMenus(); scheduleRightsUIRefresh(document); }, 120);
   }
   document.addEventListener('DOMContentLoaded', initOnce);
   initOnce();
@@ -22791,8 +22732,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 <!-- SchoolHub PATCH: withdrawn score/grade null guard (เฉพาะคะแนน/เกรดนักเรียนลาออก) -->
 <script id="schoolhub-withdrawn-score-grade-null-guard">
 (function(){
-  if(window.__schoolhubWithdrawnScoreGradeNullGuard) return;
-  window.__schoolhubWithdrawnScoreGradeNullGuard = true;
+  if(window.__schoolhubWithdrawnGradeCanonicalFix) return;
+  window.__schoolhubWithdrawnGradeCanonicalFix = true;
 
   function safeText(value, fallback){
     if(value === null || value === undefined) return fallback || '';
@@ -22811,163 +22752,98 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   window.isWithdrawnStudent = isWithdrawnStudent;
   window.isStudentWithdrawn = isWithdrawnStudent;
 
-  window.renderWithdrawnScoreCell = window.renderWithdrawnScoreCell || function(){ return '<span class="withdrawn-score-cell">ลาออก</span>'; };
-  window.renderWithdrawnGradeCell = window.renderWithdrawnGradeCell || function(){ return '<span class="withdrawn-grade-cell">ลาออก</span>'; };
-
   function esc(v){
     return safeText(v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
   }
-  function cls(st){
-    return safeText((window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room || st.classroom || st.grade))) || '-').trim() || '-';
-  }
-  function courseStudents(courseId){
-    if(!courseId || !window.state) return [];
-    var course = (state.courses || []).find(function(c){ return String(c.id) === String(courseId); }) || {};
-    var rooms = Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
-    var extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
-    var list = (state.students || []).filter(function(st){ return rooms.indexOf(cls(st)) !== -1 || extraIds.indexOf(st.id) !== -1; });
-    list.sort(function(a,b){ return String(cls(a)).localeCompare(String(cls(b)),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'); });
-    var selected = (window.__overviewRoomFilter && window.__overviewRoomFilter[courseId]) || '';
-    if(selected && selected !== 'all') list = list.filter(function(st){ return cls(st) === selected; });
-    return list;
-  }
-  function activeScoreStudents(courseId){
-    try { return (typeof window.getCourseStudents === 'function') ? window.getCourseStudents(courseId) : courseStudents(courseId); }
-    catch(e){ return courseStudents(courseId); }
-  }
-  function sanitizeNullTextIn(root){
-    if(!root) return;
-    try{
-      root.querySelectorAll('input,textarea').forEach(function(el){ if(el.value === 'null' || el.value === 'undefined') el.value = ''; });
-      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      var nodes=[];
-      while(walker.nextNode()) nodes.push(walker.currentNode);
-      nodes.forEach(function(n){
-        if(/^\s*(null|undefined)\s*$/i.test(n.nodeValue || '')) n.nodeValue = '';
-      });
-    }catch(e){}
+
+  function renderWithdrawnScoreCell(){ return '<span class="withdrawn-score-cell">ลาออก</span>'; }
+  function renderWithdrawnGradeCell(){ return '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>'; }
+  window.renderWithdrawnScoreCell = renderWithdrawnScoreCell;
+  window.renderWithdrawnGradeCell = renderWithdrawnGradeCell;
+  window.renderWithdrawnGrade = renderWithdrawnGradeCell;
+
+  const gradeSignature = window.gradeSignature || new WeakMap();
+  window.gradeSignature = gradeSignature;
+
+  function studentById(studentId){
+    return studentId && window.state && (state.students || []).find(function(x){ return String(x.id) === String(studentId); });
   }
 
-  function makeWithdrawnCell(td, isGrade){
-    if(!td) return;
-    td.classList.add(isGrade ? 'grade-cell' : 'score-cell', 'withdrawn');
-    td.classList.remove('text-primary','text-rose-500','text-rose-600','text-blue-500','text-emerald-500','text-amber-500');
-    td.innerHTML = isGrade ? window.renderWithdrawnGradeCell() : window.renderWithdrawnScoreCell();
-    td.removeAttribute('data-missing-score');
-    td.querySelectorAll('[data-missing-score]').forEach(function(el){ el.removeAttribute('data-missing-score'); });
-    td.querySelectorAll('.schoolhub-missing-score-clickable,.schoolhub-mobile-missing-score').forEach(function(el){ el.classList.remove('schoolhub-missing-score-clickable','schoolhub-mobile-missing-score'); });
+  function gradeColor(g){
+    g = String(g == null ? '' : g);
+    if(g === 'ลาออก') return 'withdrawn-grade-cell';
+    if(g === 'มส.' || g === 'F' || g === '0') return 'text-rose-600 schoolhub-grade-ms';
+    if(['4','3.5','A','B+'].indexOf(g) >= 0) return 'text-emerald-500';
+    if(['3','2.5','B','C+','C'].indexOf(g) >= 0) return 'text-blue-500';
+    if(['2','1.5','D+','D'].indexOf(g) >= 0) return 'text-amber-500';
+    if(['1'].indexOf(g) >= 0) return 'text-rose-500';
+    return 'text-slate-400';
   }
+  window.schoolhubGradeColor = gradeColor;
 
-  function applyOverviewWithdrawnGuard(){
-    var cid = window.currentActiveCourseId;
-    var table = document.getElementById('course-summary-table');
-    var students = courseStudents(cid);
-    if(table){
-      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-      rows.forEach(function(tr, i){
-        var st = students[i];
-        if(!st || !isWithdrawnStudent(st)) return;
-        tr.classList.add('schoolhub-withdrawn-row');
-        var cells = Array.prototype.slice.call(tr.children || []);
-        if(cells.length < 3) return;
-        var totalIndex = Math.max(cells.length - 2, 0);
-        var gradeIndex = Math.max(cells.length - 1, 0);
-        var attIndex = cells.findIndex(function(td){ return /^\s*\d+\s*\/\s*\d+\s*\/\s*\d+\s*$/.test(td.textContent || ''); });
-        if(attIndex < 0) attIndex = Math.min(4, totalIndex - 1);
-        for(var c = attIndex + 1; c < totalIndex; c++) makeWithdrawnCell(cells[c], false);
-        makeWithdrawnCell(cells[totalIndex], false);
-        makeWithdrawnCell(cells[gradeIndex], true);
-      });
-      sanitizeNullTextIn(table);
+  function schoolhubRenderGrade(student, total, criteria, courseId, totalMax){
+    if(isWithdrawnStudent(student)){
+      return {grade:'ลาออก', value:'ลาออก', html:renderWithdrawnGradeCell(), color:'withdrawn-grade-cell', isWithdrawn:true, signature:'withdrawn'};
     }
-
-    var box = document.getElementById('course-summary-mobile-cards');
-    if(box){
-      var cards = Array.prototype.slice.call(box.querySelectorAll('.summary-mobile-card'));
-      cards.forEach(function(card, i){
-        var st = students[i];
-        if(!st || !isWithdrawnStudent(st)) return;
-        card.classList.add('schoolhub-withdrawn-row');
-        card.querySelectorAll('.summary-mobile-plan').forEach(function(plan){
-          plan.classList.add('withdrawn');
-          var top = plan.querySelector('.summary-mobile-plan-top');
-          if(top){
-            var spans = top.querySelectorAll('span');
-            if(spans.length > 1) spans[spans.length - 1].textContent = 'ลาออก';
-          }
-          plan.querySelectorAll('[data-missing-score]').forEach(function(el){ el.removeAttribute('data-missing-score'); });
-          plan.querySelectorAll('.schoolhub-missing-score-clickable,.schoolhub-mobile-missing-score').forEach(function(el){ el.classList.remove('schoolhub-missing-score-clickable','schoolhub-mobile-missing-score'); });
-        });
-        var total = card.querySelector('.summary-mobile-total');
-        if(total){
-          total.classList.add('withdrawn');
-          total.innerHTML = '<span>รวม ลาออก</span><span class="withdrawn-grade-cell">เกรด ลาออก</span>';
-        }
-      });
-      sanitizeNullTextIn(box);
+    if(!(Number(totalMax) > 0)){
+      return {grade:'-', value:'-', html:'-', color:'text-slate-300', isWithdrawn:false, signature:'-'};
     }
+    var grade = '-';
+    if(typeof window.getFinalGradeForStudent === 'function'){
+      var courseObj = (window.state && state.courses || []).find(function(c){ return String(c.id) === String(courseId); }) || {id:courseId, gradeCriteria:criteria};
+      grade = window.getFinalGradeForStudent(courseObj, student, total);
+    }
+    if(grade === null || grade === undefined || grade === '') grade = '-';
+    grade = String(grade);
+    return {grade:grade, value:grade, html:esc(grade), color:gradeColor(grade), isWithdrawn:false, signature:'grade:'+grade};
+  }
+  window.schoolhubRenderGrade = schoolhubRenderGrade;
+
+  function schoolhubApplyGradeCell(cell, gradeInfo){
+    if(!cell || !gradeInfo) return;
+    var sig = gradeInfo.signature || (gradeInfo.isWithdrawn ? 'withdrawn' : String(gradeInfo.value));
+    if(gradeSignature.get(cell) === sig) return;
+    gradeSignature.set(cell, sig);
+    cell.className = gradeInfo.isWithdrawn
+      ? 'text-center font-bold bg-amber-50/30 summary-grade-col withdrawn'
+      : 'text-center font-bold '+gradeInfo.color+' bg-amber-50/30 summary-grade-col';
+    cell.innerHTML = gradeInfo.html;
+  }
+  window.schoolhubApplyGradeCell = schoolhubApplyGradeCell;
+
+  var oldFinalGrade = window.schoolhubCalculateFinalGrade;
+  if(typeof oldFinalGrade === 'function' && !oldFinalGrade.__withdrawnCanonicalGuard){
+    window.schoolhubCalculateFinalGrade = function(score, criteria, courseId, studentId, student){
+      var st = student || studentById(studentId);
+      if(isWithdrawnStudent(st)) return 'ลาออก';
+      return oldFinalGrade.apply(this, arguments);
+    };
+    window.schoolhubCalculateFinalGrade.__withdrawnCanonicalGuard = true;
   }
 
-  function applyScoreFormWithdrawnGuard(){
-    var cid = window.currentActiveCourseId;
-    var tbody = document.getElementById('score-list');
-    if(!tbody) return;
-    var students = activeScoreStudents(cid);
-    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-    rows.forEach(function(row, i){
-      var st = students[i];
-      if(!st || !isWithdrawnStudent(st)) return;
-      row.classList.add('schoolhub-withdrawn-row');
-      var target = row.querySelector('.schoolhub-mobile-score-box .flex') || row.querySelector('td:last-child');
-      if(target){
-        target.classList.add('schoolhub-withdrawn-control');
-        target.innerHTML = window.renderWithdrawnScoreCell();
-      }
-    });
-    sanitizeNullTextIn(tbody);
-  }
+  // Disabled legacy calculateGrade withdrawn wrapper; final calculateGrade must remain a simple rule-only helper.
 
   var oldOpenMissing = window.openMissingScorePopup;
   if(typeof oldOpenMissing === 'function' && !oldOpenMissing.__withdrawnGuard){
     window.openMissingScorePopup = function(data){
       var sid = data && data.studentId;
-      var st = sid && window.state && (state.students || []).find(function(x){ return String(x.id) === String(sid); });
-      if(st && isWithdrawnStudent(st)) return false;
+      var st = sid && studentById(sid);
+      if(isWithdrawnStudent(st)) return false;
       return oldOpenMissing.apply(this, arguments);
     };
     window.openMissingScorePopup.__withdrawnGuard = true;
   }
 
-  function hookRenderers(){
-    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__withdrawnNullGuard){
-      var oldOverview = window.renderCourseOverview;
-      window.renderCourseOverview = function(){
-        var r = oldOverview.apply(this, arguments);
-        [0,120,360,950].forEach(function(ms){ setTimeout(applyOverviewWithdrawnGuard, ms); });
-        return r;
-      };
-      window.renderCourseOverview.__withdrawnNullGuard = true;
-    }
-    if(typeof window.renderScoreList === 'function' && !window.renderScoreList.__withdrawnNullGuard){
-      var oldScore = window.renderScoreList;
-      window.renderScoreList = function(){
-        var r = oldScore.apply(this, arguments);
-        [0,80,240].forEach(function(ms){ setTimeout(applyScoreFormWithdrawnGuard, ms); });
-        return r;
-      };
-      window.renderScoreList.__withdrawnNullGuard = true;
-    }
-  }
-
   function patchXlsxAoaToSheet(){
-    if(!window.XLSX || !XLSX.utils || !XLSX.utils.aoa_to_sheet || XLSX.utils.aoa_to_sheet.__withdrawnNullGuard) return;
+    if(!window.XLSX || !XLSX.utils || !XLSX.utils.aoa_to_sheet || XLSX.utils.aoa_to_sheet.__withdrawnCanonicalGuard) return;
     var old = XLSX.utils.aoa_to_sheet;
     XLSX.utils.aoa_to_sheet = function(aoa){
       if(Array.isArray(aoa)) sanitizeExportAoa(aoa);
       return old.apply(this, arguments);
     };
-    XLSX.utils.aoa_to_sheet.__withdrawnNullGuard = true;
+    XLSX.utils.aoa_to_sheet.__withdrawnCanonicalGuard = true;
   }
+
   function sanitizeExportAoa(aoa){
     aoa.forEach(function(row){
       if(Array.isArray(row)) for(var i=0;i<row.length;i++) if(row[i] === null || row[i] === undefined || row[i] === 'null' || row[i] === 'undefined') row[i] = '';
@@ -22989,7 +22865,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
         var sameName = nameIndex >= 0 && safeText(x.name) && safeText(x.name) === safeText(row[nameIndex]);
         return sameCode && sameName;
       }) || (state.students || []).find(function(x){ return nameIndex >= 0 && safeText(x.name) && safeText(x.name) === safeText(row[nameIndex]); });
-      if(!st || !isWithdrawnStudent(st)) continue;
+      if(!isWithdrawnStudent(st)) continue;
       for(var c=firstPlanIndex; c<totalIndex; c++) row[c] = 'ลาออก';
       row[totalIndex] = 'ลาออก';
       row[gradeIndex] = 'ลาออก';
@@ -23000,18 +22876,766 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     var el = e.target && e.target.closest ? e.target.closest('[data-missing-score="1"]') : null;
     if(!el) return;
     var sid = el.dataset && el.dataset.studentId;
-    var st = sid && window.state && (state.students || []).find(function(x){ return String(x.id) === String(sid); });
-    if(st && isWithdrawnStudent(st)){
+    var st = sid && studentById(sid);
+    if(isWithdrawnStudent(st)){
       e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
       return false;
     }
   }, true);
 
-  function runAll(){ hookRenderers(); patchXlsxAoaToSheet(); applyScoreFormWithdrawnGuard(); applyOverviewWithdrawnGuard(); }
-  document.addEventListener('DOMContentLoaded', function(){ runAll(); setTimeout(runAll,500); setTimeout(runAll,1500); });
-  document.addEventListener('click', function(){ setTimeout(runAll,160); setTimeout(applyOverviewWithdrawnGuard,520); }, true);
-  setInterval(function(){ try{ applyScoreFormWithdrawnGuard(); applyOverviewWithdrawnGuard(); patchXlsxAoaToSheet(); }catch(e){} }, 2000);
-  runAll();
+  patchXlsxAoaToSheet();
+})();
+</script>
+
+
+<!-- SchoolHub PATCH: real gradeRules + editable specialRules from attendance -->
+<style id="schoolhub-real-grade-rules-special-style">
+#grade-criteria-modal{z-index:900000!important;}
+#grade-criteria-modal > div{max-width:56rem!important;max-height:92vh!important;display:flex!important;flex-direction:column!important;}
+#grade-criteria-modal form{overflow-y:auto!important;max-height:calc(92vh - 92px)!important;}
+.schoolhub-grade-main-box{border:1px solid #e2e8f0;background:#fff;border-radius:1.25rem;padding:1rem;}
+.schoolhub-grade-main-title{font-weight:1000;color:#0f172a;display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;}
+.schoolhub-grade-format-row{display:grid;grid-template-columns:1fr auto auto;gap:.6rem;align-items:end;margin-bottom:.85rem;}
+.schoolhub-grade-format-row label,.schoolhub-grade-rule-head,.schoolhub-special-rule-head{font-size:.78rem;font-weight:900;color:#475569;}
+.schoolhub-grade-main-box input,.schoolhub-grade-main-box select,#grade-special-rule-modal input{width:100%;border:1px solid #cbd5e1;border-radius:.85rem;padding:.65rem .8rem;background:#f8fafc;outline:none;font-weight:800;color:#0f172a;}
+.schoolhub-grade-main-box input:focus,.schoolhub-grade-main-box select:focus,#grade-special-rule-modal input:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.12);background:#fff;}
+.schoolhub-grade-rule-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(95px,.7fr) 42px;gap:.5rem;align-items:center;margin-bottom:.5rem;}
+.schoolhub-grade-rule-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(95px,.7fr) 42px;gap:.5rem;margin-bottom:.35rem;}
+.schoolhub-special-rule-card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:1rem;padding:.75rem;margin-bottom:.5rem;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.7rem;align-items:center;}
+.schoolhub-special-rule-card b{font-size:.95rem;color:#0f172a;}
+.schoolhub-special-rule-card span{font-size:.75rem;color:#64748b;font-weight:800;}
+.schoolhub-grade-mini-btn{border-radius:.85rem;padding:.65rem .8rem;font-size:.8rem;font-weight:1000;border:1px solid #c7d2fe;background:#eef2ff;color:#4f46e5;white-space:nowrap;}
+.schoolhub-grade-danger-btn{border-radius:.75rem;width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;font-weight:1000;}
+.schoolhub-grade-edit-btn{border-radius:.8rem;padding:.55rem .7rem;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-weight:1000;font-size:.78rem;}
+.schoolhub-grade-empty{border:1px dashed #cbd5e1;border-radius:1rem;padding:1rem;text-align:center;color:#94a3b8;font-weight:900;background:#f8fafc;}
+#grade-special-rule-modal-backdrop{z-index:910000!important;}
+#grade-special-rule-modal{z-index:910010!important;}
+#grade-special-rule-modal.hidden,#grade-special-rule-modal-backdrop.hidden{display:none!important;}
+#grade-special-rule-modal:not(.hidden){display:flex!important;}
+.grade-special-rule-close,
+#grade-special-rule-modal .modal-close,
+#grade-special-rule-modal button[aria-label="ปิด"]{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;font-size:26px!important;line-height:1!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:999px!important;padding:0!important;}
+#grade-special-rule-modal .schoolhub-special-late-help{font-size:.75rem;color:#64748b;margin-top:.25rem;line-height:1.45;font-weight:600;}
+.schoolhub-special-header-row{flex-wrap:wrap;}
+#schoolhub-special-rules-list{min-height:2.75rem;}
+.schoolhub-special-rule-card button{white-space:nowrap;}
+@media(max-width:640px){.schoolhub-grade-format-row{grid-template-columns:1fr!important}.schoolhub-special-rule-card{grid-template-columns:1fr!important}.schoolhub-special-rule-card .flex{justify-content:flex-start!important}.schoolhub-special-header-row{align-items:flex-start!important}.schoolhub-special-header-row .schoolhub-grade-mini-btn{width:100%;justify-content:center;}}
+
+@media(max-width:767px){
+  #grade-criteria-modal{padding:calc(env(safe-area-inset-top) + .6rem) .6rem calc(env(safe-area-inset-bottom) + .6rem)!important;align-items:center!important;}
+  #grade-criteria-modal > div{max-width:100%!important;max-height:calc(100dvh - 1.2rem)!important;border-radius:1.25rem!important;}
+  .schoolhub-grade-format-row{grid-template-columns:1fr!important;}
+  .schoolhub-grade-rule-row,.schoolhub-grade-rule-head{grid-template-columns:1fr 1fr 42px!important;}
+  .schoolhub-special-rule-card{grid-template-columns:1fr!important;}
+}
+</style>
+<script id="schoolhub-real-grade-rules-special-script">
+(function(){
+  if(window.__schoolhubRealGradeRulesSpecialFinal) return;
+  window.__schoolhubRealGradeRulesSpecialFinal = true;
+
+  var NUMBER_RULES = [
+    {label:'4',minScore:80},{label:'3.5',minScore:75},{label:'3',minScore:70},{label:'2.5',minScore:65},
+    {label:'2',minScore:60},{label:'1.5',minScore:55},{label:'1',minScore:50},{label:'0',minScore:0}
+  ];
+  var LETTER_RULES = [
+    {label:'A',minScore:80},{label:'B+',minScore:75},{label:'B',minScore:70},{label:'C+',minScore:65},
+    {label:'C',minScore:60},{label:'D+',minScore:55},{label:'D',minScore:50},{label:'F',minScore:0}
+  ];
+  var CUSTOM_RULES = [{label:'ผ่าน',minScore:50},{label:'ไม่ผ่าน',minScore:0}];
+  var tempGradeRules = [];
+  var tempGradeSpecialRules = [];
+  var editingGradeSpecialRuleIndex = -1;
+  var gradeCriteriaModalLoadedForCourseId = null;
+  var gradeCriteriaDirty = false;
+  function markGradeCriteriaDirty(){ gradeCriteriaDirty = true; }
+  window.markGradeCriteriaDirty = markGradeCriteriaDirty;
+
+  function byId(id){ return document.getElementById(id); }
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function clone(v){ try{return JSON.parse(JSON.stringify(v));}catch(e){return v;} }
+  function num(v,fb){ v = Number(v); return Number.isFinite(v) ? v : (fb || 0); }
+  function getCurrentCourseId(){
+    try{
+      var candidates = [
+        window.currentActiveCourseId,
+        window.currentCourseId,
+        window.selectedCourseId,
+        window.activeCourseId,
+        (typeof currentActiveCourseId !== 'undefined' ? currentActiveCourseId : ''),
+        (typeof currentCourseId !== 'undefined' && typeof currentCourseId !== 'function' ? currentCourseId : ''),
+        (typeof selectedCourseId !== 'undefined' ? selectedCourseId : ''),
+        (typeof activeCourseId !== 'undefined' ? activeCourseId : ''),
+        (window.currentCourse && window.currentCourse.id),
+        (window.selectedCourse && window.selectedCourse.id),
+        (window.activeCourse && window.activeCourse.id)
+      ];
+      ['att-course-select','score-course-select','course-select','course-filter','course-list-select'].forEach(function(id){
+        var el = byId(id);
+        if(el && el.value) candidates.push(el.value);
+      });
+      var courses = (window.state && Array.isArray(state.courses)) ? state.courses : [];
+      function clean(v){
+        if(typeof v === 'function') { try{ v = v(); }catch(e){ v = ''; } }
+        var s = String(v == null ? '' : v).trim();
+        return (s && s !== 'undefined' && s !== 'null') ? s : '';
+      }
+      function exists(id){
+        return !courses.length || courses.some(function(c){ return c && String(c.id) === String(id); });
+      }
+      for(var i=0;i<candidates.length;i++){
+        var cid = clean(candidates[i]);
+        if(cid && exists(cid)) return String(cid);
+      }
+      for(var j=0;j<candidates.length;j++){
+        var fallback = clean(candidates[j]);
+        if(fallback) return String(fallback);
+      }
+      return '';
+    }catch(e){
+      console.error('[GRADE SAVE] getCurrentCourseId failed', e);
+      return '';
+    }
+  }
+  function ensureState(){ if(!window.state) window.state = {}; if(!state.courseGrades) state.courseGrades = {}; if(!Array.isArray(state.courses)) state.courses = []; return state; }
+  function currentCourse(){ var cid = getCurrentCourseId(); ensureState(); return (state.courses || []).find(function(c){return String(c.id) === String(cid);}) || null; }
+  function defaultCriteria(format){
+    format = format || 'number';
+    var rules = format === 'letter' ? LETTER_RULES : (format === 'custom' ? CUSTOM_RULES : NUMBER_RULES);
+    return packCriteria(format, clone(rules), [], rules[rules.length - 1] ? rules[rules.length - 1].label : '0');
+  }
+  function getLowestGradeLabel(criteria){
+    var c = (criteria && criteria.gradeCriteria) ? criteria.gradeCriteria : (criteria || {});
+    var rules = Array.isArray(c.gradeRules) ? c.gradeRules : [];
+    var valid = rules.map(function(r){
+      return {label:String((r && r.label) || '').trim(), minScore:Number(r && r.minScore)};
+    }).filter(function(r){ return r.label && Number.isFinite(r.minScore); })
+      .sort(function(a,b){ return a.minScore - b.minScore; });
+    if(valid.length) return valid[0].label;
+    if(c.defaultGrade) return String(c.defaultGrade);
+    var format = c.gradeFormat || c.gradeType || 'number';
+    if(format === 'letter') return 'F';
+    return (NUMBER_RULES[NUMBER_RULES.length - 1] && NUMBER_RULES[NUMBER_RULES.length - 1].label) || '';
+  }
+  window.getLowestGradeLabel = getLowestGradeLabel;
+  function sanitizeSpecialRulesForSave(rules){
+    return (Array.isArray(rules) ? rules : []).map(function(r, i){
+      return {
+        id:String((r && r.id) || ('special_' + Date.now() + '_' + i)),
+        label:String((r && r.label) || '').trim(),
+        lateCount:Math.max(0, num(r && r.lateCount, 0)),
+        absentCount:Math.max(0, num(r && r.absentCount, 0))
+      };
+    }).filter(function(r){ return r.label && (r.lateCount > 0 || r.absentCount > 0); });
+  }
+  function lateToAbsentCount(lateCount){
+    var nLate = Number(lateCount || 0);
+    if(!Number.isFinite(nLate) || nLate <= 0) return 0;
+    return Math.floor(nLate / 3);
+  }
+  window.lateToAbsentCount = lateToAbsentCount;
+  function oldObjectToRules(raw, format){
+    raw = raw || {};
+    var base = format === 'letter' ? LETTER_RULES : NUMBER_RULES;
+    return base.map(function(r){ return {label:r.label, minScore:num(raw[r.label], r.minScore)}; });
+  }
+  function normalizeSpecialRules(raw){
+    if(raw && Array.isArray(raw.specialRules)){
+      return raw.specialRules.map(function(r,i){
+        return {id:String(r.id || ('special_' + Date.now() + '_' + i)), label:String(r.label || '').trim(), lateCount:Math.max(0,num(r.lateCount,0)), absentCount:Math.max(0,num(r.absentCount,0))};
+      }).filter(function(r){return r.label;});
+    }
+    return [];
+  }
+  function normalizeGradeCriteria(raw){
+    if(raw && raw.gradeCriteria) raw = raw.gradeCriteria;
+    var format = (raw && (raw.gradeFormat || raw.gradeType)) || 'number';
+    if(format !== 'number' && format !== 'letter' && format !== 'custom') format = 'custom';
+    var rules = [];
+    if(raw && Array.isArray(raw.gradeRules)){
+      rules = raw.gradeRules.map(function(r){ return {label:String(r.label || '').trim(), minScore:num(r.minScore,0)}; }).filter(function(r){return r.label && Number.isFinite(Number(r.minScore));});
+    }else if(raw && typeof raw === 'object'){
+      rules = oldObjectToRules(raw, format);
+    }
+    if(!rules.length) rules = clone(format === 'letter' ? LETTER_RULES : (format === 'custom' ? CUSTOM_RULES : NUMBER_RULES));
+    rules.sort(function(a,b){return num(b.minScore,0) - num(a.minScore,0);});
+    var defaultGrade = getLowestGradeLabel({gradeRules:rules, defaultGrade:raw && raw.defaultGrade, gradeFormat:format, gradeType:format});
+    return packCriteria(format, rules, normalizeSpecialRules(raw), defaultGrade);
+  }
+  function packCriteria(format, rules, specialRules, defaultGrade){
+    var obj = {gradeFormat:format || 'number', gradeType:format || 'number', gradeRules:clone(rules || []), specialRules:clone(specialRules || []), defaultGrade:String(defaultGrade || '')};
+    obj.gradeRules.forEach(function(r){ if(r && r.label) obj[String(r.label)] = num(r.minScore,0); });
+    if(!obj.defaultGrade) obj.defaultGrade = getLowestGradeLabel(obj);
+    return obj;
+  }
+  function getCourseGradeCriteria(courseOrId) {
+    ensureState();
+
+    var cid = '';
+    var course = null;
+
+    if (typeof courseOrId === 'string' || typeof courseOrId === 'number') {
+      cid = String(courseOrId);
+    } else if (courseOrId && typeof courseOrId === 'object') {
+      course = courseOrId;
+      cid = String(courseOrId.id || '');
+    }
+
+    if (!cid) cid = getCurrentCourseId();
+
+    if (!course && cid) {
+      course = (state.courses || []).find(function(c){ return String(c.id) === String(cid); }) || null;
+    }
+
+    var raw =
+      (course && course.gradeCriteria) ||
+      (state.courseGrades && state.courseGrades[cid]) ||
+      window.defaultGradeCriteria ||
+      defaultCriteria('number');
+
+    var normalized = normalizeGradeCriteria(raw);
+
+    if (cid) {
+      if (!state.courseGrades) state.courseGrades = {};
+      state.courseGrades[cid] = clone(normalized);
+    }
+
+    if (course) {
+      course.gradeCriteria = clone(normalized);
+    }
+
+    return normalized;
+  }
+  window.getCourseGradeCriteria = getCourseGradeCriteria;
+
+  window.defaultGradeCriteria = normalizeGradeCriteria(window.defaultGradeCriteria || defaultCriteria('number'));
+
+  function isWithdrawn(student){
+    if(typeof window.isWithdrawnStudent === 'function') return window.isWithdrawnStudent(student);
+    if(typeof window.isStudentWithdrawn === 'function') return window.isStudentWithdrawn(student);
+    return !!(student && (student.withdrawn === true || student.isWithdrawn === true || student.status === 'withdrawn' || student.status === 'ลาออก'));
+  }
+  function readAttendanceValue(entry, studentId){
+    if(!entry) return '';
+    if(entry.records && Object.prototype.hasOwnProperty.call(entry.records, studentId)) return entry.records[studentId];
+    if(Object.prototype.hasOwnProperty.call(entry, studentId)) return entry[studentId];
+    return '';
+  }
+  function normalizeAttendanceStatus(v){
+    v = String(v == null ? '' : v).trim().toLowerCase();
+    if(v === 'present' || v === 'มา') return 'present';
+    if(v === 'late' || v === 'สาย') return 'late';
+    if(v === 'absent' || v === 'ขาด') return 'absent';
+    return v;
+  }
+  function getStudentAttendanceCounts(course, studentId){
+    var cid = typeof course === 'string' ? course : (course && course.id) || getCurrentCourseId();
+    var hist = (window.state && state.attendance && state.attendance[cid]) || {};
+    var late = 0, absent = 0, present = 0;
+    Object.keys(hist).forEach(function(date){
+      var status = normalizeAttendanceStatus(readAttendanceValue(hist[date], studentId));
+      if(status === 'late') late++;
+      else if(status === 'absent') absent++;
+      else if(status === 'present') present++;
+    });
+    return {late:late, absent:absent, present:present};
+  }
+  window.getStudentAttendanceCounts = getStudentAttendanceCounts;
+
+  function calculateGradeFromRules(score, criteria) {
+    var n = Number(score);
+    if (!Number.isFinite(n)) return '';
+
+    var c = normalizeGradeCriteria(criteria);
+    var rules = Array.isArray(c.gradeRules) ? c.gradeRules : [];
+
+    var sorted = rules
+      .filter(function(r){ return String((r && r.label) || '').trim() && Number.isFinite(Number(r && r.minScore)); })
+      .map(function(r){ return { label:String(r.label).trim(), minScore:Number(r.minScore) }; })
+      .sort(function(a, b){ return b.minScore - a.minScore; });
+
+    for (var i = 0; i < sorted.length; i++) {
+      if (n >= sorted[i].minScore) return sorted[i].label;
+    }
+
+    return getLowestGradeLabel(c);
+  }
+  window.calculateGradeFromRules = calculateGradeFromRules;
+
+  function calculateSpecialGradeByAttendance(course, student){
+    if(!course || !student) return '';
+    var criteria = getCourseGradeCriteria(course);
+    var rules = Array.isArray(criteria.specialRules) ? criteria.specialRules : [];
+    if(!rules.length) return '';
+    var counts = getStudentAttendanceCounts(course, student.id);
+    var rawLate = counts.late || 0;
+    var rawAbsent = counts.absent || 0;
+    var convertedAbsentFromLate = lateToAbsentCount(rawLate);
+    var totalAbsent = rawAbsent + convertedAbsentFromLate;
+    var hits = [];
+    for(var i=0;i<rules.length;i++){
+      var rule = rules[i] || {};
+      var label = String(rule.label || '').trim();
+      var lateLimit = Math.max(0, num(rule.lateCount,0));
+      var absentLimit = Math.max(0, num(rule.absentCount,0));
+      if(!label) continue;
+      var lateHit = lateLimit > 0 && rawLate >= lateLimit;
+      var absentHit = absentLimit > 0 && totalAbsent >= absentLimit;
+      if(lateHit || absentHit){
+        hits.push({label:label, order:i, hitScore:Math.max(lateHit ? rawLate : 0, absentHit ? totalAbsent : 0)});
+      }
+    }
+    if(!hits.length) return '';
+    hits.sort(function(a,b){ return b.hitScore - a.hitScore || a.order - b.order; });
+    return hits[0].label;
+  }
+  window.calculateSpecialGradeByAttendance = calculateSpecialGradeByAttendance;
+
+  function computeTotalScoreForStudent(courseId, studentId){
+    var plans = ((state.coursePlans && state.coursePlans[courseId]) || []).sort(function(a,b){return num(a.week,0)-num(b.week,0);});
+    var courseScores = (state.scores || []).filter(function(s){return String(s.courseId) === String(courseId);});
+    var total = 0, totalMax = 0;
+    plans.forEach(function(p){
+      if(Number(p.maxScore) === 0) return;
+      totalMax = window.addScoreToTotal ? window.addScoreToTotal(totalMax, p.maxScore, 2) : (totalMax + num(p.maxScore,0));
+      var task = courseScores.find(function(ts){return ts.week == p.week && ts.title === p.title;});
+      var raw = task && task.records ? task.records[studentId] : null;
+      total = window.addScoreToTotal ? window.addScoreToTotal(total, raw, 2) : (total + num(raw,0));
+    });
+    total = window.normalizeScoreNumber ? window.normalizeScoreNumber(total,2) : Number(total.toFixed(2));
+    return {total:total,totalMax:totalMax};
+  }
+  function getFinalGradeForStudent(course, student, totalScore) {
+    if (isWithdrawn(student)) return 'ลาออก';
+
+    if (!course) course = { id:getCurrentCourseId() };
+    var criteria = getCourseGradeCriteria(course);
+
+    var special = calculateSpecialGradeByAttendance(course, student);
+    if (special) return special;
+
+    var score = totalScore;
+
+    if (!Number.isFinite(Number(score))) {
+      var cid = (course && course.id) || getCurrentCourseId();
+      score = computeTotalScoreForStudent(cid, student && student.id).total;
+    }
+
+    return calculateGradeFromRules(score, criteria) || getLowestGradeLabel(criteria) || '';
+  }
+  window.getFinalGradeForStudent = getFinalGradeForStudent;
+
+  window.calculateGrade = function(score, criteria) {
+    return calculateGradeFromRules(score, normalizeGradeCriteria(criteria));
+  };
+
+  function gradeColor(g, criteria){
+    g = String(g == null ? '' : g);
+    if(g === 'ลาออก') return 'withdrawn-grade-cell';
+    var special = (normalizeGradeCriteria(criteria || window.defaultGradeCriteria).specialRules || []).some(function(r){return String(r.label || '') === g;});
+    if(special || g === 'มส.' || g === 'ขร.' || /ไม่มีสิทธิ์|มส|ขร/.test(g) || g === 'F' || g === '0') return 'text-rose-600 schoolhub-grade-ms';
+    if(['4','3.5','A','B+'].indexOf(g) >= 0) return 'text-emerald-500';
+    if(['3','2.5','B','C+','C'].indexOf(g) >= 0) return 'text-blue-500';
+    if(['2','1.5','D+','D'].indexOf(g) >= 0) return 'text-amber-500';
+    if(['1'].indexOf(g) >= 0) return 'text-rose-500';
+    return 'text-slate-600';
+  }
+  window.schoolhubGradeColor = gradeColor;
+
+  window.schoolhubCalculateFinalGrade = function(score, criteria, courseId, studentId, student){
+    var st = student || (studentId && window.state && (state.students || []).find(function(x){return String(x.id) === String(studentId);}));
+    var course = (state.courses || []).find(function(c){return String(c.id) === String(courseId);}) || {id:courseId, gradeCriteria:criteria};
+    return getFinalGradeForStudent(course, st, score);
+  };
+
+  window.schoolhubRenderGrade = function(student, total, criteria, courseId, totalMax){
+    if(isWithdrawn(student)){
+      var withdrawnHtml = window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>';
+      return {grade:'ลาออก', value:'ลาออก', html:withdrawnHtml, color:'withdrawn-grade-cell', isWithdrawn:true, signature:'withdrawn'};
+    }
+    if(!(Number(totalMax) > 0)) return {grade:'-', value:'-', html:'-', color:'text-slate-300', isWithdrawn:false, signature:'-'};
+    var course = (state.courses || []).find(function(c){return String(c.id) === String(courseId);}) || {id:courseId, gradeCriteria:criteria};
+    var grade = getFinalGradeForStudent(course, student, total);
+    if(grade === null || grade === undefined || grade === '') grade = '-';
+    grade = String(grade);
+    return {grade:grade, value:grade, html:esc(grade), color:gradeColor(grade, getCourseGradeCriteria(course)), isWithdrawn:false, signature:'grade:'+grade};
+  };
+
+  function canOpenGradeCriteria(){
+    try{ if(window.isAdmin || (window.currentUser && currentUser.uid === 'admin-bypass')) return true; }catch(e){}
+    var course = currentCourse();
+    try{ if(typeof window.schoolhubIsReadonlySharedCourse === 'function' && window.schoolhubIsReadonlySharedCourse(course)){
+      if(window.showCustomAlert) window.showCustomAlert('ดูได้อย่างเดียว','คุณมีสิทธิ์ดูรายวิชานี้เท่านั้น ไม่สามารถตั้งค่าเกณฑ์เกรดได้',true); else alert('ดูได้อย่างเดียว\nคุณมีสิทธิ์ดูรายวิชานี้เท่านั้น');
+      return false;
+    }}catch(e){}
+    var ok = true;
+    try{ if(typeof window.schoolhubExpandedPlanAllows === 'function') ok = !!window.schoolhubExpandedPlanAllows('gradeCriteria'); }catch(e){}
+    try{ if(ok && typeof window.currentPlanAllows === 'function') ok = !!window.currentPlanAllows('gradeCriteria'); }catch(e){}
+    if(!ok){
+      if(window.showCustomAlert) window.showCustomAlert('แผนนี้ไม่รองรับการตั้งค่าเกณฑ์เกรด','กรุณาอัปเกรดแผนเพื่อตั้งค่าเกณฑ์เกรด',true); else alert('แผนนี้ไม่รองรับการตั้งค่าเกณฑ์เกรด');
+      return false;
+    }
+    return true;
+  }
+
+  function ensureSpecialModal(){
+    if(!byId('grade-special-rule-modal')){
+      document.body.insertAdjacentHTML('beforeend', '<div id="grade-special-rule-modal-backdrop" class="hidden fixed inset-0 bg-black/40"></div><div id="grade-special-rule-modal" class="hidden fixed inset-0 flex items-center justify-center p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5"><div class="flex items-center justify-between mb-4"><h3 id="grade-special-rule-modal-title" class="font-bold text-lg text-slate-800">เพิ่มเกณฑ์พิเศษ</h3><button type="button" onclick="closeGradeSpecialRuleModal()" aria-label="ปิด" class="grade-special-rule-close modal-close w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-black hover:bg-slate-200 flex items-center justify-center">×</button></div><div class="space-y-3"><div><label class="block text-sm font-black text-slate-600 mb-1">ผลลัพธ์ที่จะแสดง</label><input id="grade-special-label" type="text" placeholder="เช่น มส., ขร., ไม่มีสิทธิ์สอบ"></div><div><label class="block text-sm font-black text-slate-600 mb-1">สายตั้งแต่กี่ครั้ง</label><input id="grade-special-late-count" type="number" min="0" inputmode="numeric" placeholder="0"><p class="schoolhub-special-late-help">สายกี่ครั้ง = ขาด 1 ครั้ง และจะนำไปคำนวณเป็นขาดด้วย</p></div><div><label class="block text-sm font-black text-slate-600 mb-1">ขาดตั้งแต่กี่ครั้ง</label><input id="grade-special-absent-count" type="number" min="0" inputmode="numeric" placeholder="0"></div><div class="flex gap-3 pt-2"><button type="button" onclick="closeGradeSpecialRuleModal()" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="button" onclick="saveGradeSpecialRule()" class="w-1/2 py-3 bg-primary text-white rounded-xl font-bold">บันทึก</button></div></div></div></div>');
+    }
+    var bd = byId('grade-special-rule-modal-backdrop');
+    if(bd && !bd.__schoolhubSpecialBackdropBound){
+      bd.__schoolhubSpecialBackdropBound = true;
+      bd.addEventListener('click', function(e){ e.preventDefault(); closeGradeSpecialRuleModal(); });
+    }
+  }
+
+  function bindGradeCriteriaForm(form){
+    if(!form) return;
+    form.removeAttribute('onsubmit');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    if(submitBtn) submitBtn.setAttribute('type','submit');
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      return window.handleGradeCriteriaSubmit(e);
+    };
+    if(!form.__schoolhubGradeCriteriaDirtyBound){
+      form.__schoolhubGradeCriteriaDirtyBound = true;
+      form.addEventListener('input', function(e){
+        if(e && e.target && e.target.closest && e.target.closest('#schoolhub-grade-extra-rules, #schoolhub-special-rules-list')) markGradeCriteriaDirty();
+      }, true);
+      form.addEventListener('change', function(e){
+        if(e && e.target && e.target.closest && e.target.closest('#schoolhub-grade-extra-rules, #schoolhub-special-rules-list')) markGradeCriteriaDirty();
+      }, true);
+    }
+  }
+
+  function bindGradeTypeSelect(){
+    var sel = byId('grade-type-select');
+    if(sel && !sel.__schoolhubGradePresetBound){
+      sel.__schoolhubGradePresetBound = true;
+      sel.addEventListener('change', function(){ applyGradePresetFromButton(); });
+    }
+  }
+
+  function ensureMainGradeModalUI(){
+    ensureSpecialModal();
+    var modal = byId('grade-criteria-modal');
+    var form = modal && modal.querySelector('form');
+    var title = modal && modal.querySelector('h3');
+    if(title) title.innerHTML = '<i class="fas fa-medal text-amber-500 mr-2"></i> ตั้งค่าเกณฑ์เกรด';
+    if(!form) return;
+    if(form.dataset.schoolhubRealGradeRulesUi === '1'){
+      bindGradeCriteriaForm(form);
+      bindGradeTypeSelect();
+      return;
+    }
+    form.dataset.schoolhubRealGradeRulesUi = '1';
+    form.innerHTML = '<div id="schoolhub-grade-extra-rules" class="schoolhub-grade-main-box"><div class="schoolhub-grade-main-title"><i class="fas fa-sliders text-primary"></i> เกณฑ์แปลงคะแนนเป็นเกรด</div><div class="schoolhub-grade-format-row"><div><label class="block mb-1">รูปแบบเกรด</label><select id="grade-type-select"><option value="number">รูปแบบตัวเลข (4, 3.5)</option><option value="letter">รูปแบบตัวอักษร (A, B+)</option><option value="custom">รูปแบบกำหนดเอง</option></select></div><button type="button" class="schoolhub-grade-mini-btn" onclick="applyGradePresetFromButton()"><i class="fas fa-wand-magic-sparkles mr-1"></i> ใช้รูปแบบนี้</button><button type="button" class="schoolhub-grade-mini-btn" onclick="addGradeRuleRow()"><i class="fas fa-plus mr-1"></i> เพิ่มเกรด</button></div><div class="schoolhub-grade-rule-head"><div>ชื่อเกรด / ผลลัพธ์</div><div>คะแนนขั้นต่ำ</div><div></div></div><div id="schoolhub-grade-rules-list"></div><div class="mt-3"><label class="block text-xs font-black text-slate-500 mb-1">ค่าเริ่มต้นถ้าคะแนนต่ำกว่าเกณฑ์ทั้งหมด</label><input id="schoolhub-default-grade" type="text" placeholder="เช่น 0 หรือ F"></div><div id="schoolhub-grade-legacy-inputs" class="hidden"><input id="grade-crit-4"><input id="grade-crit-35"><input id="grade-crit-3"><input id="grade-crit-25"><input id="grade-crit-2"><input id="grade-crit-15"><input id="grade-crit-1"><input id="grade-crit-0"></div></div><div class="schoolhub-grade-main-box mt-4"><div class="flex items-center justify-between gap-3 mb-3"><div class="schoolhub-grade-main-title mb-0"><i class="fas fa-user-clock text-rose-500"></i> เกณฑ์พิเศษจากการเข้าเรียน</div><button type="button" onclick="startAddGradeSpecialRule()" class="schoolhub-grade-mini-btn"><i class="fas fa-plus mr-1"></i> เพิ่มเกณฑ์พิเศษ</button></div><div id="schoolhub-special-rules-list"></div><p class="text-xs text-slate-400 font-semibold mt-2">ถ้าจำนวนสายหรือขาดถึงเกณฑ์อย่างใดอย่างหนึ่ง ระบบจะแสดงผลลัพธ์พิเศษก่อนคำนวณเกรดจากคะแนน</p></div><div class="pt-4 flex gap-3"><button type="button" onclick="closeModal(\'grade-criteria-modal\')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold shadow-lg shadow-indigo-200">บันทึก</button></div>';
+    bindGradeCriteriaForm(form);
+    bindGradeTypeSelect();
+  }
+
+  function syncLegacyInputs(){
+    var map = {'4':'grade-crit-4','3.5':'grade-crit-35','3':'grade-crit-3','2.5':'grade-crit-25','2':'grade-crit-2','1.5':'grade-crit-15','1':'grade-crit-1','0':'grade-crit-0','A':'grade-crit-4','B+':'grade-crit-35','B':'grade-crit-3','C+':'grade-crit-25','C':'grade-crit-2','D+':'grade-crit-15','D':'grade-crit-1','F':'grade-crit-0'};
+    Object.keys(map).forEach(function(label){
+      var r = tempGradeRules.find(function(x){return String(x.label) === label;});
+      var el = byId(map[label]);
+      if(el && r) el.value = r.minScore;
+    });
+  }
+  function renderGradeRulesList(){
+    var box = byId('schoolhub-grade-rules-list'); if(!box) return;
+    if(!tempGradeRules.length){ box.innerHTML = '<div class="schoolhub-grade-empty">ยังไม่มีเกณฑ์เกรด</div>'; return; }
+    box.innerHTML = tempGradeRules.map(function(r,i){ return '<div class="schoolhub-grade-rule-row" data-grade-rule-row="'+i+'"><input class="grade-rule-label" type="text" value="'+esc(r.label)+'" placeholder="เช่น 4, A, ผ่าน"><input class="grade-rule-min" type="number" inputmode="decimal" value="'+esc(r.minScore)+'" placeholder="คะแนนขั้นต่ำ"><button type="button" class="schoolhub-grade-danger-btn" onclick="deleteGradeRuleRow('+i+')"><i class="fas fa-trash"></i></button></div>'; }).join('');
+    syncLegacyInputs();
+  }
+  window.renderGradeRulesList = renderGradeRulesList;
+  window.addGradeRuleRow = function(){ tempGradeRules.push({label:'',minScore:0}); markGradeCriteriaDirty(); renderGradeRulesList(); };
+  window.deleteGradeRuleRow = function(index){ tempGradeRules.splice(index,1); markGradeCriteriaDirty(); renderGradeRulesList(); };
+  window.applyGradePresetFromButton = function(){
+    var format = (byId('grade-type-select') || {}).value || 'number';
+    if(format === 'number') tempGradeRules = clone(NUMBER_RULES);
+    else if(format === 'letter') tempGradeRules = clone(LETTER_RULES);
+    else if(!tempGradeRules.length) tempGradeRules = clone(CUSTOM_RULES);
+    var def = byId('schoolhub-default-grade'); if(def) def.value = tempGradeRules[tempGradeRules.length - 1] ? tempGradeRules[tempGradeRules.length - 1].label : '';
+    markGradeCriteriaDirty();
+    renderGradeRulesList();
+  };
+  function renderGradeSpecialRulesList(){
+    var box = byId('schoolhub-special-rules-list'); if(!box) return;
+    if(!tempGradeSpecialRules.length){ box.innerHTML = '<div class="schoolhub-grade-empty">ยังไม่มีเกณฑ์พิเศษ</div>'; return; }
+    box.innerHTML = tempGradeSpecialRules.map(function(r,i){
+      return '<div class="schoolhub-special-rule-card"><div><b>'+esc(r.label)+'</b><div><span>สายตั้งแต่ '+esc(r.lateCount || 0)+' ครั้ง</span> <span>• ขาดตั้งแต่ '+esc(r.absentCount || 0)+' ครั้ง</span></div></div><div class="flex gap-2 justify-end"><button type="button" class="schoolhub-grade-edit-btn" onclick="editGradeSpecialRule('+i+')"><i class="fas fa-pen mr-1"></i>แก้ไข</button><button type="button" class="schoolhub-grade-danger-btn" onclick="deleteGradeSpecialRule('+i+')"><i class="fas fa-trash mr-1"></i>ลบ</button></div></div>';
+    }).join('');
+  }
+  window.renderGradeSpecialRulesList = renderGradeSpecialRulesList;
+  window.startAddGradeSpecialRule = function(){
+    editingGradeSpecialRuleIndex = -1;
+    window.openGradeSpecialRuleModal();
+    return false;
+  };
+  window.openGradeSpecialRuleModal = function(rule){
+    ensureSpecialModal();
+    var isEdit = editingGradeSpecialRuleIndex >= 0 && tempGradeSpecialRules[editingGradeSpecialRuleIndex];
+    if(rule && typeof rule === 'object') isEdit = true;
+    if(!rule && editingGradeSpecialRuleIndex < 0) isEdit = false;
+    var data = rule || (isEdit ? tempGradeSpecialRules[editingGradeSpecialRuleIndex] : null) || {};
+    var title = byId('grade-special-rule-modal-title'); if(title) title.textContent = isEdit ? 'แก้ไขเกณฑ์พิเศษ' : 'เพิ่มเกณฑ์พิเศษ';
+    var label = byId('grade-special-label'); if(label) label.value = data.label || '';
+    var late = byId('grade-special-late-count'); if(late) late.value = data.lateCount || 0;
+    var absent = byId('grade-special-absent-count'); if(absent) absent.value = data.absentCount || 0;
+    byId('grade-special-rule-modal-backdrop').classList.remove('hidden');
+    byId('grade-special-rule-modal').classList.remove('hidden');
+    setTimeout(function(){ if(label) label.focus(); },30);
+  };
+  window.closeGradeSpecialRuleModal = function(){
+    if(byId('grade-special-rule-modal-backdrop')) byId('grade-special-rule-modal-backdrop').classList.add('hidden');
+    if(byId('grade-special-rule-modal')) byId('grade-special-rule-modal').classList.add('hidden');
+    editingGradeSpecialRuleIndex = -1;
+  };
+  window.editGradeSpecialRule = function(index){ editingGradeSpecialRuleIndex = index; window.openGradeSpecialRuleModal(tempGradeSpecialRules[index]); };
+  window.deleteGradeSpecialRule = function(index){ tempGradeSpecialRules.splice(index,1); markGradeCriteriaDirty(); renderGradeSpecialRulesList(); };
+  window.saveGradeSpecialRule = function(){
+    var label = String((byId('grade-special-label') || {}).value || '').trim();
+    var lateCount = Math.max(0, num((byId('grade-special-late-count') || {}).value,0));
+    var absentCount = Math.max(0, num((byId('grade-special-absent-count') || {}).value,0));
+    if(!label){ if(window.showCustomAlert) window.showCustomAlert('กรอกผลลัพธ์ก่อน','เช่น มส., ขร., ไม่มีสิทธิ์สอบ',true); else alert('กรอกผลลัพธ์ก่อน'); return; }
+    if(!(lateCount > 0 || absentCount > 0)){ if(window.showCustomAlert) window.showCustomAlert('กรอกจำนวนสายหรือขาด','ต้องมีอย่างน้อย 1 เงื่อนไขที่มากกว่า 0',true); else alert('กรอกจำนวนสายหรือขาด'); return; }
+    var old = editingGradeSpecialRuleIndex >= 0 ? tempGradeSpecialRules[editingGradeSpecialRuleIndex] : null;
+    var rule = {id:(old && old.id) || ('special_' + Date.now()), label:label, lateCount:lateCount, absentCount:absentCount};
+    if(editingGradeSpecialRuleIndex >= 0) tempGradeSpecialRules[editingGradeSpecialRuleIndex] = rule;
+    else tempGradeSpecialRules.push(rule);
+    markGradeCriteriaDirty();
+    renderGradeSpecialRulesList();
+    window.closeGradeSpecialRuleModal();
+  };
+
+  function loadCriteriaToModal(){
+    ensureMainGradeModalUI();
+    var cid = getCurrentCourseId();
+    var course = currentCourse();
+    var criteria = getCourseGradeCriteria(course || cid);
+    tempGradeRules = clone(criteria.gradeRules || []);
+    tempGradeSpecialRules = sanitizeSpecialRulesForSave(criteria.specialRules || []);
+    var sel = byId('grade-type-select'); if(sel) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
+    var def = byId('schoolhub-default-grade'); if(def) def.value = criteria.defaultGrade || (tempGradeRules[tempGradeRules.length - 1] ? tempGradeRules[tempGradeRules.length - 1].label : '');
+    renderGradeRulesList();
+    renderGradeSpecialRulesList();
+    gradeCriteriaModalLoadedForCourseId = cid;
+    gradeCriteriaDirty = false;
+  }
+
+  function loadCriteriaToModalOnce(){
+    var cid = getCurrentCourseId();
+    var modal = byId('grade-criteria-modal');
+    var modalIsOpen = !!(modal && !modal.classList.contains('hidden'));
+    if(modalIsOpen && gradeCriteriaModalLoadedForCourseId === cid && gradeCriteriaDirty) return;
+    loadCriteriaToModal();
+  }
+  window.loadCriteriaToModalOnce = loadCriteriaToModalOnce;
+
+  window.openGradeCriteriaModalForCurrentCourse = function(){
+    if(!getCurrentCourseId()){
+      if(window.showCustomAlert) window.showCustomAlert('เปิดไม่ได้','ไม่พบรายวิชาปัจจุบัน กรุณาเลือกวิชาก่อนตั้งค่าเกณฑ์เกรด',true); else alert('ไม่พบรายวิชาปัจจุบัน');
+      console.error('[GRADE SAVE] missing current course id when opening modal');
+      return false;
+    }
+    if(!canOpenGradeCriteria()) return false;
+    loadCriteriaToModalOnce();
+    if(typeof window.openModal === 'function') window.openModal('grade-criteria-modal');
+    else byId('grade-criteria-modal').classList.remove('hidden');
+    return false;
+  };
+  window.openGradeCriteria = window.openGradeCriteriaModalForCurrentCourse;
+
+  function readGradeRulesFromDom(){
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#schoolhub-grade-rules-list [data-grade-rule-row]'));
+    return rows.map(function(row){
+      return {label:String((row.querySelector('.grade-rule-label') || {}).value || '').trim(), minScore:num((row.querySelector('.grade-rule-min') || {}).value,NaN)};
+    }).filter(function(r){return r.label && Number.isFinite(Number(r.minScore));});
+  }
+
+  window.handleGradeCriteriaSubmit = async function(e){
+    console.log('[GRADE SAVE] clicked');
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+
+    var cid = getCurrentCourseId();
+    console.log('[GRADE SAVE] cid', cid);
+    if(!cid){
+      if(window.showCustomAlert) window.showCustomAlert('บันทึกไม่ได้','ไม่พบรายวิชาปัจจุบัน กรุณาเลือกวิชาก่อนบันทึก',true); else alert('บันทึกไม่ได้\nไม่พบรายวิชาปัจจุบัน กรุณาเลือกวิชาก่อนบันทึก');
+      console.error('[GRADE SAVE] missing current course id');
+      return false;
+    }
+
+    ensureState();
+    var course = (state.courses || []).find(function(c){return String(c.id) === String(cid);}) || null;
+    if(!course){
+      if(window.showCustomAlert) window.showCustomAlert('บันทึกไม่ได้','ไม่พบข้อมูลรายวิชาปัจจุบัน กรุณาเลือกวิชาก่อนบันทึก',true); else alert('บันทึกไม่ได้\nไม่พบข้อมูลรายวิชาปัจจุบัน กรุณาเลือกวิชาก่อนบันทึก');
+      console.error('[GRADE SAVE] missing course', cid);
+      return false;
+    }
+
+    var rules = readGradeRulesFromDom();
+    if(!rules.length){
+      if(window.showCustomAlert) window.showCustomAlert('ยังไม่มีเกณฑ์เกรด','กรุณาเพิ่มเกณฑ์แปลงคะแนนเป็นเกรดอย่างน้อย 1 รายการ',true); else alert('ยังไม่มีเกณฑ์เกรด');
+      console.error('[GRADE SAVE] no grade rules');
+      return false;
+    }
+
+    var format = (byId('grade-type-select') || {}).value || 'custom';
+    rules.sort(function(a,b){return num(b.minScore,0)-num(a.minScore,0);});
+    var specialRulesToSave = sanitizeSpecialRulesForSave(tempGradeSpecialRules);
+    var defaultInput = String((byId('schoolhub-default-grade') || {}).value || '').trim();
+    var defaultGrade = defaultInput || getLowestGradeLabel({gradeRules:rules, gradeFormat:format, gradeType:format});
+    var criteria = packCriteria(format, rules, specialRulesToSave, defaultGrade);
+    criteria.updatedAt = new Date().toISOString();
+
+    console.log('[GRADE SAVE] criteria before save', criteria);
+    console.log('[GRADE SAVE] course before save', course);
+
+    state.courseGrades[cid] = clone(criteria);
+    course.gradeCriteria = clone(criteria);
+    if(window.currentCourse && String(window.currentCourse.id) === String(cid)) window.currentCourse.gradeCriteria = clone(criteria);
+
+    tempGradeSpecialRules = clone(criteria.specialRules || []);
+    tempGradeRules = clone(criteria.gradeRules || []);
+
+    try{
+      var saved = true;
+      if(typeof window.saveStateToDB === 'function') saved = await window.saveStateToDB();
+      else if(typeof saveStateToDB === 'function') saved = await saveStateToDB();
+      else throw new Error('saveStateToDB is not available');
+      if(saved === false) throw new Error('saveStateToDB returned false');
+      console.log('[GRADE SAVE] firebase success');
+
+      window.__gradeCache = {};
+      window.__finalGradeCache = {};
+      gradeCriteriaDirty = false;
+      gradeCriteriaModalLoadedForCourseId = cid;
+
+      if(typeof window.closeModal === 'function') window.closeModal('grade-criteria-modal');
+      else if(byId('grade-criteria-modal')) byId('grade-criteria-modal').classList.add('hidden');
+
+      ['renderCourseOverview','renderScoreTable','renderMobileScoreCards','renderStudentCards','renderScoreList','renderStudentsMaster','updateGlobalViews'].forEach(function(name){
+        try{ if(typeof window[name] === 'function') window[name](); }catch(renderErr){ console.warn('[GRADE SAVE] render failed', name, renderErr); }
+      });
+      try{ refreshFinalGradeCellsInCurrentCourse(); }catch(refreshErr){ console.warn('[GRADE SAVE] refresh final grade cells failed', refreshErr); }
+
+      if(window.showCustomAlert) window.showCustomAlert('สำเร็จ','บันทึกเกณฑ์เกรดเรียบร้อยแล้ว');
+    }catch(err){
+      console.error('[GRADE SAVE] firebase failed', err);
+      if(window.showCustomAlert) window.showCustomAlert('บันทึกไม่สำเร็จ','ไม่สามารถบันทึกลง Firebase ได้ กรุณาลองใหม่',true); else alert('บันทึกไม่สำเร็จ');
+    }
+    return false;
+  };
+  window.handleGradeCriteriaSubmit.__schoolhubCanonicalGradeCriteriaSubmit = true;
+  window.saveGradeCriteria = window.handleGradeCriteriaSubmit;
+  window.savePlusCriteria = window.handleGradeCriteriaSubmit;
+  window.saveEnhancedCriteria = window.handleGradeCriteriaSubmit;
+
+  function refreshFinalGradeCellsInCurrentCourse(){
+    var cid = getCurrentCourseId();
+    if(!cid || !window.state) return;
+    var course = currentCourse() || {id:cid};
+    var students = [];
+    try{ students = (typeof window.getCourseStudents === 'function') ? window.getCourseStudents(cid) : []; }catch(e){ students = []; }
+    var table = byId('course-summary-table');
+    if(!table || !students.length) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    rows.forEach(function(row, index){
+      var student = students[index];
+      if(!student) return;
+      var gradeCell = row.querySelector('td.summary-grade-col');
+      if(!gradeCell) return;
+      var scoreInfo = computeTotalScoreForStudent(cid, student.id);
+      var totalMax = Number(scoreInfo.totalMax || 0);
+      var grade = totalMax > 0 ? getFinalGradeForStudent(course, student, scoreInfo.total) : '-';
+      if(!grade) grade = '-';
+      gradeCell.className = 'text-center font-bold '+gradeColor(grade, getCourseGradeCriteria(course))+' bg-amber-50/30 summary-grade-col';
+      gradeCell.textContent = String(grade);
+    });
+    var mobileCards = Array.prototype.slice.call(document.querySelectorAll('#course-summary-mobile-cards .summary-mobile-card'));
+    mobileCards.forEach(function(card, index){
+      var student = students[index];
+      if(!student) return;
+      var scoreInfo = computeTotalScoreForStudent(cid, student.id);
+      var totalMax = Number(scoreInfo.totalMax || 0);
+      var grade = totalMax > 0 ? getFinalGradeForStudent(course, student, scoreInfo.total) : '-';
+      var totalLine = card.querySelector('.summary-mobile-total');
+      if(!totalLine) return;
+      var spans = totalLine.querySelectorAll('span');
+      if(spans && spans[1]){
+        spans[1].className = gradeColor(grade, getCourseGradeCriteria(course));
+        spans[1].textContent = 'เกรด ' + String(grade || '-');
+      }
+    });
+  }
+  window.refreshFinalGradeCellsInCurrentCourse = refreshFinalGradeCellsInCurrentCourse;
+
+  function wrapRenderForFinalGrades(name){
+    var fn = window[name];
+    if(typeof fn !== 'function' || fn.__schoolhubFinalGradeRulesVisibleUiWrapped) return;
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      try{ refreshFinalGradeCellsInCurrentCourse(); }catch(e){}
+      return result;
+    };
+    wrapped.__schoolhubFinalGradeRulesVisibleUiWrapped = true;
+    window[name] = wrapped;
+  }
+  wrapRenderForFinalGrades('renderCourseOverview');
+  wrapRenderForFinalGrades('renderScoreList');
+  wrapRenderForFinalGrades('renderScoreTable');
+  wrapRenderForFinalGrades('renderMobileScoreCards');
+  wrapRenderForFinalGrades('renderStudentCards');
+
+  function bindGradeCriteriaModalObserver(){
+    /* ปิด observer ตัวนี้เพื่อไม่ให้ loadCriteriaToModal() โหลดค่าเก่าทับค่าที่ผู้ใช้กำลังแก้
+       การโหลดค่าเข้า modal จะทำผ่าน openGradeCriteriaModalForCurrentCourse() / loadCriteriaToModalOnce() เท่านั้น */
+  }
+
+  function findStudentByExportRow(row, header){
+    var codeIndex = header.findIndex(function(h){return /รหัส/.test(String(h || ''));});
+    var nameIndex = header.findIndex(function(h){return /ชื่อ/.test(String(h || ''));});
+    var code = codeIndex >= 0 ? String(row[codeIndex] || '').trim() : '';
+    var name = nameIndex >= 0 ? String(row[nameIndex] || '').trim() : '';
+    return (state.students || []).find(function(st){return code && String(st.code || '').trim() === code;}) || (state.students || []).find(function(st){return name && String(st.name || '').trim() === name;}) || null;
+  }
+  function sanitizeExportAoaWithFinalGrades(aoa){
+    if(!Array.isArray(aoa) || !window.state) return;
+    var cid = getCurrentCourseId();
+    var course = (state.courses || []).find(function(c){return String(c.id) === String(cid);}) || {id:cid};
+    for(var h=0; h<aoa.length; h++){
+      var header = aoa[h];
+      if(!Array.isArray(header)) continue;
+      var gradeIndex = header.findIndex(function(v){return /เกรด/.test(String(v || ''));});
+      var totalIndex = header.findIndex(function(v){return /^รวม|รวมคะแนน/.test(String(v || ''));});
+      if(gradeIndex < 0 || totalIndex < 0) continue;
+      for(var r=h+1; r<aoa.length; r++){
+        var row = aoa[r];
+        if(!Array.isArray(row) || row.length < 2) break;
+        var st = findStudentByExportRow(row, header);
+        if(!st) continue;
+        var total = Number(row[totalIndex]);
+        if(!Number.isFinite(total)) total = computeTotalScoreForStudent(cid, st.id).total;
+        row[gradeIndex] = getFinalGradeForStudent(course, st, total) || row[gradeIndex] || '';
+      }
+    }
+  }
+  function patchXlsxExport(){
+    if(!window.XLSX || !XLSX.utils || !XLSX.utils.aoa_to_sheet || XLSX.utils.aoa_to_sheet.__schoolhubRealGradeRulesSpecialFinal) return;
+    var old = XLSX.utils.aoa_to_sheet;
+    XLSX.utils.aoa_to_sheet = function(aoa){
+      try{ sanitizeExportAoaWithFinalGrades(aoa); }catch(e){ console.warn('sanitize final grades export failed', e); }
+      return old.apply(this, arguments);
+    };
+    XLSX.utils.aoa_to_sheet.__schoolhubRealGradeRulesSpecialFinal = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){ ensureSpecialModal(); bindGradeCriteriaModalObserver(); try{ ensureMainGradeModalUI(); renderGradeSpecialRulesList(); }catch(e){} patchXlsxExport(); });
+  setTimeout(patchXlsxExport, 500);
+  document.addEventListener('click', function(){ setTimeout(patchXlsxExport, 50); }, true);
 })();
 </script>
 
