@@ -29,6 +29,52 @@
             }
         }
     </script>
+
+    <script id="schoolhub-score-number-format-helper">
+        /* SchoolHub central score helper: fixes JavaScript floating point display without changing saved Firebase data */
+        function normalizeScoreNumber(value, digits = 2) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return 0;
+            const factor = Math.pow(10, digits);
+            const fixed = Math.round((n + Number.EPSILON) * factor) / factor;
+            return Number(fixed.toFixed(digits));
+        }
+
+        function formatScoreDisplay(value, digits = 2) {
+            const n = normalizeScoreNumber(value, digits);
+            if (Number.isInteger(n)) return String(n);
+            return String(n).replace(/\.?0+$/, '');
+        }
+
+        function isMissingScoreValue(value) {
+            if (value === undefined || value === null || value === '') return true;
+            return String(value).trim().toUpperCase() === 'X';
+        }
+
+        function scoreNumberOrNull(value) {
+            if (isMissingScoreValue(value)) return null;
+            const n = Number(value);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function addScoreToTotal(total, value, digits = 2) {
+            const n = scoreNumberOrNull(value);
+            if (n === null) return normalizeScoreNumber(total || 0, digits);
+            return normalizeScoreNumber(Number(total || 0) + n, digits);
+        }
+
+        function formatScoreValueHtml(value, digits = 2) {
+            if (isMissingScoreValue(value)) return '<span class="summary-score-cell-content text-rose-600 font-black">X</span>';
+            return formatScoreDisplay(value, digits);
+        }
+
+        window.normalizeScoreNumber = normalizeScoreNumber;
+        window.formatScoreDisplay = formatScoreDisplay;
+        window.isMissingScoreValue = isMissingScoreValue;
+        window.scoreNumberOrNull = scoreNumberOrNull;
+        window.addScoreToTotal = addScoreToTotal;
+        window.formatScoreValueHtml = formatScoreValueHtml;
+    </script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f8fafc; border-radius: 8px;}
@@ -184,6 +230,15 @@
         #course-summary-table .summary-score-cell-content i {
             font-size: 10px !important;
             line-height: 18px !important;
+        }
+
+
+        /* Missing score X: use the same red/clickable behavior as the stable reference file */
+        .schoolhub-mobile-missing-score,
+        [data-missing-score="1"] {
+            color: #e11d48 !important;
+            font-weight: 900 !important;
+            cursor: pointer !important;
         }
 
         #course-summary-table .summary-sticky-no { left: 0 !important; }
@@ -5441,11 +5496,11 @@ async function submitPlanRequest(planId){
         window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
 
         // --- Timed Student Share ---
-        function buildStudentSharePayload(studentId,expireMinutes,note){const student=state.students.find(s=>s.id===studentId);const course=state.courses.find(c=>c.id===currentActiveCourseId);if(!student||!course)return null;const cid=currentActiveCourseId;const plans=(state.coursePlans[cid]||[]).sort((a,b)=>a.week-b.week);const courseScores=state.scores.filter(x=>x.courseId===cid);const attendanceHistory=state.attendance[cid]||{};const attDates=Object.keys(attendanceHistory).sort();let present=0,late=0,absent=0;attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[studentId];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});let totalScore=0,totalMax=0;const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>ts.week===p.week&&ts.title===p.title);const raw=task&&task.records?task.records[studentId]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax+=Number(p.maxScore||0);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''){totalScore+=Number(raw);display=`${raw}/${p.maxScore}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});return{student,course,note,expireMinutes:Number(expireMinutes||60),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore,totalMax},scoreRows};}
+        function buildStudentSharePayload(studentId,expireMinutes,note){const student=state.students.find(s=>s.id===studentId);const course=state.courses.find(c=>c.id===currentActiveCourseId);if(!student||!course)return null;const cid=currentActiveCourseId;const plans=(state.coursePlans[cid]||[]).sort((a,b)=>a.week-b.week);const courseScores=state.scores.filter(x=>x.courseId===cid);const attendanceHistory=state.attendance[cid]||{};const attDates=Object.keys(attendanceHistory).sort();let present=0,late=0,absent=0;attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[studentId];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});let totalScore=0,totalMax=0;const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>ts.week===p.week&&ts.title===p.title);const raw=task&&task.records?task.records[studentId]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax=window.addScoreToTotal(totalMax,p.maxScore,2);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''&&window.scoreNumberOrNull(raw)!==null){totalScore=window.addScoreToTotal(totalScore,raw,2);display=`${window.formatScoreDisplay(raw,2)}/${window.formatScoreDisplay(p.maxScore,2)}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});return{student,course,note,expireMinutes:Number(expireMinutes||60),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore:window.normalizeScoreNumber(totalScore,2),totalMax:window.normalizeScoreNumber(totalMax,2)},scoreRows};}
         window.openShareStudentModal=()=>{if(!currentActiveCourseId)return;renderShareStudentList();window.openModal('share-student-modal');};
         function renderShareStudentList(){const box=document.getElementById('share-student-list');if(!box)return;const students=window.getCourseStudents(currentActiveCourseId);if(!students.length){box.innerHTML='<div class="text-center text-slate-400 p-8">ยังไม่มีนักเรียนในวิชานี้</div>';return;}box.innerHTML=students.map(s=>`<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"><div><div class="font-bold text-slate-800">${escapeHTML(s.name)}</div><div class="text-xs text-slate-400 font-mono">${escapeHTML(s.code)} • ${escapeHTML(window.getStudentClassName(s))}</div></div><button onclick="createStudentShareLink('${s.id}')" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm"><i class="fas fa-link"></i> สร้างลิงก์</button></div>`).join('');}
         window.createStudentShareLink=async(studentId)=>{const expireMinutes=Math.max(1,Number(document.getElementById('share-expire-minutes').value||60));const note=document.getElementById('share-note').value.trim();const payload=buildStudentSharePayload(studentId,expireMinutes,note);if(!payload)return;const token=`sh_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;toggleLoader(true);try{await setDoc(getShareDocRef(token),payload);const url=`${location.origin}${location.pathname}?share=${encodeURIComponent(token)}`;try{await navigator.clipboard.writeText(url);showCustomAlert('สร้างลิงก์แล้ว',`คัดลอกลิงก์แล้ว\nหมดอายุหลังเปิดดูครั้งแรก ${expireMinutes} นาที`);}catch(e){showCustomAlert('สร้างลิงก์แล้ว',url);}}catch(e){showCustomAlert('สร้างลิงก์แชร์ไม่ได้','ต้องแก้ Firestore Rules ของ shared_student_views ก่อน: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
-        async function loadPublicShareFromURL(){const params=new URLSearchParams(location.search);const token=params.get('share');if(!token)return false;document.getElementById('global-loader').style.display='flex';document.getElementById('landing-view')?.classList.add('hidden');document.getElementById('auth-view')?.classList.add('hidden');document.getElementById('main-app')?.classList.add('hidden');const view=document.getElementById('public-share-view');const content=document.getElementById('public-share-content');view.classList.remove('hidden');try{const ref=getShareDocRef(token);const snap=await getDoc(ref);if(!snap.exists())throw new Error('not-found');const data=snap.data();const now=Date.now();let firstViewedAt=data.firstViewedAt||now;let expiresAt=data.expiresAt||(firstViewedAt+Number(data.expireMinutes||60)*60000);if(!data.firstViewedAt)await setDoc(ref,{firstViewedAt,expiresAt},{merge:true});if(now>expiresAt){content.innerHTML='<div class="text-center py-14"><i class="fas fa-clock text-5xl text-rose-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">ลิงก์หมดอายุแล้ว</h2><p class="text-slate-500 mt-2">กรุณาขอลิงก์ใหม่จากครูผู้สอน</p></div>';document.getElementById('global-loader').style.display='none';return true;}const remainMin=Math.max(0,Math.ceil((expiresAt-now)/60000));content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือประมาณ ${remainMin} นาที</div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center md:col-span-2"><div class="text-2xl font-black text-primary">${data.summary?.totalScore||0}/${data.summary?.totalMax||0}</div><div class="text-xs text-slate-500">คะแนนรวม</div></div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;}catch(e){content.innerHTML='<div class="text-center py-14"><i class="fas fa-triangle-exclamation text-5xl text-amber-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">เปิดข้อมูลไม่ได้</h2><p class="text-slate-500 mt-2">ลิงก์ไม่ถูกต้อง หรือระบบไม่อนุญาตให้อ่านข้อมูลสาธารณะ</p></div>';}document.getElementById('global-loader').style.display='none';return true;}
+        async function loadPublicShareFromURL(){const params=new URLSearchParams(location.search);const token=params.get('share');if(!token)return false;document.getElementById('global-loader').style.display='flex';document.getElementById('landing-view')?.classList.add('hidden');document.getElementById('auth-view')?.classList.add('hidden');document.getElementById('main-app')?.classList.add('hidden');const view=document.getElementById('public-share-view');const content=document.getElementById('public-share-content');view.classList.remove('hidden');try{const ref=getShareDocRef(token);const snap=await getDoc(ref);if(!snap.exists())throw new Error('not-found');const data=snap.data();const now=Date.now();let firstViewedAt=data.firstViewedAt||now;let expiresAt=data.expiresAt||(firstViewedAt+Number(data.expireMinutes||60)*60000);if(!data.firstViewedAt)await setDoc(ref,{firstViewedAt,expiresAt},{merge:true});if(now>expiresAt){content.innerHTML='<div class="text-center py-14"><i class="fas fa-clock text-5xl text-rose-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">ลิงก์หมดอายุแล้ว</h2><p class="text-slate-500 mt-2">กรุณาขอลิงก์ใหม่จากครูผู้สอน</p></div>';document.getElementById('global-loader').style.display='none';return true;}const remainMin=Math.max(0,Math.ceil((expiresAt-now)/60000));content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือประมาณ ${remainMin} นาที</div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center md:col-span-2"><div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม</div></div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;}catch(e){content.innerHTML='<div class="text-center py-14"><i class="fas fa-triangle-exclamation text-5xl text-amber-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">เปิดข้อมูลไม่ได้</h2><p class="text-slate-500 mt-2">ลิงก์ไม่ถูกต้อง หรือระบบไม่อนุญาตให้อ่านข้อมูลสาธารณะ</p></div>';}document.getElementById('global-loader').style.display='none';return true;}
 
         window.initStaticDropdowns = () => {
             const planWeek = document.getElementById('plan-week');
@@ -6926,9 +6981,9 @@ ${resetUrl.toString()}
                 const isChecklist = Number(p.maxScore) === 0;
                 const subtitle = isChecklist ? 'เช็คงาน' : `เต็ม ${p.maxScore}`;
                 thead += `<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ ${p.week} | ${p.title} | ${subtitle}"><button type="button" onclick="showPlanDetail('${cid}', '${p.id}')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">${p.week}</button></th>`;
-                if (!isChecklist) totalMax += Number(p.maxScore);
+                if (!isChecklist) totalMax = window.addScoreToTotal(totalMax, p.maxScore, 2);
             });
-            thead += `<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">${totalMax}</span></th>`;
+            thead += `<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">${window.formatScoreDisplay(totalMax, 2)}</span></th>`;
             thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>`;
             table.innerHTML = thead;
 
@@ -6954,28 +7009,28 @@ ${resetUrl.toString()}
                         const icon = rawScore === 1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (rawScore === 0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>');
                         tbody += `<td class="text-center summary-score-col">${icon}</td>`;
                     } else {
-                        if(rawScore !== null && rawScore !== '') totalScore += Number(rawScore);
+                        totalScore = window.addScoreToTotal(totalScore, rawScore, 2);
 
                         let displayHtml = '';
                         if (!task) {
                             // ยังไม่มีการบันทึกสัปดาห์นี้
                             displayHtml = `<span class="summary-score-cell-content text-slate-300">-</span>`;
-                        } else if (rawScore === '') {
+                        } else if ((window.isMissingScoreValue ? window.isMissingScoreValue(rawScore) : rawScore==='')) {
                             // มีการบันทึกแล้ว แต่ช่องของเด็กคนนี้เว้นว่างไว้ (ไม่ได้กรอก)
                             displayHtml = `<span class="summary-score-cell-content text-rose-600 font-black">X</span>`;
                         } else {
-                            displayHtml = `<span class="summary-score-cell-content text-slate-700">${rawScore}</span>`;
+                            displayHtml = `<span class="summary-score-cell-content text-slate-700">${window.formatScoreDisplay(rawScore, 2)}</span>`;
                         }
                         tbody += `<td class="text-center font-mono summary-score-col">${displayHtml}</td>`;
                     }
                 });
-                tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${totalScore}</td>`;
+                tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${window.formatScoreDisplay(totalScore, 2)}</td>`;
 
                 // Calculate and display grade
                 let gradeDisplay = '-';
                 let gradeColor = 'text-slate-400';
                 if (totalMax > 0) {
-                     gradeDisplay = calculateGrade(totalScore, gradeCriteria);
+                     gradeDisplay = calculateGrade(window.normalizeScoreNumber(totalScore, 2), gradeCriteria);
                      if(gradeDisplay === '4' || gradeDisplay === '3.5') gradeColor = 'text-emerald-500';
                      else if (gradeDisplay === '3' || gradeDisplay === '2.5') gradeColor = 'text-blue-500';
                      else if (gradeDisplay === '2' || gradeDisplay === '1.5') gradeColor = 'text-amber-500';
@@ -6989,11 +7044,20 @@ ${resetUrl.toString()}
 
         // Course Plans
         window.openPlanModalForCurrentCourse = () => {
-            if(!currentActiveCourseId) return;
+            if (typeof window.currentPlanAllows === 'function' && !window.currentPlanAllows('planScores')) {
+                if (typeof window.showCustomAlert === 'function') {
+                    window.showCustomAlert('แผนนี้ไม่รองรับการจัดการแผนคะแนน', 'กรุณาอัปเกรดแผนเพื่อจัดการแผนเก็บคะแนน', true);
+                } else {
+                    alert('แผนนี้ไม่รองรับการจัดการแผนคะแนน\nกรุณาอัปเกรดแผนเพื่อจัดการแผนเก็บคะแนน');
+                }
+                return false;
+            }
+            if(!currentActiveCourseId) return false;
             const c = state.courses.find(x => x.id === currentActiveCourseId);
-            document.getElementById('plan-modal-title').textContent = `(${c.code})`;
+            document.getElementById('plan-modal-title').textContent = `(${c && c.code ? c.code : ''})`;
             document.getElementById('plan-course-id').value = currentActiveCourseId;
             window.cancelEditPlan(); window.renderPlanList(currentActiveCourseId); window.openModal('plan-modal');
+            return false;
         };
         window.closePlanModal = () => { window.cancelEditPlan(); window.closeModal('plan-modal'); if(currentActiveCourseId) renderCourseOverview(); };
 
@@ -7476,10 +7540,10 @@ ${resetUrl.toString()}
             const headerRow = ["รหัส", "ชื่อ", "ชั้น", "มา", "สาย", "ขาด"];
             let tMax = 0; plans.forEach(p => {
                 const isChecklist = Number(p.maxScore) === 0;
-                headerRow.push(`${p.title}(${isChecklist ? 'เช็คงาน' : 'เต็ม '+p.maxScore})`);
-                if(!isChecklist) tMax+=Number(p.maxScore);
+                headerRow.push(`${p.title}(${isChecklist ? 'เช็คงาน' : 'เต็ม '+window.formatScoreDisplay(p.maxScore,2)})`);
+                if(!isChecklist) tMax = window.addScoreToTotal(tMax, p.maxScore, 2);
             });
-            headerRow.push(`รวมคะแนน(เต็ม ${tMax})`);
+            headerRow.push(`รวมคะแนน(เต็ม ${window.formatScoreDisplay(tMax, 2)})`);
             headerRow.push(`เกรดที่ได้`);
             aoa.push(headerRow);
 
@@ -7496,18 +7560,18 @@ ${resetUrl.toString()}
                         row.push(status);
                     } else {
                         const rawScore = task && task.records[s.id] !== undefined ? task.records[s.id] : null;
-                        if(rawScore !== null && rawScore !== '') totalScore += Number(rawScore);
+                        totalScore = window.addScoreToTotal(totalScore, rawScore, 2);
 
                         // ปรับตอนออก Excel: ถ้ายังไม่เคยบันทึก = -, ถ้าบันทึกแล้วแต่เว้นว่าง = ขาดส่ง (-)
                         if (!task) row.push('-');
-                        else if (rawScore === '') row.push('ขาดส่ง (-)');
-                        else row.push(Number(rawScore));
+                        else if ((window.isMissingScoreValue ? window.isMissingScoreValue(rawScore) : rawScore==='')) row.push('ขาดส่ง (-)');
+                        else row.push(window.normalizeScoreNumber(rawScore, 2));
                     }
                 });
-                row.push(totalScore);
+                row.push(window.normalizeScoreNumber(totalScore, 2));
 
                 let gradeDisplay = '-';
-                if(tMax > 0) gradeDisplay = calculateGrade(totalScore, gradeCriteria);
+                if(tMax > 0) gradeDisplay = calculateGrade(window.normalizeScoreNumber(totalScore, 2), gradeCriteria);
                 row.push(gradeDisplay);
 
                 aoa.push(row);
@@ -8260,17 +8324,17 @@ ${resetUrl.toString()}
     var totalMax=0;
     var thead='<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th><th class="text-center bg-slate-100 text-slate-600">ชั้น/ห้อง</th>';
     thead += '<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>';
-    plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; var subtitle=isChecklist?'เช็คงาน':'เต็ม '+p.maxScore; thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>'; if(!isChecklist) totalMax+=Number(p.maxScore||0); });
-    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+totalMax+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+    plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; var subtitle=isChecklist?'เช็คงาน':'เต็ม '+window.formatScoreDisplay(p.maxScore,2); thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>'; if(!isChecklist) totalMax = window.addScoreToTotal(totalMax, p.maxScore, 2); });
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
     var tbody='<tbody>';
     courseStudents.forEach(function(st,index){
       var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; });
       tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
       tbody += '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
       var total=0;
-      plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { if(raw!==null && raw!=='') total+=Number(raw); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':(raw===''?'<span class="summary-score-cell-content text-rose-600 font-black">X</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(raw)+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
-      var grade='-', color='text-slate-400'; if(totalMax>0 && window.calculateGrade){ grade=calculateGrade(total, gradeCriteria); if(['4','3.5'].includes(grade)) color='text-emerald-500'; else if(['3','2.5'].includes(grade)) color='text-blue-500'; else if(['2','1.5'].includes(grade)) color='text-amber-500'; else if(['1','0'].includes(grade)) color='text-rose-500'; }
-      tbody += '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold '+color+' bg-amber-50/30 summary-grade-col">'+esc(grade)+'</td></tr>';
+      plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { total = window.addScoreToTotal(total, raw, 2); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'<span class="summary-score-cell-content text-rose-600 font-black">X</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(window.formatScoreDisplay(raw,2))+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
+      var grade='-', color='text-slate-400'; if(totalMax>0 && window.calculateGrade){ grade=calculateGrade(window.normalizeScoreNumber(total,2), gradeCriteria); if(['4','3.5'].includes(grade)) color='text-emerald-500'; else if(['3','2.5'].includes(grade)) color='text-blue-500'; else if(['2','1.5'].includes(grade)) color='text-amber-500'; else if(['1','0'].includes(grade)) color='text-rose-500'; }
+      tbody += '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td><td class="text-center font-bold '+color+' bg-amber-50/30 summary-grade-col">'+esc(grade)+'</td></tr>';
     });
     tbody+='</tbody>'; table.innerHTML=thead+tbody;
   };
@@ -8327,8 +8391,8 @@ ${resetUrl.toString()}
     Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th',{numeric:true})).forEach(function(room){
       var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}));
       var aoa=[[`สรุปภาพรวมวิชา: ${cName}`],[`ชั้น/ห้อง: ${room}`],[]]; var header=['รหัส','ชื่อ','ชั้น/ห้อง','มา','สาย','ขาด']; var tMax=0;
-      plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; header.push(`${p.title}(${isChecklist?'เช็คงาน':'เต็ม '+p.maxScore})`); if(!isChecklist) tMax+=Number(p.maxScore||0); }); header.push(`รวมคะแนน(เต็ม ${tMax})`,'เกรดที่ได้'); aoa.push(header);
-      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { if(raw!==null && raw!=='') total+=Number(raw); row.push(!task?'-':(raw===''?'ขาดส่ง (-)':Number(raw))); }}); row.push(total); row.push(tMax>0&&window.calculateGrade?calculateGrade(total,gradeCriteria):'-'); aoa.push(row); });
+      plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; header.push(`${p.title}(${isChecklist?'เช็คงาน':'เต็ม '+window.formatScoreDisplay(p.maxScore,2)})`); if(!isChecklist) tMax = window.addScoreToTotal(tMax, p.maxScore, 2); }); header.push(`รวมคะแนน(เต็ม ${window.formatScoreDisplay(tMax, 2)})`,'เกรดที่ได้'); aoa.push(header);
+      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }}); row.push(window.normalizeScoreNumber(total,2)); row.push(tMax>0&&window.calculateGrade?calculateGrade(window.normalizeScoreNumber(total,2),gradeCriteria):'-'); aoa.push(row); });
       var sheetName=String(room||'ชั้น').replace(/[\\/?*\[\]:]/g,' ').slice(0,31) || 'ชั้น'; sheets[sheetName]=aoa;
     });
     window.downloadExcelMultiSheet(sheets, `ภาพรวม_${cName}_แยกชั้น`);
@@ -13234,16 +13298,16 @@ window.requestOwnPasswordReset = async function(){
     var courseScores = (state.scores || []).filter(function(s){ return s.courseId === cid; });
     var gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : (window.defaultGradeCriteria || []);
     var totalMax = 0;
-    plans.forEach(function(p){ if (Number(p.maxScore) !== 0) totalMax += Number(p.maxScore || 0); });
+    plans.forEach(function(p){ if (Number(p.maxScore) !== 0) totalMax = window.addScoreToTotal(totalMax, p.maxScore, 2); });
 
     var thead = '<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th><th class="text-center bg-slate-100 text-slate-600">ชั้น/ห้อง</th>';
     thead += '<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>';
     plans.forEach(function(p){
       var isChecklist = Number(p.maxScore) === 0;
-      var subtitle = isChecklist ? 'เช็คงาน' : 'เต็ม '+p.maxScore;
+      var subtitle = isChecklist ? 'เช็คงาน' : 'เต็ม '+window.formatScoreDisplay(p.maxScore,2);
       thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>';
     });
-    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+totalMax+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
 
     var tbody = '<tbody>';
     var mobileHtml = '';
@@ -13262,17 +13326,21 @@ window.requestOwnPasswordReset = async function(){
           planCells += '<td class="text-center summary-score-col"><span class="summary-score-cell-content">'+label+'</span></td>';
           planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+label+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'เช็คงาน')+'</div></div>';
         } else {
-          if(raw !== null && raw !== '') total += Number(raw);
-          var display = !task ? '-' : (raw === '' ? 'X' : raw);
-          var cellClass = !task ? 'text-slate-300' : (raw === '' ? 'text-rose-600 font-black' : 'text-slate-700');
-          planCells += '<td class="text-center font-mono summary-score-col"><span class="summary-score-cell-content '+cellClass+'">'+esc(display)+'</span></td>';
-          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+esc(display)+'/'+esc(p.maxScore || 0)+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
+          total = window.addScoreToTotal(total, raw, 2);
+          var missingScore = !!task && (window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw === '');
+          var display = !task ? '-' : (missingScore ? 'X' : window.formatScoreDisplay(raw, 2));
+          var valueHtml = missingScore ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(display);
+          var maxText = window.formatScoreDisplay(p.maxScore || 0, 2);
+          var cellClass = !task ? 'text-slate-300' : (missingScore ? 'text-rose-600 font-black' : 'text-slate-700');
+          planCells += '<td class="text-center font-mono summary-score-col"><span class="summary-score-cell-content '+cellClass+'">'+(missingScore ? 'X' : esc(display))+'</span></td>';
+          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+(missingScore ? valueHtml : esc(display)+'/'+esc(maxText))+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
         }
       });
+      total = window.normalizeScoreNumber(total, 2);
       var gg = scoreAndGrade(total, totalMax, gradeCriteria);
-      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
 
-      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2)+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -13494,7 +13562,7 @@ window.requestOwnPasswordReset = async function(){
         var h = parseHeader(headers[i], i - attIndex - 1);
         var value = texts[i] || '-';
         var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
-        var valueHtml = isMissingSavedScore ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
+        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
         planHtml += '<div class="summary-mobile-plan">'
           + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
           + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
@@ -13896,7 +13964,7 @@ window.requestOwnPasswordReset = async function(){
         var h = parseHeader(headers[i], i - attIndex - 1);
         var value = texts[i] || '-';
         var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
-        var valueHtml = isMissingSavedScore ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
+        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
         planHtml += '<div class="summary-mobile-plan">'
           + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
           + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
@@ -14786,8 +14854,8 @@ window.requestOwnPasswordReset = async function(){
     var criteria=(state.courseGrades&&state.courseGrades[cid])?state.courseGrades[cid]:window.defaultGradeCriteria;
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
     var totalMax=0;
-    plans.forEach(function(p){ var full=Number(p.maxScore); header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+full+')')); if(full!==0) totalMax+=full; });
-    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    plans.forEach(function(p){ var full=Number(p.maxScore); header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
+    header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(roomName||'ทุกห้อง')],[],header];
     list.forEach(function(st,idx){
       var pr=0,la=0,ab=0;
@@ -14798,9 +14866,9 @@ window.requestOwnPasswordReset = async function(){
         var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
         var raw=task&&task.records?task.records[st.id]:null;
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
-        else { if(raw!==null && raw!=='') total+=Number(raw); row.push(!task?'-':(raw===''?'ขาดส่ง (-)':Number(raw))); }
+        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(total, totalMax>0?calcGrade(total,criteria):'-');
+      row.push(window.normalizeScoreNumber(total,2), totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria):'-');
       aoa.push(row);
     });
     return aoa;
@@ -15197,10 +15265,10 @@ window.requestOwnPasswordReset = async function(){
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
     plans.forEach(function(p){
       var full=Number(p.maxScore);
-      header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+full+')'));
-      if(full!==0) totalMax += full;
+      header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')'));
+      if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2);
     });
-    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(roomName || 'ทุกห้อง')],[],header];
     list.forEach(function(st,idx){
       var pr=0,la=0,ab=0;
@@ -15216,11 +15284,11 @@ window.requestOwnPasswordReset = async function(){
         var raw=task && task.records ? task.records[st.id] : null;
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
         else{
-          if(raw!==null && raw!=='') total += Number(raw);
-          row.push(!task ? '-' : (raw==='' ? 'ขาดส่ง (-)' : Number(raw)));
+          total = window.addScoreToTotal(total, raw, 2);
+          row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2)));
         }
       });
-      row.push(total, totalMax>0 ? calcGrade(total, criteria) : '-');
+      row.push(window.normalizeScoreNumber(total,2), totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria) : '-');
       aoa.push(row);
     });
     return aoa;
@@ -15421,8 +15489,8 @@ window.requestOwnPasswordReset = async function(){
     var criteria=(state.courseGrades && state.courseGrades[cid]) || window.defaultGradeCriteria || [];
     var totalMax=0;
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
-    plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ '+p.week+' - '+(p.title||'')+(full===0?' (เช็คงาน)':' (เต็ม '+full+')')); if(full!==0) totalMax += full; });
-    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ '+p.week+' - '+(p.title||'')+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
+    header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(room || 'ทุกห้อง')],[],header];
     students.forEach(function(st,idx){
       var pr=0, la=0, ab=0;
@@ -15433,9 +15501,9 @@ window.requestOwnPasswordReset = async function(){
         var task=scores.find(function(ts){ return String(ts.week)===String(p.week) && String(ts.title)===String(p.title); });
         var raw=task && task.records ? task.records[st.id] : null;
         if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
-        else { if(raw!==null && raw!=='') total += Number(raw); row.push(!task ? '-' : (raw==='' ? 'ขาดส่ง (-)' : Number(raw))); }
+        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(total, totalMax>0 ? gradeOf(total, criteria) : '-');
+      row.push(window.normalizeScoreNumber(total,2), totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria) : '-');
       aoa.push(row);
     });
     return aoa;
@@ -19290,10 +19358,18 @@ label:has(#plan-sub-allow-team){
     return true;
   }
 
+  function isModalCloseButton(el){
+    if(!el || !el.matches) return false;
+    var txt = String((el.textContent || '').trim());
+    return el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
+      /^(×|x|X|ปิด|ยกเลิก)$/.test(txt) ||
+      /closeModal\(|closeCustomAlert\(|closePlanModal\(/.test(String(el.getAttribute('onclick') || ''));
+  }
   function classify(el){
-    var s = String((el.getAttribute('onclick')||'') + ' ' + (el.textContent||'') + ' ' + (el.id||'') + ' ' + (el.className||''));
+    if(isModalCloseButton(el)) return '';
+    var s = String((el.getAttribute('onclick')||'') + ' ' + (el.textContent||'') + ' ' + (el.id||'') + ' ' + (el.className||'') + ' ' + (el.dataset ? JSON.stringify(el.dataset) : ''));
     if(/openShareStudentModal|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
-    if(/openPlanModalForCurrentCourse|แผนคะแนน|จัดการแผนเก็บคะแนน/i.test(s)) return 'planScores';
+    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|แผนคะแนน|จัดการแผนเก็บคะแนน/i.test(s)) return 'planScores';
     if(/openGradeCriteria|เกณฑ์เกรด/i.test(s)) return 'gradeCriteria';
     if(/export|Export|Excel|เอ็ก|ส่งออก|โหลดตาราง/i.test(s)) return 'export';
     if(/CourseTeachers|จัดการครูในรายวิชา|เพิ่มครู|ครูผู้สอนร่วม/i.test(s) || el.id==='course-teachers-manage-btn' || el.id==='course-teachers-btn') return 'team';
@@ -19303,21 +19379,40 @@ label:has(#plan-sub-allow-team){
   }
 
   function cleanOne(el){
+    if(isModalCloseButton(el)){
+      el.classList.remove('sh-permission-disabled','schoolhub-locked-action-stable','schoolhub-plan-right-locked','schoolhub-permission-disabled-soft','opacity-60','opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale','disabled');
+      el.removeAttribute('aria-disabled');
+      el.removeAttribute('disabled');
+      el.disabled = false;
+      el.style.pointerEvents = '';
+      el.style.filter = '';
+      el.style.opacity = '';
+      el.style.cursor = '';
+      return;
+    }
     var key = classify(el);
     if(!key) return;
 
     var ok = allow(key);
     if(ok){
-      el.classList.remove('opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
-      if(/แผนนี้ไม่รองรับ|ไม่มีสิทธิ์|ไม่รองรับ/.test(el.getAttribute('title')||'')) el.removeAttribute('title');
+      el.classList.remove('sh-permission-disabled','schoolhub-locked-action-stable','schoolhub-plan-right-locked','schoolhub-permission-disabled-soft','opacity-60','opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale','disabled');
+      el.classList.add('schoolhub-unlocked-action-stable');
+      if(/แผนนี้ไม่รองรับ|ไม่มีสิทธิ์|ไม่รองรับ|อัปเกรด|ดูได้อย่างเดียว/.test(el.getAttribute('title')||'')) el.removeAttribute('title');
       el.removeAttribute('aria-disabled');
+      el.removeAttribute('disabled');
+      if(el.dataset) el.dataset.permissionAllowed = '1';
       el.disabled = false;
       el.style.pointerEvents = '';
       el.style.filter = '';
       el.style.opacity = '';
+      el.style.cursor = '';
     }else{
-      el.classList.add('opacity-50','cursor-not-allowed');
+      el.classList.add('schoolhub-plan-right-locked','sh-permission-disabled');
+      el.classList.remove('schoolhub-unlocked-action-stable','pointer-events-none');
       el.setAttribute('aria-disabled','true');
+      if(el.dataset) el.dataset.permissionAllowed = '0';
+      el.disabled = false;
+      el.style.pointerEvents = 'auto';
     }
   }
 
@@ -20824,9 +20919,7 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
     touch-action:manipulation !important;
     position:relative !important;
     z-index:2147483001 !important;
-    opacity:1 !important;
-    filter:none !important;
-    cursor:pointer !important;
+    /* อย่าฝืนสี/opacity ตรงนี้ เพราะสิทธิ์ planScores ต้องทำให้ปุ่มเทาได้จริง */
   }
   #plan-modal{
     z-index:2147483647 !important;
@@ -20843,6 +20936,24 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
   window.__schoolhubMobilePlanScoreClickFixOnly = true;
 
   function byId(id){ return document.getElementById(id); }
+  var lastPlanScoresBlockedAt = 0;
+  function canUsePlanScores(){
+    try{ if(typeof window.schoolhubExpandedPlanAllows === 'function') return !!window.schoolhubExpandedPlanAllows('planScores'); }catch(e){}
+    try{ if(typeof window.currentPlanAllows === 'function') return !!window.currentPlanAllows('planScores'); }catch(e){}
+    try{
+      var d = window.__currentUserDir || {};
+      if(d.allowPlanScores !== undefined) return d.allowPlanScores !== false;
+    }catch(e){}
+    return true;
+  }
+  function showPlanScoresBlocked(){
+    var now = Date.now();
+    if(now - lastPlanScoresBlockedAt < 650) return false;
+    lastPlanScoresBlockedAt = now;
+    if(typeof window.showCustomAlert === 'function') window.showCustomAlert('แผนนี้ไม่รองรับการจัดการแผนคะแนน','กรุณาอัปเกรดแผนเพื่อจัดการแผนเก็บคะแนน',true);
+    else alert('แผนนี้ไม่รองรับการจัดการแผนคะแนน\nกรุณาอัปเกรดแผนเพื่อจัดการแผนเก็บคะแนน');
+    return false;
+  }
   function getCourseId(){
     return window.currentActiveCourseId ||
       (byId('plan-course-id') && byId('plan-course-id').value) ||
@@ -20850,6 +20961,7 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
       (byId('att-course-select') && byId('att-course-select').value) || '';
   }
   function openPlanDirect(){
+    if(!canUsePlanScores()) return showPlanScoresBlocked();
     var cid = getCourseId();
     if(!cid){
       if(typeof window.showCustomAlert === 'function') window.showCustomAlert('ยังไม่ได้เลือกรายวิชา','กรุณาเปิดรายวิชาก่อนจัดการแผนคะแนน',true);
@@ -20886,11 +20998,20 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
       e.stopPropagation();
       if(e.stopImmediatePropagation) e.stopImmediatePropagation();
     }
+    if(!canUsePlanScores()) return showPlanScoresBlocked();
     return openPlanDirect();
   };
 
   // Override only this opener because older wrappers/permission stabilizers were swallowing mobile taps.
-  window.openPlanModalForCurrentCourse = function(){ return openPlanDirect(); };
+  window.openPlanModalForCurrentCourse = function(e){
+    if(e && typeof e.preventDefault === 'function'){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    }
+    if(!canUsePlanScores()) return showPlanScoresBlocked();
+    return openPlanDirect();
+  };
 
   ['touchstart','pointerup','click'].forEach(function(ev){
     document.addEventListener(ev, function(e){
@@ -22031,15 +22152,18 @@ select,
   document.addEventListener('dblclick', function(e){
     var el = e.target && e.target.closest ? e.target.closest('[data-missing-score="1"]') : null;
     if(!el) return;
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     window.openMissingScorePopup(Object.assign({}, el.dataset));
   }, true);
   document.addEventListener('click', function(e){
     var el = e.target && e.target.closest ? e.target.closest('[data-missing-score="1"]') : null;
     if(!el) return;
+
     var now = Date.now();
     if(lastTap.el === el && now - lastTap.t < 420){
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       window.openMissingScorePopup(Object.assign({}, el.dataset));
       lastTap = {t:0, el:null};
     } else {
@@ -22146,7 +22270,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     attend:'allowAttendance', checkAttendance:'allowAttendance', excel:'allowExport', xlsx:'allowExport',
     teacher:'allowTeam', teachers:'allowTeam', courseTeachers:'allowTeam', score:'allowScores',
     planScore:'allowPlanScores', scorePlan:'allowPlanScores', grade:'allowGradeCriteria', grades:'allowGradeCriteria',
-    share:'allowStudentShare', shareStudent:'allowStudentShare', student_share:'allowStudentShare',
+    share:'allowStudentShare', shareStudent:'allowStudentShare', studentShare:'allowStudentShare', student_share:'allowStudentShare', 'share-student':'allowStudentShare',
+    planScores:'allowPlanScores', planScore:'allowPlanScores', scorePlan:'allowPlanScores',
     course:'allowCourses', addCourse:'allowCourses', editCourse:'allowCourses', student:'allowStudents',
     addStudent:'allowStudents', editStudent:'allowStudents', update:'allowEdit', modify:'allowEdit',
     editData:'allowEdit', remove:'allowDelete', del:'allowDelete', deleteData:'allowDelete',
@@ -22177,7 +22302,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   function rightEnabled(plan, field, defaultValue){
     const def = defaultValue !== undefined ? defaultValue : DEFAULT_TRUE_FIELDS.has(field);
     if(!plan || typeof plan !== 'object') return def;
-    if(Object.prototype.hasOwnProperty.call(plan, field)) return plan[field] === true;
+    if(field === 'allowTeam') return plan[field] === true;
+    if(Object.prototype.hasOwnProperty.call(plan, field)) return plan[field] !== false;
     return def;
   }
   function normalizePlanRights(plan){
@@ -22481,11 +22607,49 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     window.applyPlanToUserPayload.__schoolhubRightsStableWrapped = true;
   }
 
+  function isModalCloseButton(el){
+    if(!el || !el.matches) return false;
+    const txt = String((el.textContent || '').trim());
+    return el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
+      /^(×|x|X|ปิด|ยกเลิก)$/.test(txt) ||
+      /closeModal\(|closeCustomAlert\(|closePlanModal\(/.test(String(el.getAttribute('onclick') || ''));
+  }
+  function unlockPermissionElement(el){
+    if(!el) return;
+    el.classList.remove(
+      'sh-permission-disabled',
+      'schoolhub-locked-action-stable',
+      'schoolhub-plan-right-locked',
+      'schoolhub-permission-disabled-soft',
+      'schoolhub-plan-right-disabled',
+      'opacity-60',
+      'opacity-50',
+      'opacity-40',
+      'cursor-not-allowed',
+      'grayscale',
+      'pointer-events-none',
+      'disabled'
+    );
+    if(el.matches && el.matches('button,a,[role="button"]')) el.classList.add('schoolhub-unlocked-action-stable');
+    el.removeAttribute('aria-disabled');
+    el.removeAttribute('disabled');
+    if(/ไม่รองรับ|ไม่มีสิทธิ์|อัปเกรด|ดูได้อย่างเดียว/.test(el.getAttribute('title') || '')) el.removeAttribute('title');
+    if(el.dataset) el.dataset.permissionAllowed = '1';
+    try{ el.disabled = false; }catch(e){}
+    el.style.pointerEvents = '';
+    el.style.opacity = '';
+    el.style.filter = '';
+    el.style.cursor = '';
+  }
+  function unlockShareStudentControls(){
+    if(!planAllows('studentShare')) return;
+    document.querySelectorAll('button[onclick*="openShareStudentModal"], #share-student-modal button, #share-student-modal a').forEach(unlockPermissionElement);
+  }
   function classifyAction(el){
-    if(!el) return '';
-    const s = String((el.getAttribute('onclick') || '') + ' ' + (el.id || '') + ' ' + (el.dataset && JSON.stringify(el.dataset) || '') + ' ' + (el.textContent || '')).replace(/\s+/g, ' ');
+    if(!el || isModalCloseButton(el)) return '';
+    const s = String((el.getAttribute('onclick') || '') + ' ' + (el.id || '') + ' ' + (el.dataset && JSON.stringify(el.dataset) || '') + ' ' + (el.textContent || '') + ' ' + (el.className || '')).replace(/\s+/g, ' ');
     if(/openShareStudentModal|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
-    if(/openPlanModalForCurrentCourse|แผนคะแนน|แผนเก็บคะแนน|plan-score/i.test(s)) return 'planScores';
+    if(/openPlanModalForCurrentCourse|schoolhubOpenPlanModalSafe|แผนคะแนน|แผนเก็บคะแนน|plan-score/i.test(s)) return 'planScores';
     if(/openGradeCriteria|เกณฑ์เกรด|grade/i.test(s)) return 'gradeCriteria';
     if(/export|Export|Excel|เอ็ก|ส่งออก|โหลดตาราง/i.test(s)) return 'export';
     if(/CourseTeachers|จัดการครูในรายวิชา|เพิ่มครู|ครูผู้สอนร่วม|team/i.test(s) || el.id === 'course-teachers-manage-btn') return 'team';
@@ -22497,22 +22661,40 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     return '';
   }
   function applyPermissionVisual(el){
+    if(isModalCloseButton(el)){ unlockPermissionElement(el); return; }
     const key = classifyAction(el);
     if(!key) return;
     const ok = planAllows(key);
-    el.classList.toggle('schoolhub-plan-right-locked', !ok);
-    el.classList.toggle('sh-permission-disabled', !ok);
-    if(!ok){ el.setAttribute('aria-disabled','true'); el.setAttribute('title', rightMessage(key).title); }
-    else{
-      el.removeAttribute('aria-disabled');
-      if(/ไม่รองรับ|ไม่มีสิทธิ์|อัปเกรด/.test(el.getAttribute('title') || '')) el.removeAttribute('title');
-    }
+    if(ok){ unlockPermissionElement(el); return; }
+    el.classList.add('schoolhub-plan-right-locked','sh-permission-disabled');
+    el.classList.remove('schoolhub-unlocked-action-stable','pointer-events-none');
+    el.setAttribute('aria-disabled','true');
+    el.setAttribute('title', rightMessage(key).title);
+    if(el.dataset) el.dataset.permissionAllowed = '0';
+    try{ el.disabled = false; }catch(e){}
+    el.style.pointerEvents = 'auto';
   }
-  function refreshRightsUI(){ document.querySelectorAll('button,a,[role="button"]').forEach(applyPermissionVisual); }
+  function refreshRightsUI(){
+    document.querySelectorAll('button,a,[role="button"]').forEach(applyPermissionVisual);
+    unlockShareStudentControls();
+  }
   function wrapGuard(name, key, action){
     const old = window[name];
     if(typeof old !== 'function' || old.__schoolhubStableRightsGuard) return;
-    window[name] = function(){ if(!requireRight(key, action)) return false; return old.apply(this, arguments); };
+    window[name] = function(){
+      const ev = arguments && arguments[0];
+      if(!planAllows(key)){
+        if(ev && typeof ev.preventDefault === 'function'){
+          ev.preventDefault();
+          ev.stopPropagation();
+          if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        }
+        return showBlocked(key, action);
+      }
+      const result = old.apply(this, arguments);
+      if(key === 'studentShare') setTimeout(unlockShareStudentControls, 0);
+      return result === undefined ? false : result;
+    };
     window[name].__schoolhubStableRightsGuard = true;
   }
   wrapGuard('exportStudentsToExcel','export','Export รายชื่อนักเรียน');
@@ -22535,6 +22717,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     const el = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
     if(!el) return;
     if(el.closest && el.closest('#admin-plan-popup,#schoolhub-plan-rights-popup,#schoolhub-plan-rights-summary-box')) return;
+    if(isModalCloseButton(el)) return;
     const key = classifyAction(el);
     if(key && !planAllows(key)){
       e.preventDefault();
