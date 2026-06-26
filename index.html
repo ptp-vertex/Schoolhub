@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3393,7 +3394,7 @@ document.addEventListener('click',function(){
         <div class="bg-white rounded-[2rem] w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0">
                 <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-list-ul text-primary mr-2"></i> แผนคะแนน <span id="plan-modal-title" class="text-slate-500 text-base font-normal ml-2"></span></h3>
-                <button onclick="closePlanModal()" class="w-8 h-8 flex items-center justify-center bg-white border text-slate-500 rounded-full hover:bg-slate-100"><i class="fas fa-times"></i></button>
+                <button type="button" data-schoolhub-plan-modal-close="1" onclick="closePlanModal(); return false;" class="schoolhub-plan-modal-close-btn w-8 h-8 flex items-center justify-center bg-white border text-slate-500 rounded-full hover:bg-slate-100" aria-label="ปิดป็อปอัพแผนคะแนน"><i class="fas fa-times"></i></button>
             </div>
             <div class="p-6 overflow-y-auto flex-1">
                 <form onsubmit="event.preventDefault(); handleAddPlan(event);" class="bg-indigo-50/50 p-5 rounded-2xl mb-8 border border-indigo-100 relative">
@@ -10021,9 +10022,18 @@ function normalizePlan(p) {
         studentLimit: Number(p.studentLimit || 0),
         weekLimit: Math.max(1, Number(p.weekLimit || p.maxWeeks || 20)),
         teamMemberLimit: Math.max(1, Number(p.teamMemberLimit || p.teamLimit || p.maxTeamMembers || 1)),
-        allowTeam: !!p.allowTeam,
+        allowCourses: p.allowCourses !== false,
+        allowStudents: p.allowStudents !== false,
         allowAttendance: p.allowAttendance !== false,
+        allowScores: p.allowScores !== false,
+        allowPlanScores: p.allowPlanScores !== false,
+        allowGradeCriteria: p.allowGradeCriteria !== false,
+        allowStudentShare: p.allowStudentShare !== false,
         allowExport: p.allowExport !== false,
+        allowTeam: p.allowTeam === true,
+        allowEdit: p.allowEdit !== false,
+        allowDelete: p.allowDelete !== false,
+        allowReports: p.allowReports !== false,
         promptpay: String(p.promptpay || '').trim(),
         order: Number(p.order || 1),
         featured: !!p.featured,
@@ -10222,8 +10232,17 @@ window.saveAdminPlanForm = async function(){
         studentLimit: Number(document.getElementById('plan-sub-student-limit')?.value || 0),
         allowTeam: document.getElementById('plan-sub-allow-team')?.checked || false,
         teamMemberLimit: Math.max(1, Number(document.getElementById('plan-sub-team-limit')?.value || 1)),
-        allowAttendance: document.getElementById('plan-sub-allow-attendance')?.checked !== false,
-        allowExport: document.getElementById('plan-sub-allow-export')?.checked !== false,
+        allowCourses: document.getElementById('plan-sub-allowCourses')?.checked !== false,
+        allowStudents: document.getElementById('plan-sub-allowStudents')?.checked !== false,
+        allowAttendance: document.getElementById('plan-sub-allowAttendance')?.checked ?? (document.getElementById('plan-sub-allow-attendance')?.checked !== false),
+        allowScores: document.getElementById('plan-sub-allowScores')?.checked !== false,
+        allowPlanScores: document.getElementById('plan-sub-allowPlanScores')?.checked !== false,
+        allowGradeCriteria: document.getElementById('plan-sub-allowGradeCriteria')?.checked !== false,
+        allowStudentShare: document.getElementById('plan-sub-allowStudentShare')?.checked !== false,
+        allowExport: document.getElementById('plan-sub-allowExport')?.checked ?? (document.getElementById('plan-sub-allow-export')?.checked !== false),
+        allowEdit: document.getElementById('plan-sub-allowEdit')?.checked !== false,
+        allowDelete: document.getElementById('plan-sub-allowDelete')?.checked !== false,
+        allowReports: document.getElementById('plan-sub-allowReports')?.checked !== false,
         price: document.getElementById('plan-sub-price')?.value.trim() || '',
         promptpay: document.getElementById('plan-sub-promptpay')?.value.trim() || '',
         desc: document.getElementById('plan-sub-desc')?.value.trim() || '',
@@ -10432,9 +10451,18 @@ function normalizePlan(item) {
         studentLimit: Number(item.studentLimit || 0),
         weekLimit: Math.max(1, Number(item.weekLimit || item.maxWeeks || 20)),
         teamMemberLimit: Math.max(1, Number(item.teamMemberLimit || item.maxTeamMembers || 1)),
-        allowTeam: !!item.allowTeam,
+        allowCourses: item.allowCourses !== false,
+        allowStudents: item.allowStudents !== false,
         allowAttendance: item.allowAttendance !== false,
+        allowScores: item.allowScores !== false,
+        allowPlanScores: item.allowPlanScores !== false,
+        allowGradeCriteria: item.allowGradeCriteria !== false,
+        allowStudentShare: item.allowStudentShare !== false,
         allowExport: item.allowExport !== false,
+        allowTeam: item.allowTeam === true,
+        allowEdit: item.allowEdit !== false,
+        allowDelete: item.allowDelete !== false,
+        allowReports: item.allowReports !== false,
         promptpay: String(item.promptpay || '').trim(),
         order: Number(item.order || 1),
         featured: !!item.featured,
@@ -18684,12 +18712,12 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     ['allowStudentShare','แชร์ให้นักเรียน','fa-share-nodes'],
     ['allowExport','Export Excel','fa-file-excel'],
     ['allowTeam','จัดการครูในรายวิชา','fa-users'],
-    ['allowEditData','แก้ไขข้อมูล','fa-pen-to-square'],
-    ['allowDeleteData','ลบข้อมูล','fa-trash'],
+    ['allowEdit','แก้ไขข้อมูล','fa-pen-to-square'],
+    ['allowDelete','ลบข้อมูล','fa-trash'],
     ['allowReports','รายงาน/ภาพรวม','fa-chart-pie']
   ];
 
-  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEdit','allowDelete','allowReports']);
 
   function byId(id){return document.getElementById(id);}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
@@ -18739,8 +18767,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
       studentShare:'allowStudentShare', shareStudent:'allowStudentShare', share:'allowStudentShare',
       export:'allowExport',
       team:'allowTeam',
-      edit:'allowEditData', editData:'allowEditData',
-      delete:'allowDeleteData', deleteData:'allowDeleteData',
+      edit:'allowEdit', editData:'allowEdit',
+      delete:'allowDelete', deleteData:'allowDelete',
       reports:'allowReports', overview:'allowReports'
     };
     const field = aliases[key] || key;
@@ -19528,11 +19556,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     ['allowStudentShare','แชร์ให้นักเรียน','fa-share-nodes'],
     ['allowExport','Export Excel','fa-file-excel'],
     ['allowTeam','จัดการครูในรายวิชา','fa-users'],
-    ['allowEditData','แก้ไขข้อมูล','fa-pen-to-square'],
-    ['allowDeleteData','ลบข้อมูล','fa-trash'],
+    ['allowEdit','แก้ไขข้อมูล','fa-pen-to-square'],
+    ['allowDelete','ลบข้อมูล','fa-trash'],
     ['allowReports','รายงาน/ภาพรวม','fa-chart-pie']
   ];
-  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEditData','allowDeleteData','allowReports']);
+  const DEFAULT_TRUE = new Set(['allowCourses','allowStudents','allowAttendance','allowScores','allowPlanScores','allowGradeCriteria','allowStudentShare','allowExport','allowEdit','allowDelete','allowReports']);
 
   function byId(id){return document.getElementById(id);}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
@@ -22102,6 +22130,127 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
 })();
 </script>
 
+
+
+<!-- SchoolHub Patch: Plan score modal X close + mobile top-right position only -->
+<style id="schoolhub-plan-score-modal-x-close-final-fix">
+#plan-modal.schoolhub-score-plan-modal > div {
+    position: relative !important;
+}
+#plan-modal .schoolhub-plan-modal-close-btn,
+#plan-modal [data-schoolhub-plan-modal-close="1"] {
+    flex: 0 0 auto !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+}
+@media (max-width: 767px) {
+    #plan-modal.schoolhub-score-plan-modal > div > .p-6.border-b {
+        position: relative !important;
+        padding-right: 4.25rem !important;
+        min-height: 4.25rem !important;
+    }
+    #plan-modal .schoolhub-plan-modal-close-btn,
+    #plan-modal [data-schoolhub-plan-modal-close="1"] {
+        position: absolute !important;
+        top: 12px !important;
+        right: 12px !important;
+        left: auto !important;
+        bottom: auto !important;
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 9999px !important;
+        z-index: 2147483647 !important;
+    }
+}
+</style>
+<script id="schoolhub-plan-score-modal-x-close-final-fix">
+(function(){
+    if (window.__schoolhubPlanScoreModalXCloseFinalFix) return;
+    window.__schoolhubPlanScoreModalXCloseFinalFix = true;
+
+    function byId(id){ return document.getElementById(id); }
+
+    function forceClosePlanModal(){
+        var modal = byId('plan-modal');
+        try { if (typeof window.cancelEditPlan === 'function') window.cancelEditPlan(); } catch(e) {}
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            modal.style.pointerEvents = 'none';
+            modal.removeAttribute('aria-modal');
+        }
+        // คืน scroll เฉพาะเมื่อไม่มี modal หลักอื่นเปิดอยู่
+        try {
+            var stillOpen = Array.prototype.some.call(document.querySelectorAll('.fixed.inset-0:not(.hidden)'), function(el){
+                return el && el.id && el.id !== 'plan-modal' && getComputedStyle(el).display !== 'none';
+            });
+            if (!stillOpen) document.body.style.overflow = '';
+        } catch(e) { document.body.style.overflow = ''; }
+        try { if (window.currentActiveCourseId && typeof window.renderCourseOverview === 'function') window.renderCourseOverview(); } catch(e) {}
+        return false;
+    }
+
+    window.closePlanModal = forceClosePlanModal;
+
+    function preparePlanCloseButton(){
+        var modal = byId('plan-modal');
+        if (!modal) return;
+        var btn = modal.querySelector('[data-schoolhub-plan-modal-close="1"], button[onclick*="closePlanModal"]');
+        if (!btn) return;
+        btn.type = 'button';
+        btn.setAttribute('data-schoolhub-plan-modal-close', '1');
+        btn.setAttribute('aria-label', 'ปิดป็อปอัพแผนคะแนน');
+        btn.classList.add('schoolhub-plan-modal-close-btn');
+        btn.onclick = function(ev){
+            if (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
+            return forceClosePlanModal();
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', preparePlanCloseButton);
+    setTimeout(preparePlanCloseButton, 0);
+    setTimeout(preparePlanCloseButton, 300);
+
+    ['click','touchstart','pointerup'].forEach(function(evName){
+        document.addEventListener(evName, function(e){
+            var btn = e.target && e.target.closest ? e.target.closest('#plan-modal [data-schoolhub-plan-modal-close="1"], #plan-modal .schoolhub-plan-modal-close-btn, #plan-modal button[onclick*="closePlanModal"]') : null;
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            forceClosePlanModal();
+        }, true);
+    });
+
+    // ถ้าเปิดด้วยแพตช์มือถือเดิมที่ใส่ inline display:flex ให้ตอนปิด hidden ชนะเสมอ
+    var observer = new MutationObserver(function(){
+        var modal = byId('plan-modal');
+        if (!modal) return;
+        if (modal.classList.contains('hidden')) {
+            modal.style.display = 'none';
+            modal.style.pointerEvents = 'none';
+        }
+    });
+    document.addEventListener('DOMContentLoaded', function(){
+        var modal = byId('plan-modal');
+        if (modal) observer.observe(modal, { attributes:true, attributeFilter:['class'] });
+    });
+})();
+</script>
+
 </body>
 </html>
 
@@ -22801,5 +22950,843 @@ select,
   }, true);
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(annotateMissingScores, 500); });
   setInterval(function(){ try{ annotateMissingScores(); }catch(e){} }, 1500);
+})();
+</script>
+
+<!-- =========================================================
+     SchoolHub FINAL 12 Plan Rights Enforcement Patch
+     แก้สิทธิ์ 12 รายการให้ทำงานจริงเหมือน เช็คชื่อ/จัดการครู/Export
+     - อ่านค่าจากแผน + public_users_directory/users_status
+     - บล็อกทั้งปุ่ม, แท็บ, ฟังก์ชัน และการคลิก/กรอกในพื้นที่ที่ถูกล็อก
+     ========================================================= -->
+<style id="schoolhub-final-12-rights-style">
+.schoolhub-plan-right-locked,
+.schoolhub-plan-right-locked *{
+  cursor:not-allowed!important;
+}
+.schoolhub-plan-right-locked{
+  opacity:.48!important;
+  filter:grayscale(.25)!important;
+}
+.schoolhub-plan-right-locked input,
+.schoolhub-plan-right-locked select,
+.schoolhub-plan-right-locked textarea{
+  pointer-events:none!important;
+}
+</style>
+<script id="schoolhub-final-12-rights-script">
+(function(){
+  if(window.__schoolhubFinal12RightsPatch) return;
+  window.__schoolhubFinal12RightsPatch = true;
+
+  var RIGHTS = {
+    courses: {field:'allowCourses', title:'แผนนี้ไม่รองรับการจัดการรายวิชา', msg:'กรุณาอัปเกรดแผนเพื่อเพิ่มหรือแก้ไขรายวิชา'},
+    students: {field:'allowStudents', title:'แผนนี้ไม่รองรับการจัดการนักเรียน', msg:'กรุณาอัปเกรดแผนเพื่อเพิ่มหรือแก้ไขนักเรียน'},
+    attendance: {field:'allowAttendance', title:'แผนนี้ไม่รองรับเช็คชื่อ', msg:'กรุณาอัปเกรดแผนเพื่อใช้เมนูเช็คชื่อ'},
+    scores: {field:'allowScores', title:'แผนนี้ไม่รองรับบันทึกคะแนน', msg:'กรุณาอัปเกรดแผนเพื่อบันทึกคะแนน'},
+    planScores: {field:'allowPlanScores', title:'แผนนี้ไม่รองรับการจัดการแผนคะแนน', msg:'กรุณาอัปเกรดแผนเพื่อจัดการแผนคะแนน'},
+    gradeCriteria: {field:'allowGradeCriteria', title:'แผนนี้ไม่รองรับการตั้งค่าเกณฑ์เกรด', msg:'กรุณาอัปเกรดแผนเพื่อตั้งค่าเกณฑ์เกรด'},
+    studentShare: {field:'allowStudentShare', title:'แผนนี้ไม่รองรับแชร์ให้นักเรียน', msg:'กรุณาอัปเกรดแผนเพื่อแชร์ผลคะแนนให้นักเรียน'},
+    export: {field:'allowExport', title:'แผนนี้ไม่รองรับ Export', msg:'กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel'},
+    team: {field:'allowTeam', title:'แผนนี้ไม่รองรับจัดการครูในรายวิชา', msg:'แผนปัจจุบันเป็นแบบใช้คนเดียว ไม่สามารถจัดการครูผู้สอนร่วมได้'},
+    edit: {field:'allowEdit', title:'แผนนี้ไม่รองรับการแก้ไขข้อมูล', msg:'กรุณาอัปเกรดแผนเพื่อแก้ไขข้อมูล'},
+    delete: {field:'allowDelete', title:'แผนนี้ไม่รองรับการลบข้อมูล', msg:'กรุณาอัปเกรดแผนเพื่อปลดล็อกการลบข้อมูล'},
+    reports: {field:'allowReports', title:'แผนนี้ไม่รองรับรายงาน/ภาพรวม', msg:'กรุณาอัปเกรดแผนเพื่อดูรายงาน/ภาพรวม'}
+  };
+  var ALIAS = {
+    course:'courses', courses:'courses', allowCourses:'courses',
+    student:'students', students:'students', allowStudents:'students',
+    attendance:'attendance', allowAttendance:'attendance',
+    score:'scores', scores:'scores', allowScores:'scores',
+    planScore:'planScores', planScores:'planScores', allowPlanScores:'planScores',
+    grade:'gradeCriteria', grades:'gradeCriteria', gradeCriteria:'gradeCriteria', allowGradeCriteria:'gradeCriteria',
+    share:'studentShare', shareStudent:'studentShare', studentShare:'studentShare', allowStudentShare:'studentShare',
+    export:'export', allowExport:'export',
+    team:'team', teachers:'team', allowTeam:'team',
+    edit:'edit', editData:'edit', allowEdit:'edit',
+    delete:'delete', deleteData:'delete', allowDelete:'delete',
+    report:'reports', reports:'reports', overview:'reports', allowReports:'reports'
+  };
+  var DEFAULT_TRUE = {
+    allowCourses:1, allowStudents:1, allowAttendance:1, allowScores:1, allowPlanScores:1,
+    allowGradeCriteria:1, allowStudentShare:1, allowExport:1, allowEdit:1,
+    allowDelete:1, allowReports:1
+  };
+
+  function keyOf(key){ return ALIAS[key] || key; }
+  function isAdminUser(){
+    try { return window.isAdmin === true || (window.currentUser && window.currentUser.uid === 'admin-bypass'); } catch(e){ return false; }
+  }
+  function dir(){ return window.__currentUserDir || {}; }
+  function allPlans(){
+    try { return Array.isArray(window.subscriptionPlans) ? window.subscriptionPlans : []; } catch(e){ return []; }
+  }
+  function activePlan(){
+    var d = dir();
+    var pid = String(d.planId || (window.currentUserPlan && window.currentUserPlan.id) || (window.activePlan && window.activePlan.id) || '').trim();
+    var p = allPlans().find(function(x){ return String(x.id || '').trim() === pid; }) || null;
+    if(p) return p;
+    if(window.currentUserPlan && window.currentUserPlan.id) return window.currentUserPlan;
+    if(window.activePlan && window.activePlan.id) return window.activePlan;
+    if(d.planId) return d;
+    return null;
+  }
+  function lockedReason(){
+    var d = dir(), p = activePlan();
+    if(isAdminUser()) return '';
+    if(!d.planId && !(d.teamStatus === 'accepted' || d.teamOwnerUid) && !p) return 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน';
+    if(d.status === 'pending_plan' || d.requestedPlanId) return 'คำขอแผนอยู่ระหว่างรออนุมัติ';
+    if(d.status === 'blocked' || d.status === 'deleted' || d.blocked === true) return 'บัญชีนี้ถูกระงับสิทธิ์';
+    var now = Date.now();
+    if((d.planExpiresAt && Number(d.planExpiresAt) <= now) && !(p && (p.freeForever || p.billingCycle === 'forever'))) return 'แผนหมดอายุแล้ว';
+    return '';
+  }
+  function valueFromSources(field){
+    var p = activePlan() || {}, d = dir() || {};
+    if(p && p[field] !== undefined && p[field] !== null) return p[field] !== false;
+    if(d && d[field] !== undefined && d[field] !== null) return d[field] !== false;
+    if(field === 'allowTeam') return (p && p.allowTeam === true) || (d && d.allowTeam === true);
+    return !!DEFAULT_TRUE[field];
+  }
+  function allows(key){
+    if(isAdminUser()) return true;
+    var reason = lockedReason();
+    if(reason) return false;
+    key = keyOf(key);
+    var def = RIGHTS[key];
+    if(!def) return true;
+    return valueFromSources(def.field);
+  }
+  function showLocked(key, action){
+    key = keyOf(key);
+    var reason = lockedReason();
+    var def = RIGHTS[key] || {title:'ไม่มีสิทธิ์ใช้งาน', msg:'แผนปัจจุบันไม่รองรับฟังก์ชันนี้'};
+    var title = reason ? 'บัญชีถูกจำกัดสิทธิ์' : def.title;
+    var msg = reason || def.msg;
+    if(action) msg += '\n\nการทำงาน: ' + action;
+    if(typeof window.showCustomAlert === 'function') window.showCustomAlert(title, msg, true);
+    else alert(title + '\n' + msg);
+    return false;
+  }
+  function requireRight(key, action){ return allows(key) ? true : showLocked(key, action); }
+
+  window.schoolhubFinalPlanAllows = allows;
+  window.schoolhubFinalRequirePlanRight = requireRight;
+  window.schoolhubExpandedPlanAllows = allows;
+  window.schoolhubExpandedRequirePlanRight = requireRight;
+  window.currentPlanAllows = function(key){ return allows(key); };
+  window.schoolhubAssertPlanFeature = function(feature, action){ return requireRight(feature, action); };
+
+  function wrap(name, key, action){
+    var old = window[name];
+    if(typeof old !== 'function' || old.__schoolhubFinal12RightsWrapped) return;
+    var fn = function(){
+      if(!requireRight(key, action)) return false;
+      return old.apply(this, arguments);
+    };
+    fn.__schoolhubFinal12RightsWrapped = true;
+    window[name] = fn;
+  }
+  function installFunctionGuards(){
+    wrap('openCourseModal','courses','เพิ่ม/แก้ไขรายวิชา');
+    wrap('editCourse','courses','แก้ไขรายวิชา');
+    wrap('handleCourseSubmit','courses','บันทึกรายวิชา');
+    wrap('saveCourse','courses','บันทึกรายวิชา');
+
+    wrap('openStudentsManager','students','จัดการนักเรียน');
+    wrap('openMultiStudentModal','students','เพิ่มนักเรียน');
+    wrap('handleMultiStudentSubmit','students','บันทึกนักเรียน');
+    wrap('saveMultiStudents','students','บันทึกนักเรียน');
+
+    wrap('saveAttendance','attendance','บันทึกเช็คชื่อ');
+    wrap('deleteAttendance','delete','ลบข้อมูลเช็คชื่อ');
+
+    wrap('renderScoreList','scores','บันทึกคะแนน');
+    wrap('saveScores','scores','บันทึกคะแนน');
+    wrap('handleSaveScores','scores','บันทึกคะแนน');
+    wrap('saveScore','scores','บันทึกคะแนน');
+
+    wrap('openPlanModalForCurrentCourse','planScores','จัดการแผนคะแนน');
+    wrap('schoolhubOpenPlanModalSafe','planScores','จัดการแผนคะแนน');
+    wrap('handleAddPlan','planScores','บันทึกแผนคะแนน');
+    wrap('editPlan','planScores','แก้ไขแผนคะแนน');
+    wrap('deletePlan','planScores','ลบแผนคะแนน');
+
+    wrap('openGradeCriteriaModalForCurrentCourse','gradeCriteria','ตั้งค่าเกณฑ์เกรด');
+    wrap('openGradeCriteria','gradeCriteria','ตั้งค่าเกณฑ์เกรด');
+    wrap('handleGradeCriteriaSubmit','gradeCriteria','บันทึกเกณฑ์เกรด');
+    wrap('saveGradeCriteria','gradeCriteria','บันทึกเกณฑ์เกรด');
+
+    wrap('openShareStudentModal','studentShare','แชร์ให้นักเรียน');
+    wrap('createStudentShareLink','studentShare','สร้างลิงก์ให้นักเรียน');
+
+    wrap('exportStudentsToExcel','export','Export รายชื่อนักเรียน');
+    wrap('exportScoresToExcel','export','Export คะแนน');
+    wrap('exportAttendanceToExcel','export','Export เช็คชื่อ');
+    wrap('downloadExcelMultiSheet','export','Export Excel');
+
+    wrap('openCourseTeachers','team','จัดการครูในรายวิชา');
+    wrap('openCourseTeachersModal','team','จัดการครูในรายวิชา');
+    wrap('addCourseTeacher','team','เพิ่มครูในรายวิชา');
+    wrap('saveCourseTeachers','team','บันทึกครูในรายวิชา');
+
+    wrap('editStudent','edit','แก้ไขข้อมูลนักเรียน');
+    wrap('openStudentEditModal','edit','แก้ไขข้อมูลนักเรียน');
+    wrap('handleStudentEditSubmit','edit','บันทึกแก้ไขนักเรียน');
+    wrap('saveStudentEdit','edit','บันทึกแก้ไขนักเรียน');
+    wrap('toggleStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('confirmSetStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('saveStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('cancelStudentWithdrawn','edit','ยกเลิกสถานะลาออก');
+
+    wrap('deleteStudent','delete','ลบนักเรียน');
+    wrap('deleteCourse','delete','ลบรายวิชา');
+    wrap('deleteScores','delete','ลบคะแนน');
+  }
+
+  function classifyElement(el){
+    if(!el) return '';
+    var s = String((el.id||'') + ' ' + (el.className||'') + ' ' + (el.textContent||'') + ' ' + (el.getAttribute('onclick')||'') + ' ' + (el.getAttribute('title')||''));
+    if(/openShareStudentModal|createStudentShareLink|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
+    if(/schoolhubOpenPlanModalSafe|openPlanModalForCurrentCourse|handleAddPlan|editPlan|deletePlan|แผนคะแนน|แผนเก็บคะแนน|จัดการแผน/i.test(s)) return 'planScores';
+    if(/openGradeCriteria|handleGradeCriteriaSubmit|saveGradeCriteria|เกณฑ์เกรด/i.test(s)) return 'gradeCriteria';
+    if(/export|Excel|ส่งออก|โหลดตาราง|เอ็กพอต|เอ็กซ์พอร์ต/i.test(s)) return 'export';
+    if(/CourseTeachers|course-teachers|จัดการครูในรายวิชา|ครูผู้สอนร่วม|เพิ่มครู/i.test(s)) return 'team';
+    if(/switchCourseTab\(['\"]attendance['\"]\)|saveAttendance|เช็คชื่อ/i.test(s)) return 'attendance';
+    if(/switchCourseTab\(['\"]scores['\"]\)|saveScores|บันทึกคะแนน/i.test(s)) return 'scores';
+    if(/switchCourseTab\(['\"]overview['\"]\)|ภาพรวม|รายงาน/i.test(s)) return 'reports';
+    if(/openCourseModal|editCourse|handleCourseSubmit|เพิ่มรายวิชา|แก้ไขรายวิชา|รายวิชา/i.test(s) && /เพิ่ม|แก้ไข|บันทึก|openCourseModal|editCourse|handleCourseSubmit/i.test(s)) return 'courses';
+    if(/openMultiStudentModal|editStudent|handleStudentEditSubmit|เพิ่มนักเรียน|แก้ไขข้อมูลนักเรียน|นักเรียน/i.test(s) && /เพิ่ม|แก้ไข|บันทึก|openMultiStudentModal|editStudent/i.test(s)) return 'students';
+    if(/deleteStudent|deleteCourse|deleteScores|deleteAttendance|ลบ/i.test(s)) return 'delete';
+    return '';
+  }
+
+  function setElementState(el){
+    var key = classifyElement(el);
+    if(!key) return;
+    var ok = allows(key);
+    el.dataset.schoolhubFinalRight = key;
+    if(ok){
+      el.classList.remove('schoolhub-plan-right-locked','opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
+      el.removeAttribute('aria-disabled');
+      if(/ไม่รองรับ|ไม่มีสิทธิ์|บัญชีถูกจำกัด/.test(el.getAttribute('title')||'')) el.removeAttribute('title');
+      if(el.tagName === 'BUTTON') el.disabled = false;
+      el.style.pointerEvents = '';
+      el.style.opacity = '';
+      el.style.filter = '';
+      el.style.cursor = '';
+    }else{
+      el.classList.add('schoolhub-plan-right-locked','opacity-50','cursor-not-allowed');
+      el.setAttribute('aria-disabled','true');
+      el.setAttribute('title',(RIGHTS[key]||{}).title || 'ไม่มีสิทธิ์ใช้งาน');
+      if(el.tagName === 'BUTTON') el.disabled = false;
+      el.style.pointerEvents = 'auto';
+    }
+  }
+  function refreshUI(){
+    document.querySelectorAll('button,a,[role="button"]').forEach(setElementState);
+    var scoreArea = document.getElementById('score-area');
+    if(scoreArea){
+      scoreArea.classList.toggle('schoolhub-plan-right-locked', !allows('scores'));
+      scoreArea.querySelectorAll('input,select,textarea').forEach(function(x){ x.disabled = !allows('scores'); });
+    }
+  }
+
+  document.addEventListener('click', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+    if(el){
+      var key = classifyElement(el) || el.dataset.schoolhubFinalRight;
+      if(key && !allows(key)){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+        showLocked(key, (el.textContent||'').trim());
+        setTimeout(refreshUI, 50);
+        return false;
+      }
+    }
+    if(e.target && e.target.closest && e.target.closest('#score-area') && !allows('scores')){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+      showLocked('scores','บันทึกคะแนน');
+      return false;
+    }
+  }, true);
+
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.closest && e.target.closest('#score-area') && !allows('scores')){
+      e.preventDefault(); e.stopPropagation();
+      showLocked('scores','บันทึกคะแนน');
+      try{ e.target.value = e.target.defaultValue || ''; }catch(_e){}
+      return false;
+    }
+  }, true);
+
+  var oldSwitch = window.switchCourseTab;
+  if(typeof oldSwitch === 'function' && !oldSwitch.__schoolhubFinal12RightsWrapped){
+    window.switchCourseTab = function(tabId){
+      if(tabId === 'attendance' && !requireRight('attendance','เปิดหน้าเช็คชื่อ')) return false;
+      if(tabId === 'scores' && !requireRight('scores','เปิดหน้าบันทึกคะแนน')) return false;
+      if(tabId === 'overview' && !requireRight('reports','เปิดภาพรวมคะแนน')) return false;
+      return oldSwitch.apply(this, arguments);
+    };
+    window.switchCourseTab.__schoolhubFinal12RightsWrapped = true;
+  }
+
+  function preserveRightsOnSave(){
+    if(typeof window.saveAdminPlanForm !== 'function' || window.saveAdminPlanForm.__schoolhubFinalRightsSaveWrapped) return;
+    var old = window.saveAdminPlanForm;
+    window.saveAdminPlanForm = async function(){
+      var values = {};
+      Object.keys(RIGHTS).forEach(function(k){
+        var f = RIGHTS[k].field;
+        var el = document.getElementById('plan-sub-' + f);
+        if(el) values[f] = !!el.checked;
+      });
+      var editId = (document.getElementById('plan-sub-edit-id')||{}).value || '';
+      var result = await old.apply(this, arguments);
+      try{
+        var targetId = editId || (window.subscriptionPlans||[]).slice().sort(function(a,b){return Number(b.updatedAt||0)-Number(a.updatedAt||0);})[0]?.id;
+        var idx = (window.subscriptionPlans||[]).findIndex(function(p){ return String(p.id) === String(targetId); });
+        if(idx >= 0){
+          Object.keys(values).forEach(function(f){ window.subscriptionPlans[idx][f] = values[f]; });
+          if(typeof setDoc === 'function' && typeof getPlansDocRef === 'function'){
+            await setDoc(getPlansDocRef(), {items:window.subscriptionPlans, updatedAt:Date.now()}, {merge:true});
+          }
+          if(typeof window.renderAdminPlans === 'function') window.renderAdminPlans();
+        }
+      }catch(e){}
+      return result;
+    };
+    window.saveAdminPlanForm.__schoolhubFinalRightsSaveWrapped = true;
+  }
+
+  function install(){ installFunctionGuards(); preserveRightsOnSave(); refreshUI(); }
+  document.addEventListener('DOMContentLoaded', function(){ install(); setTimeout(install,300); setTimeout(install,1200); });
+  document.addEventListener('click', function(){ setTimeout(install,100); }, true);
+  document.addEventListener('change', function(){ setTimeout(install,100); }, true);
+  setInterval(install, 1500);
+})();
+</script>
+
+
+<!-- =========================================================
+     SchoolHub CANONICAL 12 RIGHTS FINAL PATCH
+     รวม source of truth ของสิทธิ์ 12 รายการ + บันทึก/โหลด field เดียวกันจริง
+     ========================================================= -->
+<style id="schoolhub-canonical-12-rights-style">
+.schoolhub-plan-right-locked{opacity:.48!important;filter:grayscale(.25)!important;cursor:not-allowed!important;}
+.schoolhub-plan-right-locked *{cursor:not-allowed!important;}
+.schoolhub-plan-right-locked[aria-disabled="true"]{pointer-events:auto!important;}
+</style>
+<script type="module" id="schoolhub-canonical-12-rights-script">
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+(function(){
+  if(window.__schoolhubCanonical12RightsFinalPatch) return;
+  window.__schoolhubCanonical12RightsFinalPatch = true;
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+  };
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const plansRef = doc(db, 'system_settings', 'subscription_plans');
+
+  const RIGHTS = [
+    ['allowAttendance','attendance','เช็คชื่อ','แผนนี้ไม่รองรับเช็คชื่อ','กรุณาอัปเกรดแผนเพื่อใช้เมนูเช็คชื่อ','fa-calendar-check'],
+    ['allowExport','export','Export','แผนนี้ไม่รองรับ Export','กรุณาอัปเกรดแผนเพื่อส่งออกไฟล์ Excel','fa-file-excel'],
+    ['allowTeam','team','จัดการครูในรายวิชา / ทีมครู','แผนนี้ไม่รองรับจัดการครูในรายวิชา','แผนปัจจุบันเป็นแบบใช้คนเดียว ไม่สามารถจัดการครูผู้สอนร่วมได้','fa-users'],
+    ['allowScores','scores','บันทึกคะแนน','แผนนี้ไม่รองรับบันทึกคะแนน','กรุณาอัปเกรดแผนเพื่อบันทึกคะแนน','fa-star'],
+    ['allowPlanScores','planScores','จัดการแผนคะแนน / แผนเก็บคะแนน','แผนนี้ไม่รองรับการจัดการแผนคะแนน','กรุณาอัปเกรดแผนเพื่อจัดการแผนคะแนน','fa-list-ul'],
+    ['allowGradeCriteria','gradeCriteria','ตั้งค่าเกณฑ์เกรด','แผนนี้ไม่รองรับการตั้งค่าเกณฑ์เกรด','กรุณาอัปเกรดแผนเพื่อตั้งค่าเกณฑ์เกรด','fa-medal'],
+    ['allowStudentShare','studentShare','แชร์ให้นักเรียน','แผนนี้ไม่รองรับแชร์ให้นักเรียน','กรุณาอัปเกรดแผนเพื่อแชร์ผลคะแนนให้นักเรียน','fa-share-nodes'],
+    ['allowCourses','courses','เพิ่ม/แก้ไขรายวิชา','แผนนี้ไม่รองรับการจัดการรายวิชา','กรุณาอัปเกรดแผนเพื่อเพิ่มหรือแก้ไขรายวิชา','fa-book-open'],
+    ['allowStudents','students','เพิ่ม/แก้ไขนักเรียน','แผนนี้ไม่รองรับการจัดการนักเรียน','กรุณาอัปเกรดแผนเพื่อเพิ่มหรือแก้ไขนักเรียน','fa-user-graduate'],
+    ['allowEdit','edit','แก้ไขข้อมูล','แผนนี้ไม่รองรับการแก้ไขข้อมูล','กรุณาอัปเกรดแผนเพื่อแก้ไขข้อมูล','fa-pen-to-square'],
+    ['allowDelete','delete','ลบข้อมูล','แผนนี้ไม่รองรับการลบข้อมูล','กรุณาอัปเกรดแผนเพื่อปลดล็อกการลบข้อมูล','fa-trash'],
+    ['allowReports','reports','รายงาน/ภาพรวม','แผนนี้ไม่รองรับรายงาน/ภาพรวม','กรุณาอัปเกรดแผนเพื่อดูรายงาน/ภาพรวม','fa-chart-pie']
+  ];
+  const FIELD_TO_KEY = Object.fromEntries(RIGHTS.map(r => [r[0], r[1]]));
+  const KEY_TO_DEF = Object.fromEntries(RIGHTS.map(r => [r[1], {field:r[0], key:r[1], label:r[2], title:r[3], msg:r[4], icon:r[5]}]));
+  const DEFAULT_TRUE_FIELDS = new Set(RIGHTS.map(r => r[0]).filter(f => f !== 'allowTeam'));
+  const ALIAS = {
+    attendance:'attendance', attend:'attendance', checkAttendance:'attendance', allowAttendance:'attendance',
+    export:'export', excel:'export', xlsx:'export', allowExport:'export',
+    team:'team', teacher:'team', teachers:'team', courseTeachers:'team', allowTeam:'team',
+    score:'scores', scores:'scores', saveScore:'scores', saveScores:'scores', allowScores:'scores',
+    planScore:'planScores', planScores:'planScores', plan_score:'planScores', 'plan-score':'planScores', scorePlan:'planScores', allowPlanScores:'planScores',
+    grade:'gradeCriteria', grades:'gradeCriteria', gradeCriteria:'gradeCriteria', 'grade-criteria':'gradeCriteria', allowGradeCriteria:'gradeCriteria',
+    share:'studentShare', shareStudent:'studentShare', studentShare:'studentShare', student_share:'studentShare', 'student-share':'studentShare', allowStudentShare:'studentShare',
+    course:'courses', courses:'courses', addCourse:'courses', editCourse:'courses', allowCourses:'courses',
+    student:'students', students:'students', addStudent:'students', editStudent:'students', allowStudents:'students',
+    edit:'edit', update:'edit', editData:'edit', allowEdit:'edit',
+    delete:'delete', remove:'delete', del:'delete', deleteData:'delete', allowDelete:'delete',
+    report:'reports', reports:'reports', overview:'reports', dashboard:'reports', allowReports:'reports'
+  };
+  const LEGACY_FIELD = {};
+  const OLD_THREE_INPUTS = {
+    allowAttendance:'plan-sub-allow-attendance',
+    allowExport:'plan-sub-allow-export',
+    allowTeam:'plan-sub-allow-team'
+  };
+
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const keyOf = key => ALIAS[String(key || '').trim()] || String(key || '').trim();
+  const plans = () => Array.isArray(window.subscriptionPlans) ? window.subscriptionPlans : [];
+  const userDir = () => window.__currentUserDir || {};
+  function isAdmin(){
+    try{
+      const saved = JSON.parse(localStorage.getItem('schoolhub_web_session_v1') || '{}');
+      return window.isAdmin === true || window.isAdminUser === true || localStorage.getItem('schoolhub_admin_bypass') === 'true' || saved.role === 'admin' || saved.isAdmin === true || (window.currentUser && window.currentUser.uid === 'admin-bypass');
+    }catch(e){ return false; }
+  }
+  function normalizePlanRights(plan){
+    const p = Object.assign({}, plan || {});
+    RIGHTS.forEach(([field]) => {
+      const legacy = LEGACY_FIELD[field];
+      if(p[field] === undefined && legacy && p[legacy] !== undefined) p[field] = p[legacy];
+      if(field === 'allowTeam') p[field] = p[field] === true;
+      else p[field] = p[field] !== false;
+      if(legacy) delete p[legacy];
+    });
+    return p;
+  }
+  function activePlan(){
+    const d = userDir();
+    const pid = String(d.planId || (window.currentUserPlan && window.currentUserPlan.id) || (window.activePlan && window.activePlan.id) || '').trim();
+    let p = plans().find(x => String(x && x.id || '').trim() === pid) || null;
+    if(!p && window.currentUserPlan && window.currentUserPlan.id) p = window.currentUserPlan;
+    if(!p && window.activePlan && window.activePlan.id) p = window.activePlan;
+    if(!p && pid) p = d;
+    return p ? normalizePlanRights(p) : null;
+  }
+  function lockedReason(){
+    if(isAdmin()) return '';
+    const d = userDir();
+    const p = activePlan();
+    if(!d.planId && !(d.teamStatus === 'accepted' || d.teamOwnerUid) && !p) return 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน';
+    if(d.status === 'pending_plan' || d.requestedPlanId) return 'คำขอแผนอยู่ระหว่างรออนุมัติ';
+    if(d.status === 'blocked' || d.status === 'deleted' || d.blocked === true) return 'บัญชีนี้ถูกระงับสิทธิ์';
+    const now = Date.now();
+    if(((d.planExpiresAt && Number(d.planExpiresAt) <= now) || (d.planNextBillingAt && Number(d.planNextBillingAt) <= now)) && !(p && (p.freeForever || p.billingCycle === 'forever'))) return 'แผนหมดอายุหรือถึงรอบชำระเงินแล้ว';
+    return '';
+  }
+  function fieldValue(field){
+    if(isAdmin()) return true;
+    const p = activePlan() || {};
+    const d = userDir() || {};
+    const legacy = LEGACY_FIELD[field];
+    let v;
+    if(p[field] !== undefined && p[field] !== null) v = p[field];
+    else if(legacy && p[legacy] !== undefined && p[legacy] !== null) v = p[legacy];
+    else if(d[field] !== undefined && d[field] !== null) v = d[field];
+    else if(legacy && d[legacy] !== undefined && d[legacy] !== null) v = d[legacy];
+    else v = DEFAULT_TRUE_FIELDS.has(field);
+    return field === 'allowTeam' ? v === true : v !== false;
+  }
+  function allows(key){
+    if(isAdmin()) return true;
+    if(lockedReason()) return false;
+    const def = KEY_TO_DEF[keyOf(key)];
+    if(!def) return true;
+    return fieldValue(def.field);
+  }
+  function getRights(){
+    const p = activePlan() || {};
+    const reason = lockedReason();
+    const out = {admin:isAdmin(), active:!reason || isAdmin(), locked:!!reason && !isAdmin(), reason, plan:p};
+    RIGHTS.forEach(([field]) => { out[field] = isAdmin() ? true : fieldValue(field); });
+    out.courseLimit = Number(p.courseLimit || 0);
+    out.studentLimit = Number(p.studentLimit || 0);
+    out.weekLimit = Number(p.weekLimit || p.maxWeeks || 20);
+    out.teamLimit = Math.max(1, Number(p.teamMemberLimit || p.maxTeamMembers || 1));
+    return out;
+  }
+  function alertLocked(key, action){
+    const reason = lockedReason();
+    const def = KEY_TO_DEF[keyOf(key)] || {title:'ไม่มีสิทธิ์ใช้งาน', msg:'แผนปัจจุบันไม่รองรับฟังก์ชันนี้'};
+    let title = reason ? 'บัญชีถูกจำกัดสิทธิ์' : def.title;
+    let msg = reason || def.msg;
+    if(action) msg += '\n\nการทำงาน: ' + action;
+    if(typeof window.showCustomAlert === 'function') window.showCustomAlert(title, msg, true);
+    else alert(title + '\n' + msg);
+    return false;
+  }
+  function requireRight(key, action){ return allows(key) ? true : alertLocked(key, action); }
+
+  function installSourceOfTruth(){
+    window.schoolhubGetRealPlanRights = getRights;
+    window.schoolhubGetCanonicalPlanRights = getRights;
+    window.schoolhubFinalPlanAllows = allows;
+    window.schoolhubExpandedPlanAllows = allows;
+    window.schoolhubStrictPlanAllow = allows;
+    window.currentPlanAllows = allows;
+    window.schoolhubFinalRequirePlanRight = requireRight;
+    window.schoolhubExpandedRequirePlanRight = requireRight;
+    window.schoolhubStrictRequireFeature = requireRight;
+    window.schoolhubAssertPlanFeature = requireRight;
+    window.requireRight = requireRight;
+    window.planAllows = allows;
+  }
+
+  function ensureRightsInputs(){
+    let anchor = $('schoolhub-expanded-rights-box') || $('schoolhub-plan-rights-summary-box') || ($('plan-sub-features') && $('plan-sub-features').closest('form')) || $('admin-plan-popup');
+    if(!anchor) return;
+    RIGHTS.forEach(([field]) => {
+      let el = $('plan-sub-' + field);
+      if(!el){
+        el = document.createElement('input');
+        el.type = 'checkbox';
+        el.id = 'plan-sub-' + field;
+        el.className = 'schoolhub-canonical-right-input';
+        el.style.cssText = 'position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;pointer-events:none!important;';
+        anchor.appendChild(el);
+      }
+    });
+  }
+  function defaultRight(field){ return field === 'allowTeam' ? false : DEFAULT_TRUE_FIELDS.has(field); }
+  function readRightsFromForm(){
+    ensureRightsInputs();
+    const out = {};
+    RIGHTS.forEach(([field]) => {
+      const el = $('plan-sub-' + field);
+      const oldId = OLD_THREE_INPUTS[field];
+      const oldEl = oldId ? $(oldId) : null;
+      if(el) out[field] = !!el.checked;
+      else if(oldEl) out[field] = !!oldEl.checked;
+      else out[field] = defaultRight(field);
+    });
+    return out;
+  }
+  function writeRightsToForm(plan){
+    ensureRightsInputs();
+    const p = normalizePlanRights(plan || {});
+    RIGHTS.forEach(([field]) => {
+      const val = p[field] !== undefined ? !!p[field] : defaultRight(field);
+      const el = $('plan-sub-' + field);
+      if(el) el.checked = val;
+      const oldId = OLD_THREE_INPUTS[field];
+      if(oldId && $(oldId)) $(oldId).checked = val;
+      document.querySelectorAll('.spr-popup-check[data-right="' + field + '"]').forEach(chk => { chk.checked = val; });
+    });
+    renderRightsPreview();
+  }
+  function renderRightsPreview(){
+    const preview = $('schoolhub-plan-rights-preview');
+    if(!preview) return;
+    const data = readRightsFromForm();
+    const on = RIGHTS.filter(([field]) => data[field]);
+    const off = RIGHTS.filter(([field]) => !data[field]);
+    let html = on.slice(0, 8).map(([field,key,label,,,,icon]) => `<span class="spr-chip"><i class="fas ${esc(icon)}"></i>${esc(label)}</span>`).join('');
+    if(on.length > 8) html += `<span class="spr-chip">+${on.length - 8} สิทธิ์</span>`;
+    if(off.length) html += `<span class="spr-chip off"><i class="fas fa-lock"></i>ปิด ${off.length} สิทธิ์</span>`;
+    preview.innerHTML = html || '<span class="spr-chip off"><i class="fas fa-lock"></i>ปิดทั้งหมด</span>';
+  }
+  function syncPopupChecksToCanonical(){
+    document.querySelectorAll('.spr-popup-check').forEach(chk => {
+      const raw = chk.dataset.right;
+      chk.onchange = function(){
+        const field = chk.dataset.right;
+        const el = $('plan-sub-' + field);
+        if(el) el.checked = chk.checked;
+        const oldId = OLD_THREE_INPUTS[field];
+        if(oldId && $(oldId)) $(oldId).checked = chk.checked;
+        renderRightsPreview();
+      };
+    });
+  }
+  function ensurePopupHas12Rights(){
+    const grid = document.querySelector('#schoolhub-plan-rights-popup .spr-popup-grid');
+    if(!grid) return;
+    RIGHTS.forEach(([field,,label,,,,icon]) => {
+      let chk = grid.querySelector('.spr-popup-check[data-right="' + field + '"]');
+      if(!chk){
+        grid.insertAdjacentHTML('beforeend', `<label><input type="checkbox" class="spr-popup-check" data-right="${esc(field)}"><i class="fas ${esc(icon)} text-primary w-5 text-center"></i><span>${esc(label)}</span></label>`);
+      }
+    });
+    syncPopupChecksToCanonical();
+  }
+
+  async function loadPlansForPatch(){
+    let items = [];
+    try{
+      const snap = await getDoc(plansRef);
+      if(snap.exists() && Array.isArray((snap.data() || {}).items)) items = (snap.data() || {}).items;
+    }catch(e){}
+    if(!items.length && Array.isArray(window.subscriptionPlans)) items = window.subscriptionPlans;
+    if(!items.length){
+      try{ items = JSON.parse(localStorage.getItem('schoolhub_subscription_plans') || '[]'); }catch(e){}
+    }
+    items = (items || []).map(normalizePlanRights);
+    window.subscriptionPlans = items;
+    try{
+      localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(items));
+      localStorage.setItem('schoolhub_public_plans', JSON.stringify(items));
+      localStorage.setItem('schoolhub_subscription_plans_cache', JSON.stringify(items));
+    }catch(e){}
+    return items;
+  }
+  async function savePlansForPatch(items){
+    const clean = (items || []).map(normalizePlanRights).sort((a,b) => Number(a.order || 0) - Number(b.order || 0));
+    window.subscriptionPlans = clean;
+    try{
+      localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(clean));
+      localStorage.setItem('schoolhub_public_plans', JSON.stringify(clean));
+      localStorage.setItem('schoolhub_subscription_plans_cache', JSON.stringify(clean));
+    }catch(e){}
+    await setDoc(plansRef, {items:clean, updatedAt:Date.now()}, {merge:true});
+    return clean;
+  }
+
+  function installApplyPayloadBridge(){
+    const old = window.applyPlanToUserPayload;
+    if(typeof old !== 'function' || old.__canonical12RightsPayloadWrapped) return;
+    window.applyPlanToUserPayload = function(plan, startAt, cycle, extra){
+      const payload = old.apply(this, arguments) || {};
+      const cleanPlan = normalizePlanRights(plan || {});
+      RIGHTS.forEach(([field]) => { payload[field] = cleanPlan[field]; });
+      return payload;
+    };
+    window.applyPlanToUserPayload.__canonical12RightsPayloadWrapped = true;
+  }
+
+  function wrapAdminForm(){
+    ensureRightsInputs();
+    ensurePopupHas12Rights();
+    if(typeof window.resetAdminPlanForm === 'function' && !window.resetAdminPlanForm.__canonical12RightsWrapped){
+      const old = window.resetAdminPlanForm;
+      window.resetAdminPlanForm = function(){
+        const r = old.apply(this, arguments);
+        setTimeout(() => writeRightsToForm({}), 30);
+        return r;
+      };
+      window.resetAdminPlanForm.__canonical12RightsWrapped = true;
+    }
+    if(typeof window.editAdminPlan === 'function' && !window.editAdminPlan.__canonical12RightsWrapped){
+      const old = window.editAdminPlan;
+      window.editAdminPlan = async function(id){
+        const result = await old.apply(this, arguments);
+        const items = await loadPlansForPatch();
+        const p = items.find(x => String(x.id) === String(id)) || {};
+        writeRightsToForm(p);
+        return result;
+      };
+      window.editAdminPlan.__canonical12RightsWrapped = true;
+    }
+    if(typeof window.openSchoolHubPlanRightsPopup === 'function' && !window.openSchoolHubPlanRightsPopup.__canonical12RightsWrapped){
+      const old = window.openSchoolHubPlanRightsPopup;
+      window.openSchoolHubPlanRightsPopup = function(){
+        ensureRightsInputs();
+        ensurePopupHas12Rights();
+        renderRightsPreview();
+        const r = old.apply(this, arguments);
+        ensurePopupHas12Rights();
+        writeRightsToForm(readRightsFromForm());
+        return r;
+      };
+      window.openSchoolHubPlanRightsPopup.__canonical12RightsWrapped = true;
+    }
+    if(typeof window.saveSchoolHubPlanRightsPopup === 'function' && !window.saveSchoolHubPlanRightsPopup.__canonical12RightsWrapped){
+      window.saveSchoolHubPlanRightsPopup = function(){
+        const data = {};
+        document.querySelectorAll('.spr-popup-check').forEach(chk => { data[chk.dataset.right] = !!chk.checked; });
+        writeRightsToForm(data);
+        if(typeof window.closeSchoolHubPlanRightsPopup === 'function') window.closeSchoolHubPlanRightsPopup();
+      };
+      window.saveSchoolHubPlanRightsPopup.__canonical12RightsWrapped = true;
+    }
+    if(typeof window.saveAdminPlanForm === 'function' && !window.saveAdminPlanForm.__canonical12RightsWrapped){
+      const old = window.saveAdminPlanForm;
+      window.saveAdminPlanForm = async function(){
+        const rights = readRightsFromForm();
+        const editId = ($('plan-sub-edit-id') || {}).value || '';
+        const result = await old.apply(this, arguments);
+        try{
+          let items = await loadPlansForPatch();
+          const targetId = editId || (items.slice().sort((a,b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))[0] || {}).id;
+          const idx = items.findIndex(p => String(p.id) === String(targetId));
+          if(idx >= 0){
+            items[idx] = normalizePlanRights(Object.assign({}, items[idx], rights, {updatedAt:Date.now()}));
+            await savePlansForPatch(items);
+            if(typeof window.renderAdminPlans === 'function') window.renderAdminPlans();
+            if(typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+            if(typeof window.renderUserPlans === 'function') window.renderUserPlans();
+          }
+        }catch(e){ console.warn('บันทึกสิทธิ์ 12 รายการซ้ำไม่สำเร็จ:', e); }
+        return result;
+      };
+      window.saveAdminPlanForm.__canonical12RightsWrapped = true;
+    }
+  }
+
+  function wrap(name, key, action){
+    const old = window[name];
+    if(typeof old !== 'function' || old.__canonical12RightsGuarded) return;
+    const fn = function(){
+      if(!requireRight(key, action)) return false;
+      return old.apply(this, arguments);
+    };
+    fn.__canonical12RightsGuarded = true;
+    window[name] = fn;
+  }
+  function installFunctionGuards(){
+    wrap('openCourseModal','courses','เพิ่ม/แก้ไขรายวิชา');
+    wrap('editCourse','courses','แก้ไขรายวิชา');
+    wrap('handleCourseSubmit','courses','บันทึกรายวิชา');
+    wrap('saveCourse','courses','บันทึกรายวิชา');
+    wrap('openMultiStudentModal','students','เพิ่มนักเรียน');
+    wrap('handleMultiStudentSubmit','students','บันทึกนักเรียน');
+    wrap('saveMultiStudents','students','บันทึกนักเรียน');
+    wrap('openStudentModal','students','เพิ่ม/แก้ไขนักเรียน');
+    wrap('saveAttendance','attendance','บันทึกเช็คชื่อ');
+    wrap('renderScoreList','scores','เปิดหน้าบันทึกคะแนน');
+    wrap('saveScores','scores','บันทึกคะแนน');
+    wrap('handleSaveScores','scores','บันทึกคะแนน');
+    wrap('saveScore','scores','บันทึกคะแนน');
+    wrap('openPlanModalForCurrentCourse','planScores','จัดการแผนคะแนน');
+    wrap('schoolhubOpenPlanModalSafe','planScores','จัดการแผนคะแนน');
+    wrap('handleAddPlan','planScores','บันทึกแผนคะแนน');
+    wrap('editPlan','planScores','แก้ไขแผนคะแนน');
+    wrap('deletePlan','planScores','ลบแผนคะแนน');
+    wrap('openGradeCriteriaModalForCurrentCourse','gradeCriteria','ตั้งค่าเกณฑ์เกรด');
+    wrap('openGradeCriteria','gradeCriteria','ตั้งค่าเกณฑ์เกรด');
+    wrap('handleGradeCriteriaSubmit','gradeCriteria','บันทึกเกณฑ์เกรด');
+    wrap('saveGradeCriteria','gradeCriteria','บันทึกเกณฑ์เกรด');
+    wrap('openShareStudentModal','studentShare','แชร์ให้นักเรียน');
+    wrap('createStudentShareLink','studentShare','สร้างลิงก์ให้นักเรียน');
+    wrap('exportStudentsToExcel','export','Export รายชื่อนักเรียน');
+    wrap('exportScoresToExcel','export','Export คะแนน');
+    wrap('exportAttendanceToExcel','export','Export เช็คชื่อ');
+    wrap('downloadExcelMultiSheet','export','Export Excel');
+    wrap('openCourseTeachers','team','จัดการครูในรายวิชา');
+    wrap('openCourseTeachersModal','team','จัดการครูในรายวิชา');
+    wrap('addCourseTeacher','team','เพิ่มครูในรายวิชา');
+    wrap('saveCourseTeachers','team','บันทึกครูในรายวิชา');
+    wrap('editStudent','edit','แก้ไขข้อมูลนักเรียน');
+    wrap('openStudentEditModal','edit','แก้ไขข้อมูลนักเรียน');
+    wrap('handleStudentEditSubmit','edit','บันทึกแก้ไขนักเรียน');
+    wrap('saveStudentEdit','edit','บันทึกแก้ไขนักเรียน');
+    wrap('toggleStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('confirmSetStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('saveStudentWithdrawn','edit','เปลี่ยนสถานะนักเรียน');
+    wrap('cancelStudentWithdrawn','edit','ยกเลิกสถานะลาออก');
+    wrap('deleteStudent','delete','ลบนักเรียน');
+    wrap('deleteCourse','delete','ลบรายวิชา');
+    wrap('deleteScores','delete','ลบคะแนน');
+    wrap('deleteAttendance','delete','ลบเช็คชื่อ');
+  }
+  function classify(el){
+    if(!el) return '';
+    const s = String((el.id || '') + ' ' + (el.className || '') + ' ' + (el.textContent || '') + ' ' + (el.getAttribute('onclick') || '') + ' ' + (el.getAttribute('title') || ''));
+    if(/openShareStudentModal|createStudentShareLink|แชร์ให้นักเรียน|share-student/i.test(s)) return 'studentShare';
+    if(/schoolhubOpenPlanModalSafe|openPlanModalForCurrentCourse|handleAddPlan|editPlan|deletePlan|แผนคะแนน|แผนเก็บคะแนน|จัดการแผน/i.test(s)) return 'planScores';
+    if(/openGradeCriteria|handleGradeCriteriaSubmit|saveGradeCriteria|เกณฑ์เกรด/i.test(s)) return 'gradeCriteria';
+    if(/export|Excel|ส่งออก|โหลดตาราง|เอ็กพอต|เอ็กซ์พอร์ต/i.test(s)) return 'export';
+    if(/CourseTeachers|course-teachers|จัดการครูในรายวิชา|ครูผู้สอนร่วม|เพิ่มครู/i.test(s)) return 'team';
+    if(/switchCourseTab\(['"]attendance['"]\)|saveAttendance|เช็คชื่อ/i.test(s)) return 'attendance';
+    if(/switchCourseTab\(['"]scores['"]\)|saveScores|บันทึกคะแนน/i.test(s)) return 'scores';
+    if(/switchCourseTab\(['"]overview['"]\)|ภาพรวม|รายงาน/i.test(s)) return 'reports';
+    if(/deleteStudent|deleteCourse|deleteScores|deleteAttendance|ลบ/i.test(s)) return 'delete';
+    if(/openCourseModal|editCourse|handleCourseSubmit|เพิ่มรายวิชา|แก้ไขรายวิชา/i.test(s)) return 'courses';
+    if(/openMultiStudentModal|openStudentEditModal|editStudent|handleStudentEditSubmit|เพิ่มนักเรียน|แก้ไขข้อมูลนักเรียน/i.test(s)) return /แก้ไข|edit/i.test(s) ? 'edit' : 'students';
+    return '';
+  }
+  function updateElement(el){
+    const key = classify(el) || el.dataset.schoolhubFinalRight || '';
+    if(!key) return;
+    const ok = allows(key);
+    el.dataset.schoolhubFinalRight = key;
+    if(ok){
+      el.classList.remove('schoolhub-plan-right-locked','opacity-50','opacity-40','cursor-not-allowed','pointer-events-none','grayscale');
+      el.removeAttribute('aria-disabled');
+      if(/ไม่รองรับ|ไม่มีสิทธิ์|บัญชีถูกจำกัด/.test(el.getAttribute('title') || '')) el.removeAttribute('title');
+      if(el.tagName === 'BUTTON') el.disabled = false;
+      el.style.pointerEvents = '';
+      el.style.opacity = '';
+      el.style.filter = '';
+      el.style.cursor = '';
+    }else{
+      el.classList.add('schoolhub-plan-right-locked','opacity-50','cursor-not-allowed');
+      el.setAttribute('aria-disabled','true');
+      el.setAttribute('title', (KEY_TO_DEF[key] || {}).title || 'ไม่มีสิทธิ์ใช้งาน');
+      if(el.tagName === 'BUTTON') el.disabled = false;
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'not-allowed';
+    }
+  }
+  function refreshRightsUI(){
+    document.querySelectorAll('button,a,[role="button"]').forEach(updateElement);
+    const scoreArea = $('score-area');
+    if(scoreArea){
+      const off = !allows('scores');
+      scoreArea.classList.toggle('schoolhub-plan-right-locked', off);
+      scoreArea.querySelectorAll('input,select,textarea').forEach(x => { x.disabled = off; });
+    }
+  }
+  function installClickGate(){
+    if(window.__schoolhubCanonicalClickGateInstalled) return;
+    window.__schoolhubCanonicalClickGateInstalled = true;
+    document.addEventListener('click', function(e){
+      const el = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+      if(el){
+        const key = classify(el) || el.dataset.schoolhubFinalRight || '';
+        if(key && !allows(key)){
+          e.preventDefault();
+          e.stopPropagation();
+          if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+          alertLocked(key, (el.textContent || '').trim());
+          setTimeout(refreshRightsUI, 30);
+          return false;
+        }
+      }
+      if(e.target && e.target.closest && e.target.closest('#score-area') && !allows('scores')){
+        e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+        alertLocked('scores','บันทึกคะแนน');
+        return false;
+      }
+    }, true);
+    document.addEventListener('input', function(e){
+      if(e.target && e.target.closest && e.target.closest('#score-area') && !allows('scores')){
+        e.preventDefault(); e.stopPropagation();
+        alertLocked('scores','บันทึกคะแนน');
+        try{ e.target.value = e.target.defaultValue || ''; }catch(_e){}
+        return false;
+      }
+    }, true);
+  }
+  function installTabGuard(){
+    const old = window.switchCourseTab;
+    if(typeof old !== 'function' || old.__canonical12RightsGuarded) return;
+    window.switchCourseTab = function(tabId){
+      if(tabId === 'attendance' && !requireRight('attendance','เปิดหน้าเช็คชื่อ')) return false;
+      if(tabId === 'scores' && !requireRight('scores','เปิดหน้าบันทึกคะแนน')) return false;
+      if(tabId === 'overview' && !requireRight('reports','เปิดภาพรวมคะแนน')) return false;
+      return old.apply(this, arguments);
+    };
+    window.switchCourseTab.__canonical12RightsGuarded = true;
+  }
+
+  function install(){
+    installSourceOfTruth();
+    installApplyPayloadBridge();
+    wrapAdminForm();
+    installFunctionGuards();
+    installTabGuard();
+    installClickGate();
+    refreshRightsUI();
+  }
+  document.addEventListener('DOMContentLoaded', () => { install(); setTimeout(install, 300); setTimeout(install, 1200); });
+  document.addEventListener('click', () => setTimeout(install, 80), true);
+  document.addEventListener('change', () => { setTimeout(() => { ensureRightsInputs(); syncPopupChecksToCanonical(); renderRightsPreview(); install(); }, 80); }, true);
+  setInterval(install, 1000);
+  install();
 })();
 </script>
