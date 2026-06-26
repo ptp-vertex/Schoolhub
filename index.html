@@ -68,12 +68,40 @@
             return formatScoreDisplay(value, digits);
         }
 
+        function safeText(value, fallback = '') {
+            if (value === null || value === undefined) return fallback;
+            return String(value);
+        }
+
+        function isWithdrawnStudent(student) {
+            return !!(
+                student && (
+                    student.withdrawn === true ||
+                    student.isWithdrawn === true ||
+                    student.status === 'withdrawn' ||
+                    student.status === 'ลาออก'
+                )
+            );
+        }
+
+        function renderWithdrawnScoreCell() {
+            return '<span class="withdrawn-score-cell">ลาออก</span>';
+        }
+
+        function renderWithdrawnGradeCell() {
+            return '<span class="withdrawn-grade-cell">ลาออก</span>';
+        }
+
         window.normalizeScoreNumber = normalizeScoreNumber;
         window.formatScoreDisplay = formatScoreDisplay;
         window.isMissingScoreValue = isMissingScoreValue;
         window.scoreNumberOrNull = scoreNumberOrNull;
         window.addScoreToTotal = addScoreToTotal;
         window.formatScoreValueHtml = formatScoreValueHtml;
+        window.safeText = safeText;
+        window.isWithdrawnStudent = isWithdrawnStudent;
+        window.renderWithdrawnScoreCell = renderWithdrawnScoreCell;
+        window.renderWithdrawnGradeCell = renderWithdrawnGradeCell;
     </script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -2286,6 +2314,24 @@ document.addEventListener('click',function(){
 .schoolhub-withdrawn-row { opacity: .72; }
 .schoolhub-withdrawn-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:800; color:#be123c; background:#fff1f2; border:1px solid #fecdd3; border-radius:9999px; padding:.18rem .5rem; margin-left:.35rem; white-space:nowrap; }
 .schoolhub-withdrawn-control { opacity:.55 !important; pointer-events:none !important; cursor:not-allowed !important; }
+.withdrawn-score-cell,
+.withdrawn-grade-cell,
+.score-cell.withdrawn,
+.grade-cell.withdrawn,
+.summary-score-col.withdrawn,
+.summary-total-col.withdrawn,
+.summary-grade-col.withdrawn,
+.summary-mobile-plan.withdrawn {
+  background:#f1f5f9 !important;
+  color:#94a3b8 !important;
+  font-weight:600 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+}
+.summary-score-col.withdrawn .summary-score-cell-content,
+.summary-total-col.withdrawn .withdrawn-score-cell,
+.summary-grade-col.withdrawn .withdrawn-grade-cell,
+.summary-mobile-plan.withdrawn span { color:#94a3b8 !important; }
 </style>
 
 
@@ -2654,7 +2700,7 @@ document.addEventListener('click',function(){
                             </div>
                             <div class="text-center pt-1">
                                 <p class="text-sm font-medium text-slate-500">ไม่มีบัญชี? <button type="button" onclick="toggleAuthMode('register')" class="text-primary font-black hover:text-indigo-700 hover:underline">สมัครสมาชิก</button></p>
-                                <p class="text-sm font-medium text-slate-500 mt-2"><button type="button" onclick="openForgotPassword()" class="text-slate-400 hover:text-primary hover:underline">ลืมรหัสผ่าน?</button></p>
+                                <p class="text-sm font-medium text-slate-500 mt-2"><button type="button" data-reset-password class="forgot-password-link text-slate-400 hover:text-primary hover:underline" onclick="return openResetPasswordPage(event)">ลืมรหัสผ่าน?</button></p>
                             </div>
                         </form>
 
@@ -2821,7 +2867,7 @@ document.addEventListener('click',function(){
                     </div>
                     <div class="grid grid-cols-1 gap-3 pt-2">
                         <button onclick="saveUserProfileChanges()" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> บันทึกชื่อ</button>
-                        <button onclick="requestOwnPasswordReset()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
+                        <button type="button" data-reset-password class="forgot-password-link w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition" onclick="return openResetPasswordPage(event)"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
                     </div>
                 </div>
             </div>
@@ -4231,7 +4277,7 @@ document.addEventListener('click',function(){
         }
         window.startSchoolHubRealtimeListeners = startSchoolHubRealtimeListeners;
 
-        window.isStudentWithdrawn = (student) => !!(student && (student.withdrawn === true || student.status === 'ลาออก' || student.status === 'withdrawn'));
+        window.isStudentWithdrawn = (student) => (typeof window.isWithdrawnStudent === 'function') ? window.isWithdrawnStudent(student) : !!(student && (student.withdrawn === true || student.isWithdrawn === true || student.status === 'ลาออก' || student.status === 'withdrawn'));
         window.getStudentWithdrawnClass = (student) => window.isStudentWithdrawn(student) ? ' schoolhub-withdrawn-text' : '';
         window.getStudentWithdrawnRowClass = (student) => window.isStudentWithdrawn(student) ? ' schoolhub-withdrawn-row' : '';
         window.getStudentWithdrawnBadge = (student) => window.isStudentWithdrawn(student) ? '<span onclick="event.stopPropagation(); showStudentWithdrawReason(\'' + student.id + '\')" class="schoolhub-withdrawn-badge" title="ดูเหตุผลลาออก" role="button" tabindex="0"><i class="fas fa-user-slash"></i> ลาออก</span>' : '';
@@ -5999,10 +6045,27 @@ async function submitPlanRequest(planId){
             document.getElementById('auth-subtitle').textContent = isLogin ? "ระบบจัดการห้องเรียนอัจฉริยะ" : "สร้างบัญชีใหม่เพื่อเริ่มต้นใช้งาน";
         };
 
-        window.openForgotPassword = () => {
-            const resetUrl = 'reset-password.html';
-            window.open(resetUrl, '_blank');
+        window.openResetPasswordPage = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            window.open('./reset-password.html', '_blank', 'noopener,noreferrer');
+            return false;
         };
+
+        window.openForgotPassword = window.openResetPasswordPage;
+
+        document.addEventListener('click', function(e) {
+            const el = e.target.closest('[data-reset-password], .forgot-password-link');
+            if (!el) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            window.open('./reset-password.html', '_blank', 'noopener,noreferrer');
+        }, true);
 
         window.handleLogin = async (e) => {
             e.preventDefault();
@@ -6379,7 +6442,7 @@ async function submitPlanRequest(planId){
             if (emailInput) emailInput.value = currentUser.email || 'Admin';
             if (adminPassWrap) adminPassWrap.classList.toggle('hidden', !isAdminBypass);
             if (adminPassInput) adminPassInput.value = '';
-            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            const resetBtn = document.querySelector('#user-profile-modal [data-reset-password]');
             if (resetBtn) {
                 resetBtn.classList.toggle('hidden', isAdminBypass);
                 resetBtn.innerHTML = '<i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน';
@@ -6425,39 +6488,8 @@ async function submitPlanRequest(planId){
             } finally { toggleLoader(false); }
         };
 
-        window.requestOwnPasswordReset = async () => {
-            if (!currentUser || currentUser.uid === 'admin-bypass') {
-                return showCustomAlert('Admin เปลี่ยนรหัสได้ในโปรไฟล์', 'กรุณากรอกรหัสผ่าน Admin ใหม่ในหน้าต่างโปรไฟล์ แล้วกดบันทึกชื่อ', false);
-            }
-            const email = currentUser.email || '';
-            if (!email) return showCustomAlert('ไม่พบอีเมล', 'บัญชีนี้ไม่มีอีเมลสำหรับรีเซ็ตรหัสผ่าน', true);
-            try {
-                toggleLoader(true);
-                const resetUrl = new URL('reset-password.html', window.location.href);
-                resetUrl.searchParams.set('schoolhubReset', '1');
-                resetUrl.searchParams.set('email', email);
-                const token = makeToken();
-                resetUrl.searchParams.set('token', token);
-                await sendMailViaWebApp({
-                    to: email,
-                    name: currentUser.displayName || email,
-                    type: 'reset',
-                    subject: 'SchoolHub - รีเซ็ตรหัสผ่าน',
-                    message: `สวัสดี ${currentUser.displayName || email}
-
-กรุณากดลิงก์ด้านล่างเพื่อรีเซ็ตรหัสผ่าน:
-${resetUrl.toString()}
-
-ลิงก์หมดอายุใน 20 นาที
-
-— SchoolHub`,
-                    extra: { link: resetUrl.toString(), token }
-                });
-                closeModal('user-profile-modal');
-                showCustomAlert('ส่งลิงก์แล้ว', `ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว`);
-            } catch (err) {
-                showCustomAlert('ส่งลิงก์ไม่สำเร็จ', err.message || String(err), true);
-            } finally { toggleLoader(false); }
+        window.requestOwnPasswordReset = function(event) {
+            return window.openResetPasswordPage(event);
         };
 
         window.openAdminFirstSetupModal = () => {
@@ -7394,14 +7426,17 @@ ${resetUrl.toString()}
             const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
             courseStudents.forEach((s, index) => {
                 const studentOrder = index + 1;
-                const sc = saved[s.id] !== undefined ? saved[s.id] : '';
+                const isWithdrawn = (typeof window.isWithdrawnStudent === 'function') ? window.isWithdrawnStudent(s) : window.isStudentWithdrawn(s);
+                const sc = (!isWithdrawn && saved[s.id] !== undefined && saved[s.id] !== null) ? saved[s.id] : '';
                 let inputHtml = '';
-                if (maxScoreNum === 0) {
+                if (isWithdrawn) {
+                    inputHtml = window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>';
+                } else if (maxScoreNum === 0) {
                     const isChecked = (sc === 1 || sc === '1' || sc === true) ? 'checked' : '';
-                    inputHtml = `<input type="checkbox" class="score-checkbox w-6 h-6 text-primary rounded focus:ring-primary cursor-pointer mx-auto block shadow-sm" ${isChecked} data-studentid="${s.id}" ${window.isStudentWithdrawn(s)?'disabled':''}>`;
+                    inputHtml = `<input type="checkbox" class="score-checkbox w-6 h-6 text-primary rounded focus:ring-primary cursor-pointer mx-auto block shadow-sm" ${isChecked} data-studentid="${s.id}">`;
                 } else {
-                    // เอา placeholder="0" ออก ให้แสดงว่างเปล่า
-                    inputHtml = `<input type="number" inputmode="decimal" pattern="[0-9]*" min="0" max="${max}" placeholder="" value="${sc}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" data-studentid="${s.id}" ${window.isStudentWithdrawn(s)?'disabled':''} oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
+                    // เอา placeholder="0" ออก ให้แสดงว่างเปล่า และกัน null/undefined หลุดเข้าช่องกรอก
+                    inputHtml = `<input type="number" inputmode="decimal" pattern="[0-9]*" min="0" max="${max}" placeholder="" value="${escapeHTML(window.safeText ? window.safeText(sc) : (sc ?? ''))}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" data-studentid="${s.id}" oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
                 }
                 if (isMobileCardView) {
                     const scoreLabel = maxScoreNum === 0 ? 'สถานะงาน' : `คะแนน / ${escapeHTML(max)}`;
@@ -12860,7 +12895,7 @@ window.openUserProfileSettings = async function(){
             if($('profile-email-input')) $('profile-email-input').value = d.email || '';
             if($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
             if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.remove('hidden');
-            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            const resetBtn = document.querySelector('#user-profile-modal [data-reset-password]');
             if(resetBtn) resetBtn.classList.add('hidden');
         }catch(e){}
     }else{
@@ -12925,7 +12960,7 @@ window.openUserProfileSettings = async function(){
             if($('user-display-email')) $('user-display-email').textContent = email || username;
             if($('user-avatar-initial')) $('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
 
-            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            const resetBtn = document.querySelector('#user-profile-modal [data-reset-password]');
             if(resetBtn) resetBtn.classList.add('hidden');
         }catch(e){
             console.warn('load admin profile failed:', e);
@@ -12957,7 +12992,7 @@ window.openUserProfileSettings = async function(){
    - ผู้ใช้ปกติใช้ Firebase Auth currentUser
    ========================================================= */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const profileFixConfig = {
@@ -13066,7 +13101,7 @@ window.openUserProfileSettings = async function(){
             if ($pf('profile-email-input')) $pf('profile-email-input').value = email;
             if ($pf('admin-profile-password-input')) $pf('admin-profile-password-input').value = '';
             if ($pf('admin-profile-password-wrap')) $pf('admin-profile-password-wrap').classList.remove('hidden');
-            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            const resetBtn = document.querySelector('#user-profile-modal [data-reset-password]');
             if (resetBtn) resetBtn.classList.add('hidden');
 
             localStorage.setItem('schoolhub_admin_active', 'true');
@@ -13087,7 +13122,7 @@ window.openUserProfileSettings = async function(){
         if ($pf('profile-display-name-input')) $pf('profile-display-name-input').value = authUser?.displayName || ($pf('user-display-name')?.textContent || '').trim();
         if ($pf('profile-email-input')) $pf('profile-email-input').value = authUser?.email || ($pf('user-display-email')?.textContent || '').trim();
         if ($pf('admin-profile-password-wrap')) $pf('admin-profile-password-wrap').classList.add('hidden');
-        const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+        const resetBtn = document.querySelector('#user-profile-modal [data-reset-password]');
         if (resetBtn) resetBtn.classList.remove('hidden');
     }
 
@@ -13140,16 +13175,16 @@ window.saveUserProfileChanges = async function(){
     }
 };
 
-window.requestOwnPasswordReset = async function(){
-    const authUser = profileFixAuth.currentUser;
-    const email = authUser?.email || ($pf('profile-email-input')?.value || '').trim();
-    if (!email) return pfAlert('ไม่พบอีเมล', 'ไม่พบอีเมลสำหรับส่งลิงก์รีเซ็ตรหัสผ่าน', true);
-    try {
-        await sendPasswordResetEmail(profileFixAuth, email);
-        pfAlert('ส่งอีเมลแล้ว', 'ระบบส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณแล้ว');
-    } catch(e) {
-        pfAlert('ส่งอีเมลไม่สำเร็จ', e?.message || String(e), true);
+window.requestOwnPasswordReset = function(event){
+    if (typeof window.openResetPasswordPage === 'function') {
+        return window.openResetPasswordPage(event);
     }
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    window.open('./reset-password.html', '_blank', 'noopener,noreferrer');
+    return false;
 };
 </script>
 
@@ -13312,12 +13347,18 @@ window.requestOwnPasswordReset = async function(){
     var tbody = '<tbody>';
     var mobileHtml = '';
     students.forEach(function(st, index){
+      var isWithdrawn = (typeof window.isWithdrawnStudent === 'function') ? window.isWithdrawnStudent(st) : (window.isStudentWithdrawn && window.isStudentWithdrawn(st));
       var pr=0, la=0, ab=0;
       attDates.forEach(function(d){ var rec = (history[d] && history[d].records) || {}; var x = rec[st.id]; if(x==='present') pr++; else if(x==='late') la++; else if(x==='absent') ab++; });
       var total = 0;
       var planCells = '';
       var planCards = '';
       plans.forEach(function(p){
+        if (isWithdrawn) {
+          planCells += '<td class="text-center font-mono summary-score-col withdrawn"><span class="summary-score-cell-content">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</span></td>';
+          planCards += '<div class="summary-mobile-plan withdrawn"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>ลาออก</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
+          return;
+        }
         var task = courseScores.find(function(ts){ return ts.week == p.week && ts.title === p.title; });
         var raw = task && task.records ? task.records[st.id] : null;
         var isChecklist = Number(p.maxScore) === 0;
@@ -13336,11 +13377,13 @@ window.requestOwnPasswordReset = async function(){
           planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+(missingScore ? valueHtml : esc(display)+'/'+esc(maxText))+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
         }
       });
-      total = window.normalizeScoreNumber(total, 2);
-      var gg = scoreAndGrade(total, totalMax, gradeCriteria);
-      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
+      total = isWithdrawn ? 0 : window.normalizeScoreNumber(total, 2);
+      var gg = isWithdrawn ? {grade:'ลาออก', color:'withdrawn-grade-cell'} : scoreAndGrade(total, totalMax, gradeCriteria);
+      var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td>';
+      var gradeCell = isWithdrawn ? '<td class="text-center font-bold bg-amber-50/30 summary-grade-col withdrawn">'+(window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+totalCell+gradeCell+'</tr>';
 
-      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2)+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -14862,13 +14905,15 @@ window.requestOwnPasswordReset = async function(){
       attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var v=rec[st.id]; if(v==='present')pr++; else if(v==='late')la++; else if(v==='absent')ab++; });
       var row=[idx+1,st.code||'',st.name||'',studentRoom(st),pr,la,ab];
       var total=0;
+      var isWithdrawn = (window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st);
       plans.forEach(function(p){
+        if(isWithdrawn){ row.push('ลาออก'); return; }
         var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
         var raw=task&&task.records?task.records[st.id]:null;
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
         else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(window.normalizeScoreNumber(total,2), totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria):'-');
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria):'-'));
       aoa.push(row);
     });
     return aoa;
@@ -15279,7 +15324,9 @@ window.requestOwnPasswordReset = async function(){
       });
       var row=[idx+1, st.code || '', st.name || '', studentRoom(st), pr, la, ab];
       var total=0;
+      var isWithdrawn = (window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st);
       plans.forEach(function(p){
+        if(isWithdrawn){ row.push('ลาออก'); return; }
         var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
         var raw=task && task.records ? task.records[st.id] : null;
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
@@ -15288,7 +15335,7 @@ window.requestOwnPasswordReset = async function(){
           row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2)));
         }
       });
-      row.push(window.normalizeScoreNumber(total,2), totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria) : '-');
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria) : '-'));
       aoa.push(row);
     });
     return aoa;
@@ -15497,13 +15544,15 @@ window.requestOwnPasswordReset = async function(){
       dates.forEach(function(d){ var rec=(history[d] && history[d].records) || {}; var v=rec[st.id]; if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++; });
       var row=[idx+1, st.code||'', st.name||'', roomOf(st), pr, la, ab];
       var total=0;
+      var isWithdrawn = (window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st);
       plans.forEach(function(p){
+        if(isWithdrawn){ row.push('ลาออก'); return; }
         var task=scores.find(function(ts){ return String(ts.week)===String(p.week) && String(ts.title)===String(p.title); });
         var raw=task && task.records ? task.records[st.id] : null;
         if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
         else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(window.normalizeScoreNumber(total,2), totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria) : '-');
+      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria) : '-'));
       aoa.push(row);
     });
     return aoa;
@@ -22737,5 +22786,234 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   initOnce();
 })();
 </script>
+
+
+<!-- SchoolHub PATCH: withdrawn score/grade null guard (เฉพาะคะแนน/เกรดนักเรียนลาออก) -->
+<script id="schoolhub-withdrawn-score-grade-null-guard">
+(function(){
+  if(window.__schoolhubWithdrawnScoreGradeNullGuard) return;
+  window.__schoolhubWithdrawnScoreGradeNullGuard = true;
+
+  function safeText(value, fallback){
+    if(value === null || value === undefined) return fallback || '';
+    return String(value);
+  }
+  window.safeText = window.safeText || safeText;
+
+  function isWithdrawnStudent(student){
+    return !!(student && (
+      student.withdrawn === true ||
+      student.isWithdrawn === true ||
+      student.status === 'withdrawn' ||
+      student.status === 'ลาออก'
+    ));
+  }
+  window.isWithdrawnStudent = isWithdrawnStudent;
+  window.isStudentWithdrawn = isWithdrawnStudent;
+
+  window.renderWithdrawnScoreCell = window.renderWithdrawnScoreCell || function(){ return '<span class="withdrawn-score-cell">ลาออก</span>'; };
+  window.renderWithdrawnGradeCell = window.renderWithdrawnGradeCell || function(){ return '<span class="withdrawn-grade-cell">ลาออก</span>'; };
+
+  function esc(v){
+    return safeText(v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function cls(st){
+    return safeText((window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room || st.classroom || st.grade))) || '-').trim() || '-';
+  }
+  function courseStudents(courseId){
+    if(!courseId || !window.state) return [];
+    var course = (state.courses || []).find(function(c){ return String(c.id) === String(courseId); }) || {};
+    var rooms = Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+    var extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
+    var list = (state.students || []).filter(function(st){ return rooms.indexOf(cls(st)) !== -1 || extraIds.indexOf(st.id) !== -1; });
+    list.sort(function(a,b){ return String(cls(a)).localeCompare(String(cls(b)),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'); });
+    var selected = (window.__overviewRoomFilter && window.__overviewRoomFilter[courseId]) || '';
+    if(selected && selected !== 'all') list = list.filter(function(st){ return cls(st) === selected; });
+    return list;
+  }
+  function activeScoreStudents(courseId){
+    try { return (typeof window.getCourseStudents === 'function') ? window.getCourseStudents(courseId) : courseStudents(courseId); }
+    catch(e){ return courseStudents(courseId); }
+  }
+  function sanitizeNullTextIn(root){
+    if(!root) return;
+    try{
+      root.querySelectorAll('input,textarea').forEach(function(el){ if(el.value === 'null' || el.value === 'undefined') el.value = ''; });
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      var nodes=[];
+      while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(n){
+        if(/^\s*(null|undefined)\s*$/i.test(n.nodeValue || '')) n.nodeValue = '';
+      });
+    }catch(e){}
+  }
+
+  function makeWithdrawnCell(td, isGrade){
+    if(!td) return;
+    td.classList.add(isGrade ? 'grade-cell' : 'score-cell', 'withdrawn');
+    td.classList.remove('text-primary','text-rose-500','text-rose-600','text-blue-500','text-emerald-500','text-amber-500');
+    td.innerHTML = isGrade ? window.renderWithdrawnGradeCell() : window.renderWithdrawnScoreCell();
+    td.removeAttribute('data-missing-score');
+    td.querySelectorAll('[data-missing-score]').forEach(function(el){ el.removeAttribute('data-missing-score'); });
+    td.querySelectorAll('.schoolhub-missing-score-clickable,.schoolhub-mobile-missing-score').forEach(function(el){ el.classList.remove('schoolhub-missing-score-clickable','schoolhub-mobile-missing-score'); });
+  }
+
+  function applyOverviewWithdrawnGuard(){
+    var cid = window.currentActiveCourseId;
+    var table = document.getElementById('course-summary-table');
+    var students = courseStudents(cid);
+    if(table){
+      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+      rows.forEach(function(tr, i){
+        var st = students[i];
+        if(!st || !isWithdrawnStudent(st)) return;
+        tr.classList.add('schoolhub-withdrawn-row');
+        var cells = Array.prototype.slice.call(tr.children || []);
+        if(cells.length < 3) return;
+        var totalIndex = Math.max(cells.length - 2, 0);
+        var gradeIndex = Math.max(cells.length - 1, 0);
+        var attIndex = cells.findIndex(function(td){ return /^\s*\d+\s*\/\s*\d+\s*\/\s*\d+\s*$/.test(td.textContent || ''); });
+        if(attIndex < 0) attIndex = Math.min(4, totalIndex - 1);
+        for(var c = attIndex + 1; c < totalIndex; c++) makeWithdrawnCell(cells[c], false);
+        makeWithdrawnCell(cells[totalIndex], false);
+        makeWithdrawnCell(cells[gradeIndex], true);
+      });
+      sanitizeNullTextIn(table);
+    }
+
+    var box = document.getElementById('course-summary-mobile-cards');
+    if(box){
+      var cards = Array.prototype.slice.call(box.querySelectorAll('.summary-mobile-card'));
+      cards.forEach(function(card, i){
+        var st = students[i];
+        if(!st || !isWithdrawnStudent(st)) return;
+        card.classList.add('schoolhub-withdrawn-row');
+        card.querySelectorAll('.summary-mobile-plan').forEach(function(plan){
+          plan.classList.add('withdrawn');
+          var top = plan.querySelector('.summary-mobile-plan-top');
+          if(top){
+            var spans = top.querySelectorAll('span');
+            if(spans.length > 1) spans[spans.length - 1].textContent = 'ลาออก';
+          }
+          plan.querySelectorAll('[data-missing-score]').forEach(function(el){ el.removeAttribute('data-missing-score'); });
+          plan.querySelectorAll('.schoolhub-missing-score-clickable,.schoolhub-mobile-missing-score').forEach(function(el){ el.classList.remove('schoolhub-missing-score-clickable','schoolhub-mobile-missing-score'); });
+        });
+        var total = card.querySelector('.summary-mobile-total');
+        if(total){
+          total.classList.add('withdrawn');
+          total.innerHTML = '<span>รวม ลาออก</span><span class="withdrawn-grade-cell">เกรด ลาออก</span>';
+        }
+      });
+      sanitizeNullTextIn(box);
+    }
+  }
+
+  function applyScoreFormWithdrawnGuard(){
+    var cid = window.currentActiveCourseId;
+    var tbody = document.getElementById('score-list');
+    if(!tbody) return;
+    var students = activeScoreStudents(cid);
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    rows.forEach(function(row, i){
+      var st = students[i];
+      if(!st || !isWithdrawnStudent(st)) return;
+      row.classList.add('schoolhub-withdrawn-row');
+      var target = row.querySelector('.schoolhub-mobile-score-box .flex') || row.querySelector('td:last-child');
+      if(target){
+        target.classList.add('schoolhub-withdrawn-control');
+        target.innerHTML = window.renderWithdrawnScoreCell();
+      }
+    });
+    sanitizeNullTextIn(tbody);
+  }
+
+  var oldOpenMissing = window.openMissingScorePopup;
+  if(typeof oldOpenMissing === 'function' && !oldOpenMissing.__withdrawnGuard){
+    window.openMissingScorePopup = function(data){
+      var sid = data && data.studentId;
+      var st = sid && window.state && (state.students || []).find(function(x){ return String(x.id) === String(sid); });
+      if(st && isWithdrawnStudent(st)) return false;
+      return oldOpenMissing.apply(this, arguments);
+    };
+    window.openMissingScorePopup.__withdrawnGuard = true;
+  }
+
+  function hookRenderers(){
+    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__withdrawnNullGuard){
+      var oldOverview = window.renderCourseOverview;
+      window.renderCourseOverview = function(){
+        var r = oldOverview.apply(this, arguments);
+        [0,120,360,950].forEach(function(ms){ setTimeout(applyOverviewWithdrawnGuard, ms); });
+        return r;
+      };
+      window.renderCourseOverview.__withdrawnNullGuard = true;
+    }
+    if(typeof window.renderScoreList === 'function' && !window.renderScoreList.__withdrawnNullGuard){
+      var oldScore = window.renderScoreList;
+      window.renderScoreList = function(){
+        var r = oldScore.apply(this, arguments);
+        [0,80,240].forEach(function(ms){ setTimeout(applyScoreFormWithdrawnGuard, ms); });
+        return r;
+      };
+      window.renderScoreList.__withdrawnNullGuard = true;
+    }
+  }
+
+  function patchXlsxAoaToSheet(){
+    if(!window.XLSX || !XLSX.utils || !XLSX.utils.aoa_to_sheet || XLSX.utils.aoa_to_sheet.__withdrawnNullGuard) return;
+    var old = XLSX.utils.aoa_to_sheet;
+    XLSX.utils.aoa_to_sheet = function(aoa){
+      if(Array.isArray(aoa)) sanitizeExportAoa(aoa);
+      return old.apply(this, arguments);
+    };
+    XLSX.utils.aoa_to_sheet.__withdrawnNullGuard = true;
+  }
+  function sanitizeExportAoa(aoa){
+    aoa.forEach(function(row){
+      if(Array.isArray(row)) for(var i=0;i<row.length;i++) if(row[i] === null || row[i] === undefined || row[i] === 'null' || row[i] === 'undefined') row[i] = '';
+    });
+    var headerIndex = aoa.findIndex(function(row){ return Array.isArray(row) && row.indexOf('ชื่อ - นามสกุล') !== -1 && row.indexOf('เกรด') !== -1; });
+    if(headerIndex < 0 || !window.state) return;
+    var header = aoa[headerIndex];
+    var codeIndex = header.indexOf('รหัสนักเรียน');
+    var nameIndex = header.indexOf('ชื่อ - นามสกุล');
+    var gradeIndex = header.indexOf('เกรด');
+    var totalIndex = header.findIndex(function(h){ return /^รวมคะแนน/.test(String(h || '')); });
+    var firstPlanIndex = header.findIndex(function(h){ return /^สัปดาห์/.test(String(h || '')); });
+    if(gradeIndex < 0 || totalIndex < 0 || firstPlanIndex < 0) return;
+    for(var r=headerIndex+1; r<aoa.length; r++){
+      var row = aoa[r];
+      if(!Array.isArray(row) || !row.length) continue;
+      var st = (state.students || []).find(function(x){
+        var sameCode = codeIndex >= 0 && safeText(x.code) && safeText(x.code) === safeText(row[codeIndex]);
+        var sameName = nameIndex >= 0 && safeText(x.name) && safeText(x.name) === safeText(row[nameIndex]);
+        return sameCode && sameName;
+      }) || (state.students || []).find(function(x){ return nameIndex >= 0 && safeText(x.name) && safeText(x.name) === safeText(row[nameIndex]); });
+      if(!st || !isWithdrawnStudent(st)) continue;
+      for(var c=firstPlanIndex; c<totalIndex; c++) row[c] = 'ลาออก';
+      row[totalIndex] = 'ลาออก';
+      row[gradeIndex] = 'ลาออก';
+    }
+  }
+
+  document.addEventListener('dblclick', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('[data-missing-score="1"]') : null;
+    if(!el) return;
+    var sid = el.dataset && el.dataset.studentId;
+    var st = sid && window.state && (state.students || []).find(function(x){ return String(x.id) === String(sid); });
+    if(st && isWithdrawnStudent(st)){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      return false;
+    }
+  }, true);
+
+  function runAll(){ hookRenderers(); patchXlsxAoaToSheet(); applyScoreFormWithdrawnGuard(); applyOverviewWithdrawnGuard(); }
+  document.addEventListener('DOMContentLoaded', function(){ runAll(); setTimeout(runAll,500); setTimeout(runAll,1500); });
+  document.addEventListener('click', function(){ setTimeout(runAll,160); setTimeout(applyOverviewWithdrawnGuard,520); }, true);
+  setInterval(function(){ try{ applyScoreFormWithdrawnGuard(); applyOverviewWithdrawnGuard(); patchXlsxAoaToSheet(); }catch(e){} }, 2000);
+  runAll();
+})();
+</script>
+
 </body>
 </html>
