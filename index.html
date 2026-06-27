@@ -23674,6 +23674,18 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 .schoolhub-grade-danger-btn{border-radius:.75rem;width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;font-weight:1000;}
 .schoolhub-grade-edit-btn{border-radius:.8rem;padding:.55rem .7rem;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-weight:1000;font-size:.78rem;}
 .schoolhub-grade-empty{border:1px dashed #cbd5e1;border-radius:1rem;padding:1rem;text-align:center;color:#94a3b8;font-weight:900;background:#f8fafc;}
+.grade-current-summary{margin-bottom:1rem;}
+.grade-current-summary .grade-current-meta{display:flex;flex-wrap:wrap;gap:.45rem;margin:.55rem 0 .85rem;}
+.grade-current-summary .grade-current-pill{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #c7d2fe;background:#eef2ff;color:#4f46e5;border-radius:999px;padding:.35rem .65rem;font-size:.75rem;font-weight:1000;}
+.grade-current-summary .grade-current-list{font-size:.86rem;line-height:1.75;color:#475569;font-weight:700;}
+.grade-current-summary .grade-current-empty{color:#94a3b8;font-size:.86rem;font-weight:800;}
+#grade-criteria-history-list{margin-top:.75rem;}
+.schoolhub-grade-history-title{font-weight:1000;color:#0f172a;display:flex;align-items:center;gap:.5rem;margin:1rem 0 .65rem;}
+.schoolhub-grade-history-card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:1rem;padding:.85rem;margin-bottom:.6rem;}
+.schoolhub-grade-history-card .history-date{font-weight:1000;color:#0f172a;}
+.schoolhub-grade-history-card .history-by{font-size:.78rem;color:#64748b;font-weight:800;margin-top:.15rem;}
+.schoolhub-grade-history-card .history-rules{font-size:.82rem;color:#475569;line-height:1.65;margin-top:.45rem;font-weight:700;}
+
 #grade-special-rule-modal-backdrop{z-index:910000!important;}
 #grade-special-rule-modal{z-index:910010!important;}
 #grade-special-rule-modal.hidden,#grade-special-rule-modal-backdrop.hidden{display:none!important;}
@@ -23826,7 +23838,10 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     if(!rules.length) rules = clone(format === 'letter' ? LETTER_RULES : (format === 'custom' ? CUSTOM_RULES : NUMBER_RULES));
     rules.sort(function(a,b){return num(b.minScore,0) - num(a.minScore,0);});
     var defaultGrade = getLowestGradeLabel({gradeRules:rules, defaultGrade:raw && raw.defaultGrade, gradeFormat:format, gradeType:format});
-    return packCriteria(format, rules, normalizeSpecialRules(raw), defaultGrade);
+    var normalized = packCriteria(format, rules, normalizeSpecialRules(raw), defaultGrade);
+    if(raw && raw.updatedAt) normalized.updatedAt = raw.updatedAt;
+    if(raw && raw.updatedBy) normalized.updatedBy = raw.updatedBy;
+    return normalized;
   }
   function packCriteria(format, rules, specialRules, defaultGrade){
     var obj = {gradeFormat:format || 'number', gradeType:format || 'number', gradeRules:clone(rules || []), specialRules:clone(specialRules || []), defaultGrade:String(defaultGrade || '')};
@@ -24084,6 +24099,92 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     }
   }
 
+  function gradeCriteriaFormatLabel(criteria){
+    var f = String((criteria && (criteria.gradeFormat || criteria.gradeType)) || 'number');
+    if(f === 'letter') return 'รูปแบบตัวอักษร';
+    if(f === 'custom') return 'รูปแบบกำหนดเอง';
+    return 'รูปแบบตัวเลข';
+  }
+
+  function gradeDateText(value){
+    if(typeof window.formatThaiDateTime === 'function') return window.formatThaiDateTime(value);
+    try{
+      var ms = value && typeof value.toMillis === 'function' ? value.toMillis() : Date.parse(value);
+      return Number.isFinite(ms) ? new Date(ms).toLocaleString('th-TH') : '-';
+    }catch(e){ return '-'; }
+  }
+
+  function ensureGradeCriteriaSummarySlots(){
+    var modal = byId('grade-criteria-modal');
+    var form = modal && modal.querySelector('form');
+    if(!form) return;
+
+    var summary = byId('current-grade-criteria-summary');
+    if(!summary){
+      summary = document.createElement('div');
+      summary.id = 'current-grade-criteria-summary';
+      summary.className = 'grade-current-summary';
+      var firstBox = byId('schoolhub-grade-extra-rules');
+      form.insertBefore(summary, firstBox || form.firstChild);
+    }
+
+    var history = byId('grade-criteria-history-list');
+    if(!history){
+      var wrap = document.createElement('div');
+      wrap.className = 'schoolhub-grade-main-box mt-4';
+      wrap.innerHTML = '<div class="schoolhub-grade-history-title"><i class="fas fa-clock-rotate-left text-indigo-500"></i> ประวัติการตั้งค่าเกณฑ์เกรด</div><div id="grade-criteria-history-list"></div>';
+      var actions = form.querySelector('.pt-4.flex.gap-3');
+      form.insertBefore(wrap, actions || null);
+    }
+  }
+
+  function renderCurrentGradeCriteriaSummary(course){
+    ensureGradeCriteriaSummarySlots();
+    var box = byId('current-grade-criteria-summary');
+    if(!box) return;
+
+    var criteria = getCourseGradeCriteria(course || currentCourse() || getCurrentCourseId());
+    var gradeRules = Array.isArray(criteria.gradeRules) ? criteria.gradeRules : [];
+    var specialRules = Array.isArray(criteria.specialRules) ? criteria.specialRules : [];
+    var gradeHtml = gradeRules.map(function(r){ return esc(r.label) + ' = ' + esc(r.minScore) + ' คะแนนขึ้นไป'; }).join('<br>') || '<span class="grade-current-empty">ยังไม่มีเกณฑ์</span>';
+    var specialHtml = specialRules.map(function(r){ return esc(r.label) + ': สายตั้งแต่ ' + esc(r.lateCount || 0) + ' ครั้ง / ขาดตั้งแต่ ' + esc(r.absentCount || 0) + ' ครั้ง'; }).join('<br>') || '<span class="grade-current-empty">ยังไม่มีเกณฑ์พิเศษ</span>';
+
+    box.innerHTML = '<div class="rounded-3xl bg-indigo-50 border border-indigo-100 p-5 mb-5">'
+      + '<h3 class="font-black text-indigo-700 mb-2">การตั้งค่าที่ใช้อยู่ปัจจุบัน</h3>'
+      + '<div class="grade-current-meta">'
+      + '<span class="grade-current-pill"><i class="fas fa-layer-group"></i> ' + esc(gradeCriteriaFormatLabel(criteria)) + '</span>'
+      + '<span class="grade-current-pill"><i class="fas fa-calendar-check"></i> แก้ไขล่าสุด: ' + esc(gradeDateText(criteria.updatedAt)) + '</span>'
+      + '</div>'
+      + '<div class="mb-3"><div class="font-bold text-slate-800">เกณฑ์แปลงคะแนนเป็นเกรด</div><div class="grade-current-list">' + gradeHtml + '</div></div>'
+      + '<div><div class="font-bold text-slate-800">เกณฑ์พิเศษจากการเข้าเรียน</div><div class="grade-current-list">' + specialHtml + '</div></div>'
+      + '</div>';
+  }
+  window.renderCurrentGradeCriteriaSummary = renderCurrentGradeCriteriaSummary;
+
+  function renderGradeCriteriaHistory(course){
+    ensureGradeCriteriaSummarySlots();
+    var box = byId('grade-criteria-history-list');
+    if(!box) return;
+    course = course || currentCourse();
+    var history = Array.isArray(course && course.gradeCriteriaHistory) ? course.gradeCriteriaHistory : [];
+
+    if(!history.length){
+      box.innerHTML = '<div class="text-slate-500 text-sm">ยังไม่มีประวัติการตั้งค่า</div>';
+      return;
+    }
+
+    box.innerHTML = history.map(function(item){
+      var rules = (item.criteria && Array.isArray(item.criteria.gradeRules) ? item.criteria.gradeRules : []).map(function(r){ return esc(r.label) + ' = ' + esc(r.minScore); }).join(', ') || 'ไม่มีเกณฑ์';
+      var specials = (item.criteria && Array.isArray(item.criteria.specialRules) ? item.criteria.specialRules : []).map(function(r){ return esc(r.label) + ' สาย ' + esc(r.lateCount || 0) + ' / ขาด ' + esc(r.absentCount || 0); }).join(', ');
+      return '<div class="schoolhub-grade-history-card">'
+        + '<div class="history-date">แก้ไขเมื่อ ' + esc(gradeDateText(item.updatedAt)) + '</div>'
+        + '<div class="history-by">โดย ' + esc(item.updatedBy || '-') + '</div>'
+        + '<div class="history-rules">' + rules + (specials ? '<br>เกณฑ์พิเศษ: ' + specials : '') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  window.renderGradeCriteriaHistory = renderGradeCriteriaHistory;
+
   function ensureMainGradeModalUI(){
     ensureSpecialModal();
     var modal = byId('grade-criteria-modal');
@@ -24092,12 +24193,14 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     if(title) title.innerHTML = '<i class="fas fa-medal text-amber-500 mr-2"></i> ตั้งค่าเกณฑ์เกรด';
     if(!form) return;
     if(form.dataset.schoolhubRealGradeRulesUi === '1'){
+      ensureGradeCriteriaSummarySlots();
       bindGradeCriteriaForm(form);
       bindGradeTypeSelect();
       return;
     }
     form.dataset.schoolhubRealGradeRulesUi = '1';
     form.innerHTML = '<div id="schoolhub-grade-extra-rules" class="schoolhub-grade-main-box"><div class="schoolhub-grade-main-title"><i class="fas fa-sliders text-primary"></i> เกณฑ์แปลงคะแนนเป็นเกรด</div><div class="schoolhub-grade-format-row"><div><label class="block mb-1">รูปแบบเกรด</label><select id="grade-type-select"><option value="number">รูปแบบตัวเลข (4, 3.5)</option><option value="letter">รูปแบบตัวอักษร (A, B+)</option><option value="custom">รูปแบบกำหนดเอง</option></select></div><button type="button" class="schoolhub-grade-mini-btn" onclick="applyGradePresetFromButton()"><i class="fas fa-wand-magic-sparkles mr-1"></i> ใช้รูปแบบนี้</button><button type="button" class="schoolhub-grade-mini-btn" onclick="addGradeRuleRow()"><i class="fas fa-plus mr-1"></i> เพิ่มเกรด</button></div><div class="schoolhub-grade-rule-head"><div>ชื่อเกรด / ผลลัพธ์</div><div>คะแนนขั้นต่ำ</div><div></div></div><div id="schoolhub-grade-rules-list"></div><div class="mt-3"><label class="block text-xs font-black text-slate-500 mb-1">ค่าเริ่มต้นถ้าคะแนนต่ำกว่าเกณฑ์ทั้งหมด</label><input id="schoolhub-default-grade" type="text" placeholder="เช่น 0 หรือ F"></div><div id="schoolhub-grade-legacy-inputs" class="hidden"><input id="grade-crit-4"><input id="grade-crit-35"><input id="grade-crit-3"><input id="grade-crit-25"><input id="grade-crit-2"><input id="grade-crit-15"><input id="grade-crit-1"><input id="grade-crit-0"></div></div><div class="schoolhub-grade-main-box mt-4"><div class="flex items-center justify-between gap-3 mb-3"><div class="schoolhub-grade-main-title mb-0"><i class="fas fa-user-clock text-rose-500"></i> เกณฑ์พิเศษจากการเข้าเรียน</div><button type="button" onclick="startAddGradeSpecialRule()" class="schoolhub-grade-mini-btn"><i class="fas fa-plus mr-1"></i> เพิ่มเกณฑ์พิเศษ</button></div><div id="schoolhub-special-rules-list"></div><p class="text-xs text-slate-400 font-semibold mt-2">ถ้าจำนวนสายหรือขาดถึงเกณฑ์อย่างใดอย่างหนึ่ง ระบบจะแสดงผลลัพธ์พิเศษก่อนคำนวณเกรดจากคะแนน</p></div><div class="pt-4 flex gap-3"><button type="button" onclick="closeModal(\'grade-criteria-modal\')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold shadow-lg shadow-indigo-200">บันทึก</button></div>';
+    ensureGradeCriteriaSummarySlots();
     bindGradeCriteriaForm(form);
     bindGradeTypeSelect();
   }
@@ -24188,6 +24291,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     var def = byId('schoolhub-default-grade'); if(def) def.value = criteria.defaultGrade || (tempGradeRules[tempGradeRules.length - 1] ? tempGradeRules[tempGradeRules.length - 1].label : '');
     renderGradeRulesList();
     renderGradeSpecialRulesList();
+    renderCurrentGradeCriteriaSummary(course || cid);
+    renderGradeCriteriaHistory(course);
     gradeCriteriaModalLoadedForCourseId = cid;
     gradeCriteriaDirty = false;
   }
@@ -24256,13 +24361,26 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     var defaultGrade = defaultInput || getLowestGradeLabel({gradeRules:rules, gradeFormat:format, gradeType:format});
     var criteria = packCriteria(format, rules, specialRulesToSave, defaultGrade);
     criteria.updatedAt = new Date().toISOString();
+    criteria.updatedBy = (window.currentUser && window.currentUser.email) || (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
+
+    course.gradeCriteriaHistory = Array.isArray(course.gradeCriteriaHistory) ? course.gradeCriteriaHistory : [];
+    course.gradeCriteriaHistory.unshift({
+      id: 'grade_history_' + Date.now(),
+      criteria: clone(criteria),
+      updatedAt: criteria.updatedAt,
+      updatedBy: criteria.updatedBy
+    });
+    course.gradeCriteriaHistory = course.gradeCriteriaHistory.slice(0, 20);
 
     console.log('[GRADE SAVE] criteria before save', criteria);
     console.log('[GRADE SAVE] course before save', course);
 
     state.courseGrades[cid] = clone(criteria);
     course.gradeCriteria = clone(criteria);
-    if(window.currentCourse && String(window.currentCourse.id) === String(cid)) window.currentCourse.gradeCriteria = clone(criteria);
+    if(window.currentCourse && String(window.currentCourse.id) === String(cid)) {
+      window.currentCourse.gradeCriteria = clone(criteria);
+      window.currentCourse.gradeCriteriaHistory = clone(course.gradeCriteriaHistory || []);
+    }
 
     tempGradeSpecialRules = clone(criteria.specialRules || []);
     tempGradeRules = clone(criteria.gradeRules || []);
@@ -24279,6 +24397,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
       window.__finalGradeCache = {};
       gradeCriteriaDirty = false;
       gradeCriteriaModalLoadedForCourseId = cid;
+      renderCurrentGradeCriteriaSummary(course);
+      renderGradeCriteriaHistory(course);
 
       if(typeof window.closeModal === 'function') window.closeModal('grade-criteria-modal');
       else if(byId('grade-criteria-modal')) byId('grade-criteria-modal').classList.add('hidden');
@@ -25673,32 +25793,80 @@ body.schoolhub-settings-modal-open{
 
 
 <style id="schoolhub-settings-mobile-source-of-truth-visibility">
+/* Settings mobile uses the same desktop DOM; only CSS changes below 768px. */
 @media (max-width: 768px) {
-  #settings-modal {
+  #settings-modal.settings-modal {
     position: fixed !important;
     inset: 0 !important;
     z-index: 999999 !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    background: rgba(15, 23, 42, .45) !important;
   }
+
+  #settings-modal.settings-modal.hidden { display: none !important; }
 
   #settings-modal .settings-dialog {
     width: 100vw !important;
     height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    display: grid !important;
+    grid-template-rows: auto 1fr !important;
+    grid-template-columns: 1fr !important;
+    overflow: hidden !important;
+  }
+
+  #settings-modal .settings-sidebar {
     display: flex !important;
     flex-direction: column !important;
+    width: 100% !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  #settings-modal .settings-tabs-list {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+    padding-bottom: 4px !important;
+  }
+
+  #settings-modal .settings-tab {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
   }
 
   #settings-modal .settings-content {
-    flex: 1 1 auto !important;
     display: block !important;
-    overflow-y: auto !important;
     min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px !important;
     padding-bottom: 120px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   #settings-modal .schoolhub-settings-panel:not(.hidden) {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
   }
 }
 </style>
@@ -26696,7 +26864,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
       $('schoolhub-settings-admin-system-tab')?.classList.toggle('hidden', !admin);
       if (admin) startAdminContactRealtime(false); else updateAdminMessageBadges(0);
       unlockSettingsControls();
-      renderSettingsPanel('general');
+      renderSettingsPanel(normalizeTab(tab || window.__schoolhubSettingsActiveTab || 'general'));
       switchSettingsTab(normalizeTab(tab || window.__schoolhubSettingsActiveTab || 'general'));
       applyLanguage();
       refreshAdminMessageBadges();
@@ -26745,7 +26913,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     } catch(e) { console.warn('Settings chrome refresh skipped:', e); }
 
     ensureSettingsPanels();
-    renderSettingsPanel('general');
+    renderSettingsPanel(tab || 'general');
     switchSettingsTab(tab || 'general');
     unlockSettingsControls();
     forceSettingsContentVisible();
