@@ -25538,6 +25538,16 @@ body.schoolhub-settings-modal-open{
   overflow-y:auto!important;
   -webkit-overflow-scrolling:touch!important;
   min-height:0!important;
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+#settings-modal .schoolhub-settings-panel:not(.hidden){
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
 }
 @media (max-width:768px){
   #settings-modal.settings-modal{
@@ -25616,6 +25626,10 @@ body.schoolhub-settings-modal-open{
     overflow-y:auto!important;
     -webkit-overflow-scrolling:touch!important;
     padding:14px 14px calc(24px + env(safe-area-inset-bottom))!important;
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
   }
 }
 </style>
@@ -25767,12 +25781,27 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   }
 
   function renderLanguagePanel(){
-    const select = $('settings-language-select');
-    if (select) {
-      select.innerHTML = buildLanguageOptions();
-      select.value = currentLang();
+    try {
+      const panel = ensureSettingsPanel('language');
+      if (!panel) throw new Error('settings-panel-language not found');
+      panel.className = 'schoolhub-settings-panel hidden space-y-5';
+      panel.innerHTML = createLanguagePanelHTML();
+      bindLanguagePanelEvents();
+      const select = $('settings-language-select');
+      if (select) {
+        select.innerHTML = buildLanguageOptions();
+        select.value = currentLang();
+      }
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('Language panel render failed', e);
+      const panel = ensureSettingsPanel('language');
+      if (panel) panel.innerHTML = `<div class=\"rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold\">โหลดหน้า ภาษา ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
     }
-    applyLanguage();
   }
 
   async function saveUserLanguageToFirebase(lang){
@@ -25858,10 +25887,262 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     });
   }
 
-  function renderProfilePanel(){
+  function settingsPanelId(tab){
+    return `schoolhub-settings-panel-${normalizeTab(tab)}`;
+  }
+
+  function ensureSettingsContent(){
+    const modal = $('settings-modal');
+    if (!modal) return null;
+    let content = modal.querySelector('.settings-content, .settings-main, .settings-right, .settings-body');
+    if (!content) {
+      const dialog = modal.querySelector('.settings-dialog') || modal;
+      content = document.createElement('div');
+      content.className = 'settings-content';
+      content.setAttribute('data-schoolhub-always-allowed', '1');
+      dialog.appendChild(content);
+      console.warn('Settings content container was missing; recreated .settings-content');
+    }
+    content.style.display = 'block';
+    content.style.visibility = 'visible';
+    content.style.opacity = '1';
+    content.style.pointerEvents = 'auto';
+    content.style.overflowY = 'auto';
+    return content;
+  }
+
+  function ensureSettingsPanel(tab){
+    tab = normalizeTab(tab);
+    const id = settingsPanelId(tab);
+    let panel = $(id);
+    if (!panel && tab === 'general') panel = $('settings-panel-general');
+    if (!panel) {
+      const content = ensureSettingsContent();
+      if (!content) return null;
+      panel = document.createElement('section');
+      panel.id = id;
+      panel.className = 'schoolhub-settings-panel hidden space-y-5';
+      content.appendChild(panel);
+      console.warn(`Settings panel ${id} was missing; recreated before render`);
+    }
+    panel.classList.add('schoolhub-settings-panel');
+    panel.setAttribute('data-schoolhub-settings-panel', tab);
+    if (tab === 'general') panel.setAttribute('data-settings-panel-id', 'settings-panel-general');
+    return panel;
+  }
+
+  function ensureCoreSettingsPanels(){
+    ['general','plans','language','contact-admin','admin-system','contact-messages'].forEach(ensureSettingsPanel);
+  }
+
+  function forceSettingsContentVisible(){
+    const content = ensureSettingsContent();
+    if (content) {
+      content.style.display = 'block';
+      content.style.visibility = 'visible';
+      content.style.opacity = '1';
+      content.style.pointerEvents = 'auto';
+      content.style.overflowY = 'auto';
+      content.style.minHeight = '0';
+    }
+    document.querySelectorAll('#settings-modal .schoolhub-settings-panel:not(.hidden)').forEach(panel => {
+      panel.style.display = 'block';
+      panel.style.visibility = 'visible';
+      panel.style.opacity = '1';
+      panel.style.pointerEvents = 'auto';
+    });
+  }
+
+  function createGeneralPanelHTML(){
+    return `
+      <div class="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-5">
+        <h4 class="text-lg font-black text-slate-900"><i class="fas fa-circle-info text-primary mr-2"></i><span data-i18n="general">${esc(t('general'))}</span></h4>
+        <p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="generalDescription">${esc(t('generalDescription'))}</p>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
+        <div class="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+          <div class="flex items-center justify-between gap-3 mb-4"><div>
+            <h5 class="text-lg font-black text-slate-900"><i class="fas fa-user-circle text-primary mr-2"></i><span data-i18n="userProfile">${esc(t('userProfile'))}</span></h5>
+            <p class="text-sm text-slate-500 mt-1" data-i18n="profileDescription">${esc(t('profileDescription'))}</p>
+          </div></div>
+          <div id="schoolhub-settings-profile-host" class="schoolhub-settings-inline-profile" data-schoolhub-always-allowed="1"></div>
+        </div>
+        <div class="xl:col-span-2 space-y-4">
+          <div class="rounded-3xl border border-slate-100 bg-slate-50 p-5"><h5 class="font-black text-slate-900"><i class="fas fa-id-card text-slate-500 mr-2"></i><span data-i18n="accountInfo">${esc(t('accountInfo'))}</span></h5><div id="schoolhub-settings-account-summary" class="text-sm text-slate-600 leading-7 mt-3"><span data-i18n="loadingAccount">${esc(t('loadingAccount'))}</span></div></div>
+          <div class="rounded-3xl border border-slate-100 bg-white p-5"><h5 class="font-black text-slate-900"><i class="fas fa-palette text-indigo-500 mr-2"></i><span data-i18n="displayTheme">${esc(t('displayTheme'))}</span></h5><p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="displayThemeDescription">${esc(t('displayThemeDescription'))}</p></div>
+          <div class="rounded-3xl border border-slate-100 bg-white p-5"><h5 class="font-black text-slate-900"><i class="fas fa-language text-sky-600 mr-2"></i><span data-i18n="language">${esc(t('language'))}</span></h5><p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="languageCardDescription">${esc(t('languageCardDescription'))}</p><button type="button" data-open-language-panel data-schoolhub-always-allowed="1" class="mt-3 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-100 px-4 py-2 rounded-xl text-sm font-black"><i class="fas fa-language mr-1"></i> <span data-i18n="language">${esc(t('language'))}</span></button></div>
+          <div class="rounded-3xl border border-slate-100 bg-white p-5"><h5 class="font-black text-slate-900"><i class="fas fa-bell text-amber-500 mr-2"></i><span data-i18n="notifications">${esc(t('notifications'))}</span></h5><p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="notificationsDescription">${esc(t('notificationsDescription'))}</p></div>
+        </div>
+      </div>`;
+  }
+
+  function bindGeneralPanelEvents(){
+    const panel = ensureSettingsPanel('general');
+    if (!panel) return;
+    const saveBtn = panel.querySelector('[data-settings-save-profile]');
+    if (saveBtn && saveBtn.dataset.schoolhubBound !== '1') {
+      saveBtn.dataset.schoolhubBound = '1';
+      saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); window.saveSettingsProfileChanges?.(); });
+    }
+    const resetBtn = panel.querySelector('[data-settings-reset-password]');
+    if (resetBtn && resetBtn.dataset.schoolhubBound !== '1') {
+      resetBtn.dataset.schoolhubBound = '1';
+      resetBtn.addEventListener('click', function(e){
+        e.preventDefault(); e.stopPropagation();
+        if (typeof window.openResetPasswordPage === 'function') return window.openResetPasswordPage(e);
+        window.open('reset-password.html', '_blank');
+        return false;
+      });
+    }
+    panel.querySelectorAll('[data-open-language-panel]').forEach(btn => {
+      if (btn.dataset.schoolhubBound === '1') return;
+      btn.dataset.schoolhubBound = '1';
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); setActiveTab('language'); });
+    });
+  }
+
+  function renderGeneralPanel(){
+    const panel = ensureSettingsPanel('general');
+    try {
+      if (!panel) throw new Error('settings-panel-general not found');
+      panel.className = 'schoolhub-settings-panel hidden space-y-5';
+      panel.innerHTML = createGeneralPanelHTML();
+      renderProfilePanel(true);
+      bindGeneralPanelEvents();
+      const filled = fillProfilePanel();
+      if (filled && typeof filled.catch === 'function') filled.catch(e => console.error('General panel render failed', e));
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('General panel render failed', e);
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลดหน้า ทั่วไป ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
+    }
+  }
+
+  function createPlansPanelHTML(){
+    return `<div class="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-5"><h4 class="text-lg font-black text-slate-900"><i class="fas fa-layer-group text-emerald-600 mr-2"></i><span data-i18n="plans">${esc(t('plans'))}</span></h4><p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="plansDescription">${esc(t('plansDescription'))}</p></div><div id="schoolhub-settings-user-plan-host" class="space-y-5" data-schoolhub-always-allowed="1"></div>`;
+  }
+
+  function createLanguagePanelHTML(){
+    return `<div class="rounded-3xl border border-sky-100 bg-sky-50/60 p-5"><h4 class="text-xl font-black text-slate-900"><i class="fas fa-language text-sky-600 mr-2"></i><span data-i18n="language">${esc(t('language'))}</span></h4><p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="chooseLanguageDescription">${esc(t('chooseLanguageDescription'))}</p></div><div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4"><div><label for="settings-language-select" class="block text-sm font-black text-slate-700 mb-2" data-i18n="selectLanguageLabel">${esc(t('selectLanguageLabel'))}</label><select id="settings-language-select" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-sky-100 focus:border-sky-500" data-schoolhub-always-allowed="1"></select><p class="text-xs text-slate-500 mt-2" data-i18n="languagePersistHint">${esc(t('languagePersistHint'))}</p></div><button type="button" data-save-language-setting data-schoolhub-always-allowed="1" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-3 rounded-2xl font-black shadow-sm inline-flex items-center gap-2"><i class="fas fa-save"></i><span data-i18n="saveLanguage">${esc(t('saveLanguage'))}</span></button></div>`;
+  }
+
+  function bindLanguagePanelEvents(){
+    const panel = ensureSettingsPanel('language');
+    const saveBtn = panel?.querySelector('[data-save-language-setting]');
+    if (saveBtn && saveBtn.dataset.schoolhubBound !== '1') {
+      saveBtn.dataset.schoolhubBound = '1';
+      saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); window.saveLanguageSetting?.(); });
+    }
+  }
+
+  function createContactAdminPanelHTML(){
+    return `<div class="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start"><div class="xl:col-span-2 rounded-3xl bg-indigo-50 border border-indigo-100 p-5"><h4 class="text-xl font-black text-slate-900"><i class="fas fa-headset text-primary mr-2"></i><span data-i18n="contactAdmin">${esc(t('contactAdmin'))}</span></h4><p class="text-sm text-slate-600 leading-7 mt-3" data-i18n="contactAdminDescription">${esc(t('contactAdminDescription'))}</p><div class="mt-4 rounded-2xl bg-white/80 border border-indigo-100 p-4 text-sm text-slate-600 leading-7"><b>คำแนะนำ:</b> ระบุเมนูที่พบปัญหา อุปกรณ์ที่ใช้ และขั้นตอนก่อนเกิดปัญหา เพื่อให้ผู้ดูแลตรวจสอบได้เร็วขึ้น</div></div><form id="schoolhub-admin-contact-form" class="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-5 space-y-4 shadow-sm"><div><label class="block text-sm font-black text-slate-700 mb-1.5">หัวข้อ</label><input id="schoolhub-contact-title" type="text" required maxlength="120" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Export ไม่ปิด / คะแนนไม่แสดง / ขอความช่วยเหลือ" data-schoolhub-always-allowed="1"></div><div><label class="block text-sm font-black text-slate-700 mb-1.5">รายละเอียดปัญหา</label><textarea id="schoolhub-contact-message" required rows="7" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary resize-y min-h-[180px]" placeholder="พิมพ์รายละเอียดปัญหาหรือข้อความที่ต้องการแจ้งผู้ดูแลระบบ" data-schoolhub-always-allowed="1"></textarea></div><div><label class="block text-sm font-black text-slate-700 mb-1.5">อีเมลติดต่อกลับ</label><input id="schoolhub-contact-email" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="อีเมลสำหรับให้ผู้ดูแลติดต่อกลับ" data-schoolhub-always-allowed="1"></div><button id="schoolhub-contact-submit-btn" type="submit" data-schoolhub-always-allowed="1" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2 text-base"><i class="fas fa-paper-plane"></i> ส่งข้อความถึงผู้ดูแลระบบ</button></form><div class="xl:col-span-5 bg-white border border-slate-100 rounded-3xl p-5 shadow-sm"><div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4"><div><h5 class="text-lg font-black text-slate-900"><i class="fas fa-clock-rotate-left text-indigo-500 mr-2"></i>ประวัติการแจ้ง</h5><p class="text-sm text-slate-500 mt-1">แสดงข้อความที่คุณเคยส่งถึงผู้ดูแลระบบ พร้อมสถานะล่าสุดจากแอดมิน</p></div><button type="button" data-refresh-user-contact-history data-schoolhub-always-allowed="1" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-black"><i class="fas fa-sync-alt mr-1"></i> รีเฟรช</button></div><div id="schoolhub-user-contact-history-list" class="space-y-3"><div class="text-center text-slate-400 py-8 border border-dashed border-slate-200 rounded-2xl"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดประวัติการแจ้ง...</div></div></div></div>`;
+  }
+
+  function bindContactAdminPanelEvents(){
+    const panel = ensureSettingsPanel('contact-admin');
+    const form = panel?.querySelector('#schoolhub-admin-contact-form');
+    if (form && form.dataset.schoolhubBound !== '1') {
+      form.dataset.schoolhubBound = '1';
+      form.addEventListener('submit', function(e){ e.preventDefault(); e.stopPropagation(); window.submitSchoolHubAdminContactMessage?.(e); });
+    }
+    const refreshBtn = panel?.querySelector('[data-refresh-user-contact-history]');
+    if (refreshBtn && refreshBtn.dataset.schoolhubBound !== '1') {
+      refreshBtn.dataset.schoolhubBound = '1';
+      refreshBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); window.loadUserContactMessageHistory?.(true); });
+    }
+  }
+
+  function renderContactAdminPanel(){
+    const panel = ensureSettingsPanel('contact-admin');
+    try {
+      if (!panel) throw new Error('settings-panel-contact-admin not found');
+      panel.className = 'schoolhub-settings-panel hidden';
+      panel.innerHTML = createContactAdminPanelHTML();
+      bindContactAdminPanelEvents();
+      prefillContactEmail();
+      try { startUserContactHistoryRealtime(false, true); } catch(e) { console.error('Contact admin panel render failed', e); }
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('Contact admin panel render failed', e);
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลดหน้า ติดต่อผู้ดูแลระบบ ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
+    }
+  }
+
+  function createAdminSystemPanelHTML(){
+    return `<div class="rounded-3xl border border-rose-100 bg-rose-50/50 p-5"><h4 class="text-xl font-black text-slate-900"><i class="fas fa-sliders text-rose-500 mr-2"></i>ตั้งค่าระบบ</h4><p class="text-sm text-slate-500 mt-1">เมนูแอดมินที่เกี่ยวข้องกับการตั้งค่า แสดงในหน้าต่างตั้งค่านี้โดยไม่เปิดหน้าต่างซ้อน</p></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><button type="button" data-open-admin-messages data-schoolhub-always-allowed="1" class="rounded-3xl border border-sky-100 bg-white p-5 text-left hover:shadow-md transition"><i class="fas fa-inbox text-sky-600 text-2xl mb-3 block"></i><b class="text-slate-900">ข้อความจากผู้ใช้ <span class="admin-message-badge hidden" data-admin-message-badge="admin-system-card">0</span></b><p class="text-sm text-slate-500 mt-1">ดูรายการที่ผู้ใช้ส่งถึงผู้ดูแลระบบ</p></button><button type="button" data-open-plans-panel data-schoolhub-always-allowed="1" class="rounded-3xl border border-emerald-100 bg-white p-5 text-left hover:shadow-md transition"><i class="fas fa-layer-group text-emerald-600 text-2xl mb-3 block"></i><b class="text-slate-900">จัดการแผน</b><p class="text-sm text-slate-500 mt-1">ดูแผนและรายการแผนในพื้นที่ด้านขวา</p></button></div>`;
+  }
+
+  function bindAdminSystemPanelEvents(){
+    const panel = ensureSettingsPanel('admin-system');
+    panel?.querySelector('[data-open-admin-messages]')?.addEventListener('click', function(e){ e.preventDefault(); setActiveTab('contact-messages'); });
+    panel?.querySelector('[data-open-plans-panel]')?.addEventListener('click', function(e){ e.preventDefault(); setActiveTab('plans'); });
+  }
+
+  function renderAdminSystemPanel(){
+    const panel = ensureSettingsPanel('admin-system');
+    try {
+      if (!panel) throw new Error('settings-panel-admin-system not found');
+      panel.className = 'schoolhub-settings-panel hidden space-y-4';
+      panel.innerHTML = createAdminSystemPanelHTML();
+      bindAdminSystemPanelEvents();
+      refreshAdminMessageBadges();
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('Admin system panel render failed', e);
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลดหน้า ตั้งค่าระบบ ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
+    }
+  }
+
+  function createAdminMessagesPanelHTML(){
+    return `<div class="rounded-3xl border border-rose-100 bg-rose-50/50 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div><h4 class="text-xl font-black text-slate-900"><i class="fas fa-inbox text-rose-500 mr-2"></i>ข้อความจากผู้ใช้</h4><p class="text-sm text-slate-500 mt-1">รายการข้อความที่ผู้ใช้ส่งถึงผู้ดูแลระบบ</p></div><button type="button" data-refresh-admin-messages data-schoolhub-always-allowed="1" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black"><i class="fas fa-sync-alt mr-1"></i> รีเฟรช</button></div><div id="schoolhub-admin-contact-message-list" class="grid grid-cols-1 gap-4"><div class="text-center text-slate-400 py-10 bg-white rounded-3xl border border-dashed border-slate-200"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดข้อความ...</div></div>`;
+  }
+
+  function bindAdminMessagesPanelEvents(){
+    const panel = ensureSettingsPanel('contact-messages');
+    const refreshBtn = panel?.querySelector('[data-refresh-admin-messages]');
+    if (refreshBtn && refreshBtn.dataset.schoolhubBound !== '1') {
+      refreshBtn.dataset.schoolhubBound = '1';
+      refreshBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); window.loadAdminContactMessages?.(); });
+    }
+  }
+
+  function renderAdminMessagesPanel(){
+    const panel = ensureSettingsPanel('contact-messages');
+    try {
+      if (!panel) throw new Error('settings-panel-contact-messages not found');
+      panel.className = 'schoolhub-settings-panel hidden space-y-4';
+      panel.innerHTML = createAdminMessagesPanelHTML();
+      bindAdminMessagesPanelEvents();
+      window.loadAdminContactMessages?.();
+      refreshAdminMessageBadges();
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('Admin messages panel render failed', e);
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลดหน้า ข้อความจากผู้ใช้ ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
+    }
+  }
+
+  function renderProfilePanel(force = false){
     const host = $('schoolhub-settings-profile-host');
     if (!host) return;
-    if (host.dataset.schoolhubProfilePanelRendered === '1' && host.querySelector('#settings-profile-display-name-input')) return;
+    if (!force && host.dataset.schoolhubProfilePanelRendered === '1' && host.querySelector('#settings-profile-display-name-input')) return;
     host.innerHTML = `
       <div class="space-y-4 settings-profile-form" data-schoolhub-always-allowed="1">
         <div id="settings-profile-admin-username-wrap" class="hidden">
@@ -25882,8 +26163,8 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
           <p class="text-xs text-rose-500 mt-2">บัญชี Admin สามารถแก้ชื่อผู้ใช้ อีเมล และรหัสผ่านได้จาก Settings โดยตรง</p>
         </div>
         <div class="grid grid-cols-1 gap-3 pt-2">
-          <button type="button" onclick="saveSettingsProfileChanges()" data-schoolhub-always-allowed="1" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> <span data-i18n="saveProfile">บันทึกโปรไฟล์</span></button>
-          <button type="button" data-settings-reset-password class="forgot-password-link w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition" onclick="return openResetPasswordPage(event)" data-schoolhub-always-allowed="1"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
+          <button type="button" data-settings-save-profile data-schoolhub-always-allowed="1" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> <span data-i18n="saveProfile">บันทึกโปรไฟล์</span></button>
+          <button type="button" data-settings-reset-password class="forgot-password-link w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition" data-schoolhub-always-allowed="1"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
         </div>
       </div>
     `;
@@ -26190,55 +26471,90 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   window.schoolhubLoadSettingsPlanHistory = loadSettingsPlanHistory;
 
   async function renderPlansPanel(){
-    movePlansIntoSettings();
-    renderCurrentPlanCard('schoolhub-settings-current-plan-card');
-    if (typeof window.loadLatestPlanDataInBackground === 'function') {
-      window.loadLatestPlanDataInBackground().then(() => {
-        try { renderCurrentPlanCard('schoolhub-settings-current-plan-card'); } catch(e){}
-      }).catch(()=>{});
+    const panel = ensureSettingsPanel('plans');
+    try {
+      if (!panel) throw new Error('settings-panel-plans not found');
+      panel.className = 'schoolhub-settings-panel hidden space-y-5';
+      panel.innerHTML = createPlansPanelHTML();
+      movePlansIntoSettings();
+      renderCurrentPlanCard('schoolhub-settings-current-plan-card');
+      if (typeof window.loadLatestPlanDataInBackground === 'function') {
+        window.loadLatestPlanDataInBackground().then(() => {
+          try { renderCurrentPlanCard('schoolhub-settings-current-plan-card'); } catch(e){}
+        }).catch(err => console.error('Plans panel render failed', err));
+      }
+      try { loadSettingsPlanHistory(false); } catch(e){ console.error('Plans panel render failed', e); }
+      applyLanguage();
+      forceSettingsContentVisible();
+      unlockSettingsControls();
+      return panel;
+    } catch(e) {
+      console.error('Plans panel render failed', e);
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลดหน้า แผนการใช้งาน ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
+      return panel || null;
     }
-    try { loadSettingsPlanHistory(false); } catch(e){}
   }
 
   function setActiveTab(tab){
     tab = normalizeTab(tab);
     if ((tab === 'contact-messages' || tab === 'admin-system') && !isAdminSession()) tab = 'contact-admin';
     window.__schoolhubSettingsActiveTab = tab;
+    ensureCoreSettingsPanels();
     document.querySelectorAll('#settings-modal .settings-tab[data-settings-tab]').forEach(btn => {
-      const active = btn.dataset.settingsTab === tab;
+      const active = normalizeTab(btn.dataset.settingsTab) === tab;
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     document.querySelectorAll('#settings-modal .schoolhub-settings-panel').forEach(panel => panel.classList.add('hidden'));
-    const panel = $(`schoolhub-settings-panel-${tab}`) || $('schoolhub-settings-panel-general');
+    const renderers = {
+      general: renderGeneralPanel,
+      plans: renderPlansPanel,
+      language: renderLanguagePanel,
+      'contact-admin': renderContactAdminPanel,
+      'admin-system': renderAdminSystemPanel,
+      'contact-messages': renderAdminMessagesPanel
+    };
+    const renderer = renderers[tab] || renderGeneralPanel;
+    let panel = ensureSettingsPanel(tab) || ensureSettingsPanel('general');
+    try {
+      const result = renderer();
+      if (result && typeof result.then === 'function') result.catch(e => console.error(`${tab} panel render failed`, e));
+    } catch(e) {
+      console.error(`${tab} panel render failed`, e);
+    }
+    panel = ensureSettingsPanel(tab) || ensureSettingsPanel('general');
     panel?.classList.remove('hidden');
+    forceSettingsContentVisible();
     unlockSettingsControls();
-    if (tab === 'general') fillProfilePanel();
-    if (tab === 'plans') renderPlansPanel();
-    if (tab === 'language') renderLanguagePanel();
-    if (tab === 'contact-admin') { prefillContactEmail(); startUserContactHistoryRealtime(false, true); }
-    if (tab === 'contact-messages') window.loadAdminContactMessages?.();
+    applyLanguage();
+    if (tab === 'contact-messages' || tab === 'admin-system') refreshAdminMessageBadges();
     return tab;
   }
 
-  function renderSettings(){
-    moveProfileIntoSettings();
-    movePlansIntoSettings();
-    const admin = isAdminSession();
-    const badge = $('schoolhub-settings-role-badge');
-    if (badge) {
-      badge.textContent = admin ? t('admin') : t('regularUser');
-      badge.className = admin
-        ? 'settings-role-badge bg-rose-50 text-rose-600 border-rose-100'
-        : 'settings-role-badge bg-indigo-50 text-primary border-indigo-100';
+  function renderSettings(tab = 'general'){
+    try {
+      ensureCoreSettingsPanels();
+      const admin = isAdminSession();
+      const badge = $('schoolhub-settings-role-badge');
+      if (badge) {
+        badge.textContent = admin ? t('admin') : t('regularUser');
+        badge.className = admin
+          ? 'settings-role-badge bg-rose-50 text-rose-600 border-rose-100'
+          : 'settings-role-badge bg-indigo-50 text-primary border-indigo-100';
+      }
+      $('schoolhub-settings-admin-messages-tab')?.classList.toggle('hidden', !admin);
+      $('schoolhub-settings-admin-system-tab')?.classList.toggle('hidden', !admin);
+      if (admin) startAdminContactRealtime(false); else updateAdminMessageBadges(0);
+      unlockSettingsControls();
+      setActiveTab(normalizeTab(tab || window.__schoolhubSettingsActiveTab || 'general'));
+      applyLanguage();
+      refreshAdminMessageBadges();
+      forceSettingsContentVisible();
+    } catch(e) {
+      console.error('Settings render failed', e);
+      const panel = ensureSettingsPanel('general');
+      if (panel) panel.innerHTML = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 text-rose-700 font-bold">โหลด Settings ไม่สำเร็จ: ${esc(e?.message || String(e))}</div>`;
     }
-    $('schoolhub-settings-admin-messages-tab')?.classList.toggle('hidden', !admin);
-    $('schoolhub-settings-admin-system-tab')?.classList.toggle('hidden', !admin);
-    if (admin) startAdminContactRealtime(false); else updateAdminMessageBadges(0);
-    unlockSettingsControls();
-    setActiveTab(window.__schoolhubSettingsActiveTab || 'general');
-    applyLanguage();
-    refreshAdminMessageBadges();
   }
 
   window.schoolhubOpenSettingsTab = function(tab='general'){
@@ -26253,13 +26569,16 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     const modal = $('settings-modal');
     if (!modal) return;
     try { document.body.appendChild(modal); } catch(e) {}
-    window.__schoolhubSettingsActiveTab = normalizeTab(tab);
+    const targetTab = normalizeTab(tab || 'general');
+    window.__schoolhubSettingsActiveTab = targetTab;
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden','false');
     if (!document.body.classList.contains('overflow-hidden')) document.body.dataset.schoolhubSettingsAddedOverflowHidden = '1';
     document.body.classList.add('schoolhub-settings-modal-open', 'overflow-hidden');
-    renderSettings();
-    setTimeout(unlockSettingsControls, 0);
+    renderSettings(targetTab);
+    setActiveTab(targetTab);
+    forceSettingsContentVisible();
+    setTimeout(function(){ setActiveTab(window.__schoolhubSettingsActiveTab || 'general'); unlockSettingsControls(); forceSettingsContentVisible(); }, 0);
     setTimeout(function(){ document.querySelector('#settings-modal .settings-close')?.focus?.(); }, 0);
   };
   window.openSchoolHubSettings = function(tab='general'){
@@ -26284,8 +26603,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   };
   window.openUserProfileSettingsFromSettings = function(){
     setActiveTab('general');
-    renderProfilePanel();
-    fillProfilePanel();
+    renderGeneralPanel();
     return false;
   };
   window.openUserProfileSettings = function(){
@@ -26842,19 +27160,15 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
   document.addEventListener('DOMContentLoaded', function(){
     setDocumentLanguage();
-    moveProfileIntoSettings();
-    movePlansIntoSettings();
-    renderLanguagePanel();
-    renderSettings();
+    ensureCoreSettingsPanels();
+    renderSettings('general');
     applyLanguage();
     try { if (typeof window.schoolhubQueueRuntimeTranslation === 'function') window.schoolhubQueueRuntimeTranslation(document.body); } catch(e) {}
   });
   if (document.readyState !== 'loading') {
     setDocumentLanguage();
-    moveProfileIntoSettings();
-    movePlansIntoSettings();
-    renderLanguagePanel();
-    renderSettings();
+    ensureCoreSettingsPanels();
+    renderSettings('general');
     applyLanguage();
     try { if (typeof window.schoolhubQueueRuntimeTranslation === 'function') window.schoolhubQueueRuntimeTranslation(document.body); } catch(e) {}
   }
