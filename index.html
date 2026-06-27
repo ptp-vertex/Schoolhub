@@ -7107,7 +7107,7 @@ async function submitPlanRequest(planId){
 
         async function schoolhubBackupStateBeforeSave(stateRef, payload, userKey) {
             try {
-                const backupRef = doc(db, 'users', userKey, 'school_data', 'backups', String(Date.now()));
+                const backupRef = doc(db, 'users', userKey, 'school_data_backups', String(Date.now()));
                 await withTimeout(setDoc(backupRef, Object.assign({}, payload, { _backedUpAt: Date.now() })), 8000, 'backupState');
             } catch(backupErr) {
                 console.error('SAVE BLOCKED\nReason: Backup failed\nNo data was written to Firestore.', backupErr);
@@ -8224,7 +8224,8 @@ async function submitPlanRequest(planId){
             Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th')).forEach((room, idx) => {
                 const groupId = 'student-room-group-' + idx;
                 const list = rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'));
-                tbody.innerHTML += `<tr class="bg-indigo-50/80 border-y border-indigo-100 cursor-pointer" onclick="toggleStudentRoomGroup('${groupId}')"><td colspan="4" class="p-4"><div class="flex items-center justify-between"><div class="font-black text-primary"><i class="fas fa-door-open mr-2"></i>${escapeHTML(room)}</div><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">${list.length} คน</div></div></td></tr>`;
+                const __roomDeleteBtn = __shCanDeleteStudent ? `<button onclick="event.stopPropagation(); deleteStudentRoom(this)" data-room="${escapeHTML(room)}" class="text-rose-500 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"><i class="fas fa-trash mr-1"></i>ลบทั้งห้อง</button>` : '';
+                tbody.innerHTML += `<tr class="bg-indigo-50/80 border-y border-indigo-100"><td colspan="4" class="p-4"><div class="flex items-center justify-between"><div class="font-black text-primary cursor-pointer" onclick="toggleStudentRoomGroup('${groupId}')"><i class="fas fa-door-open mr-2"></i>${escapeHTML(room)}</div><div class="flex items-center gap-2"><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">${list.length} คน</div>${__roomDeleteBtn}</div></div></td></tr>`;
                 list.forEach(s => {
                     tbody.innerHTML += `
                         <tr class="${groupId}${window.getStudentWithdrawnRowClass(s)}">
@@ -8340,6 +8341,24 @@ async function submitPlanRequest(planId){
         };
 
         window.deleteStudent = (id) => { window.showCustomConfirm("ยืนยันการลบ", "ลบนักเรียนคนนี้ออกจากฐานข้อมูล?", async () => { state.students = state.students.filter(s => s.id !== id); renderStudentsMaster(); updateGlobalViews(); await saveStateToDB(); }); };
+        window.deleteStudentRoom = (btnEl) => {
+            const room = btnEl ? btnEl.getAttribute('data-room') : null;
+            if (!room) return;
+            const roomStudents = (state.students || []).filter(s => window.getStudentClassName(s) === room);
+            if (roomStudents.length === 0) return;
+            window.showCustomConfirm(
+                'ลบนักเรียนทั้งห้อง',
+                `ต้องการลบนักเรียนทั้งหมด ${roomStudents.length} คน ในห้อง "${room}" ออกจากฐานข้อมูลหรือไม่?\nการกระทำนี้ไม่สามารถย้อนกลับได้`,
+                async () => {
+                    const ids = new Set(roomStudents.map(s => s.id));
+                    state.students = (state.students || []).filter(s => !ids.has(s.id));
+                    renderStudentsMaster();
+                    updateGlobalViews();
+                    await saveStateToDB();
+                    showCustomAlert('สำเร็จ', `ลบนักเรียนห้อง "${room}" จำนวน ${roomStudents.length} คน เรียบร้อยแล้ว`);
+                }
+            );
+        };
 
         // --- THE NEW OVERVIEW SUMMARY TABLE (Horizontal Matrix) ---
         window.showPlanDetail = (courseId, planId) => {
