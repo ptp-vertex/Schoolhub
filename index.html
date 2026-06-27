@@ -30,6 +30,24 @@
         }
     </script>
 
+
+
+    <script id="schoolhub-dropdown-performance-helper">
+    (function(){
+      if (window.__schoolhubDropdownPerformanceHelper) return;
+      window.__schoolhubDropdownPerformanceHelper = true;
+      window.isDropdownRelatedElement = function(el) {
+        return !!(
+          el &&
+          el.closest &&
+          el.closest(
+            'select, option, datalist, .dropdown, .dropdown-menu, .dropdown-content, .custom-select, .select-menu, .choices, .choices__list, .select2, .flatpickr-calendar, [role="listbox"], [role="option"], [data-dropdown], [data-menu]'
+          )
+        );
+      };
+    })();
+    </script>
+
     <script id="schoolhub-score-number-format-helper">
         /* SchoolHub central score helper: fixes JavaScript floating point display without changing saved Firebase data */
         function normalizeScoreNumber(value, digits = 2) {
@@ -2387,6 +2405,218 @@ document.addEventListener('click',function(){
 }
 </style>
 <!-- SchoolHub stable anti-flicker cleanup: duplicate rights/current-plan renderers disabled; canonical single-flow scripts active. -->
+
+<style id="schoolhub-settings-modal-layout-fix">
+/* Settings modal layout fix: do not touch score/grade/export/permission systems */
+body.schoolhub-settings-modal-open { overflow: hidden !important; }
+#settings-modal.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  background: rgba(15, 23, 42, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  pointer-events: auto;
+}
+#settings-modal.settings-modal.hidden { display: none !important; }
+#settings-modal.settings-modal * { box-sizing: border-box; }
+#settings-modal .settings-dialog {
+  width: min(960px, 96vw);
+  height: min(720px, 90vh);
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 22px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, .28);
+}
+#settings-modal .settings-sidebar {
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 18px 12px;
+  overflow-y: auto;
+  min-width: 0;
+}
+#settings-modal .settings-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0 4px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+#settings-modal .settings-sidebar-title h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  font-weight: 900;
+  color: #0f172a;
+}
+#settings-modal .settings-sidebar-title p {
+  margin: 6px 0 0;
+  font-size: .82rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+#settings-modal .settings-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-size: .84rem;
+  font-weight: 900;
+  border-width: 1px;
+  border-style: solid;
+}
+#settings-modal .settings-tabs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#settings-modal .settings-tab,
+#settings-modal .settings-close {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+#settings-modal .settings-close {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border: 0;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 14px;
+  font-size: 30px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+#settings-modal .settings-close:hover {
+  background: #fee2e2;
+  color: #e11d48;
+}
+#settings-modal .settings-tab {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #334155;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: left;
+  font-weight: 900;
+  line-height: 1.35;
+  transition: background .15s ease, color .15s ease;
+}
+#settings-modal .settings-tab:hover { background: #f8fafc; }
+#settings-modal .settings-tab.active {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+#settings-modal .settings-tab[data-settings-tab="contact-messages"].active {
+  background: #fff1f2;
+  color: #e11d48;
+}
+#settings-modal .settings-content {
+  padding: 24px;
+  overflow-y: auto;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+}
+#settings-modal .schoolhub-settings-panel.hidden { display: none !important; }
+#settings-modal .schoolhub-settings-panel { min-width: 0; }
+#settings-modal .schoolhub-settings-inline-profile .p-6 { padding: 0 !important; }
+#settings-modal .schoolhub-settings-inline-profile > div { width: 100%; }
+#settings-modal .schoolhub-settings-inline-profile input,
+#settings-modal .schoolhub-settings-inline-profile textarea,
+#settings-modal .schoolhub-settings-inline-profile select { font-size: 16px; }
+#settings-modal #user-current-plan-box { margin-bottom: 1rem; }
+#settings-modal #user-plan-list { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+#settings-modal #user-payment-history-box { margin-top: 1rem; }
+#settings-modal .pricing-card { min-width: 0; }
+@media (max-width: 768px) {
+  #settings-modal.settings-modal {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  #settings-modal .settings-dialog {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  #settings-modal .settings-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+    overflow: hidden;
+    padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  }
+  #settings-modal .settings-sidebar-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 0 0 10px;
+    margin-bottom: 10px;
+  }
+  #settings-modal .settings-sidebar-title { min-width: 0; flex: 1 1 auto; }
+  #settings-modal .settings-sidebar-title h3 { font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #settings-modal .settings-sidebar-title p { display: none; }
+  #settings-modal .settings-role-badge { flex: 0 0 auto; padding: 7px 10px; font-size: .76rem; }
+  #settings-modal .settings-close {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    font-size: 32px;
+    border-radius: 16px;
+  }
+  #settings-modal .settings-tabs-list {
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  #settings-modal .settings-tabs-list::-webkit-scrollbar { height: 0; }
+  #settings-modal .settings-tab {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 11px 13px;
+    border-radius: 999px;
+    background: #f8fafc;
+  }
+  #settings-modal .settings-tab.active { background: #eef2ff; }
+  #settings-modal .settings-content {
+    padding: 16px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  #settings-modal #schoolhub-settings-panel-contact-admin .grid,
+  #settings-modal #schoolhub-settings-panel-general .grid,
+  #settings-modal #schoolhub-settings-panel-plans .grid,
+  #settings-modal #schoolhub-settings-panel-admin-system .grid,
+  #settings-modal #schoolhub-settings-panel-contact-messages .grid {
+    grid-template-columns: 1fr !important;
+  }
+  #settings-modal #user-plan-list { grid-template-columns: 1fr !important; }
+  #settings-modal #user-payment-history-box .p-5 { padding: 1rem; }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -2770,6 +3000,9 @@ document.addEventListener('click',function(){
                 <button id="nav-user-plans" onclick="openUserPlanSelector()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="user-plans">
                     <i class="fas fa-layer-group w-5 text-center"></i> เลือก / เปลี่ยนแผน
                 </button>
+                <button id="nav-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general')" data-schoolhub-always-allowed="1" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="settings">
+                    <i class="fas fa-sliders-h w-5 text-center"></i> ตั้งค่า
+                </button>
 
                 <div id="course-context-menu" class="hidden mt-6 animate-fadeIn">
                     <p class="px-4 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 mt-6 border-t pt-6" id="sidebar-course-name">เมนูประจำวิชา</p>
@@ -2802,6 +3035,7 @@ document.addEventListener('click',function(){
                         <i class="fas fa-bullhorn w-5 text-center"></i> ประกาศ
                     </button>
                     <button id="nav-admin-plans" onclick="switchView('admin-plans')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2" data-target="admin-plans"><i class="fas fa-layer-group w-5 text-center"></i> แผนการใช้งาน</button>
+                    <button id="nav-admin-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general')" data-schoolhub-always-allowed="1" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-700 hover:bg-slate-50 mt-2" data-target="settings"><i class="fas fa-sliders-h w-5 text-center"></i> ตั้งค่า</button>
                 </div>
             </nav>
 
@@ -2831,12 +3065,14 @@ document.addEventListener('click',function(){
                     <button id="mobile-nav-dashboard" onclick="goToHome(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left bg-indigo-50 text-primary font-medium"><i class="fas fa-border-all"></i> ห้องเรียนของฉัน</button>
                     <button id="mobile-nav-students" onclick="openStudentsManager(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-users"></i> ฐานข้อมูลนักเรียน</button>
                     <button id="mobile-nav-user-plans" onclick="openUserPlanSelector(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-layer-group"></i> เลือก / เปลี่ยนแผน</button>
+                    <button id="mobile-nav-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general'); toggleMobileMenu()" data-schoolhub-always-allowed="1" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-sliders-h"></i> ตั้งค่า</button>
                     <div id="mobile-admin-menu-group" class="hidden space-y-2 mt-4">
                         <p class="px-4 text-xs font-bold text-rose-400 uppercase tracking-wider">ระบบแอดมิน</p>
                         <button onclick="switchView('admin-permissions'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-shield"></i> จัดการสิทธิ์</button>
                         <button onclick="switchView('admin-dashboard'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-chart-line"></i> แดชบอร์ดรวม</button>
                         <button onclick="switchView('admin-announcements'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-bullhorn"></i> ประกาศ</button>
                         <button onclick="switchView('admin-plans'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-600 bg-emerald-50 font-medium"><i class="fas fa-layer-group"></i> แผนการใช้งาน</button>
+                        <button id="mobile-nav-admin-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general'); toggleMobileMenu()" data-schoolhub-always-allowed="1" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 bg-slate-50 font-medium"><i class="fas fa-sliders-h"></i> ตั้งค่า</button>
                     </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
                 </div>
@@ -3422,9 +3658,153 @@ document.addEventListener('click',function(){
                     <!-- Edit / Add Plan Panel (slide in below) -->
                     
                     <!-- admin-plan-edit-panel removed: popup is the only plan form -->
-
                 </div>
-            </div>
+
+                <!-- View: Settings Center (kept as placeholder only; Settings now opens in modal) -->
+                <div id="view-settings" class="view-section hidden" aria-hidden="true"></div>
+
+                <!-- Settings Modal: sidebar on desktop, horizontal tabs on mobile -->
+                <div id="settings-modal" class="settings-modal hidden" data-schoolhub-always-allowed="1" aria-hidden="true" onclick="closeSettingsModal()">
+                    <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" data-schoolhub-always-allowed="1" onclick="event.stopPropagation()">
+                        <aside class="settings-sidebar" data-schoolhub-always-allowed="1">
+                            <div class="settings-sidebar-header">
+                                <button type="button" class="settings-close" onclick="closeSettingsModal()" data-schoolhub-always-allowed="1" aria-label="ปิดหน้าต่างตั้งค่า">×</button>
+                                <div class="settings-sidebar-title">
+                                    <h3 id="settings-modal-title"><i class="fas fa-sliders-h text-primary mr-2"></i><span data-i18n="settings">ตั้งค่า</span></h3>
+                                    <p data-i18n="settingsDescription">ศูนย์รวมโปรไฟล์ แผนการใช้งาน ภาษา และช่องทางติดต่อผู้ดูแลระบบ</p>
+                                </div>
+                                <span id="schoolhub-settings-role-badge" class="settings-role-badge bg-indigo-50 text-primary border-indigo-100">ผู้ใช้งาน</span>
+                            </div>
+
+                            <div class="settings-tabs-list" id="schoolhub-settings-tabs" data-schoolhub-always-allowed="1">
+                                <button type="button" data-settings-tab="general" onclick="schoolhubOpenSettingsTab('general')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab active"><i class="fas fa-home mr-2"></i><span data-i18n="general">ทั่วไป</span></button>
+                                <button type="button" data-settings-tab="plans" onclick="schoolhubOpenSettingsTab('plans')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-layer-group mr-2"></i><span data-i18n="plans">แผนการใช้งาน</span></button>
+                                <button type="button" data-settings-tab="language" onclick="schoolhubOpenSettingsTab('language')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-language mr-2"></i><span data-i18n="language">ภาษา</span></button>
+                                <button type="button" data-settings-tab="contact-admin" onclick="schoolhubOpenSettingsTab('contact-admin')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-headset mr-2"></i><span data-i18n="contactAdmin">ติดต่อผู้ดูแลระบบ</span></button>
+                                <button type="button" id="schoolhub-settings-admin-system-tab" data-settings-tab="admin-system" onclick="schoolhubOpenSettingsTab('admin-system')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab hidden"><i class="fas fa-sliders mr-2"></i><span data-i18n="systemSettings">ตั้งค่าระบบ</span></button>
+                                <button type="button" id="schoolhub-settings-admin-messages-tab" data-settings-tab="contact-messages" onclick="schoolhubOpenSettingsTab('contact-messages')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab hidden"><i class="fas fa-inbox mr-2"></i><span data-i18n="userMessages">ข้อความจากผู้ใช้</span></button>
+                            </div>
+                        </aside>
+
+                        <div class="settings-content" data-schoolhub-always-allowed="1">
+                            <section id="schoolhub-settings-panel-general" class="schoolhub-settings-panel space-y-5">
+                                <div class="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-5">
+                                    <h4 class="text-lg font-black text-slate-900"><i class="fas fa-circle-info text-primary mr-2"></i><span data-i18n="general">ทั่วไป</span></h4>
+                                    <p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="generalDescription">รวมข้อมูลโปรไฟล์ บัญชี และตัวเลือกพื้นฐานไว้ในหน้าเดียว แก้ไขได้จากด้านขวาของหน้าต่างนี้โดยไม่เปิดหน้าต่างซ้อน</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
+                                    <div class="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+                                        <div class="flex items-center justify-between gap-3 mb-4">
+                                            <div>
+                                                <h5 class="text-lg font-black text-slate-900"><i class="fas fa-user-circle text-primary mr-2"></i><span data-i18n="userProfile">โปรไฟล์ผู้ใช้งาน</span></h5>
+                                                <p class="text-sm text-slate-500 mt-1" data-i18n="profileDescription">แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้</p>
+                                            </div>
+                                        </div>
+                                        <div id="schoolhub-settings-profile-host" class="schoolhub-settings-inline-profile"></div>
+                                    </div>
+
+                                    <div class="xl:col-span-2 space-y-4">
+                                        <div class="rounded-3xl border border-slate-100 bg-slate-50 p-5">
+                                            <h5 class="font-black text-slate-900"><i class="fas fa-id-card text-slate-500 mr-2"></i><span data-i18n="accountInfo">ข้อมูลบัญชี</span></h5>
+                                            <div id="schoolhub-settings-account-summary" class="text-sm text-slate-600 leading-7 mt-3"><span data-i18n="loadingAccount">กำลังโหลดข้อมูลบัญชี...</span></div>
+                                        </div>
+                                        <div class="rounded-3xl border border-slate-100 bg-white p-5">
+                                            <h5 class="font-black text-slate-900"><i class="fas fa-palette text-indigo-500 mr-2"></i><span data-i18n="displayTheme">ธีม / รูปแบบการแสดงผล</span></h5>
+                                            <p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="displayThemeDescription">ใช้ธีมและรูปแบบการแสดงผลเดิมของระบบ เพื่อไม่กระทบหน้าคะแนน เกรด และ Export</p>
+                                        </div>
+                                        <div class="rounded-3xl border border-slate-100 bg-white p-5">
+                                            <h5 class="font-black text-slate-900"><i class="fas fa-language text-sky-600 mr-2"></i><span data-i18n="language">ภาษา</span></h5>
+                                            <p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="languageCardDescription">เลือกภาษาได้จากเมนูภาษาในแถบตั้งค่า</p>
+                                        </div>
+                                        <div class="rounded-3xl border border-slate-100 bg-white p-5">
+                                            <h5 class="font-black text-slate-900"><i class="fas fa-bell text-amber-500 mr-2"></i><span data-i18n="notifications">การแจ้งเตือน</span></h5>
+                                            <p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="notificationsDescription">ใช้การแจ้งเตือนเดิมของระบบและแสดงผลในหน้าต่างเดียวกัน</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-plans" class="schoolhub-settings-panel hidden space-y-5">
+                                <div class="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-5">
+                                    <h4 class="text-lg font-black text-slate-900"><i class="fas fa-layer-group text-emerald-600 mr-2"></i><span data-i18n="plans">แผนการใช้งาน</span></h4>
+                                    <p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="plansDescription">ดูเฉพาะแผนปัจจุบันและประวัติการใช้งาน ส่วนการเลือกหรือเปลี่ยนแผนให้เปิดจากเมนูหลักเดิม</p>
+                                </div>
+                                <div id="schoolhub-settings-user-plan-host" class="space-y-5"></div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-language" class="schoolhub-settings-panel hidden space-y-5">
+                                <div class="rounded-3xl border border-sky-100 bg-sky-50/60 p-5">
+                                    <h4 class="text-xl font-black text-slate-900"><i class="fas fa-language text-sky-600 mr-2"></i><span data-i18n="language">ภาษา</span></h4>
+                                    <p class="text-sm text-slate-600 leading-7 mt-2" data-i18n="chooseLanguageDescription">เลือกภาษาที่ต้องการใช้ในระบบ</p>
+                                </div>
+                                <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
+                                    <div>
+                                        <label for="settings-language-select" class="block text-sm font-black text-slate-700 mb-2" data-i18n="selectLanguageLabel">เลือกภาษา</label>
+                                        <select id="settings-language-select" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-sky-100 focus:border-sky-500"></select>
+                                        <p class="text-xs text-slate-500 mt-2" data-i18n="languagePersistHint">ระบบจะจำภาษาที่เลือกไว้ และใช้อีกครั้งเมื่อเปิดเว็บใหม่</p>
+                                    </div>
+                                    <button type="button" onclick="saveLanguageSetting()" data-schoolhub-always-allowed="1" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-3 rounded-2xl font-black shadow-sm inline-flex items-center gap-2">
+                                        <i class="fas fa-save"></i><span data-i18n="saveLanguage">บันทึกภาษา</span>
+                                    </button>
+                                </div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-contact-admin" class="schoolhub-settings-panel hidden">
+                                <div class="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
+                                    <div class="xl:col-span-2 rounded-3xl bg-indigo-50 border border-indigo-100 p-5">
+                                        <h4 class="text-xl font-black text-slate-900"><i class="fas fa-headset text-primary mr-2"></i><span data-i18n="contactAdmin">ติดต่อผู้ดูแลระบบ</span></h4>
+                                        <p class="text-sm text-slate-600 leading-7 mt-3" data-i18n="contactAdminDescription">หากพบปัญหาการใช้งาน สามารถติดต่อผู้ดูแลระบบได้ ระบบจะบันทึกข้อความไว้ให้แอดมินตรวจสอบ</p>
+                                        <div class="mt-4 rounded-2xl bg-white/80 border border-indigo-100 p-4 text-sm text-slate-600 leading-7">
+                                            <b>คำแนะนำ:</b> ระบุเมนูที่พบปัญหา อุปกรณ์ที่ใช้ และขั้นตอนก่อนเกิดปัญหา เพื่อให้ผู้ดูแลตรวจสอบได้เร็วขึ้น
+                                        </div>
+                                    </div>
+                                    <form id="schoolhub-admin-contact-form" onsubmit="event.preventDefault(); submitSchoolHubAdminContactMessage(event);" class="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-5 space-y-4 shadow-sm">
+                                        <div>
+                                            <label class="block text-sm font-black text-slate-700 mb-1.5">หัวข้อ</label>
+                                            <input id="schoolhub-contact-title" type="text" required maxlength="120" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Export ไม่ปิด / คะแนนไม่แสดง / ขอความช่วยเหลือ">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-black text-slate-700 mb-1.5">รายละเอียดปัญหา</label>
+                                            <textarea id="schoolhub-contact-message" required rows="7" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary resize-y min-h-[180px]" placeholder="พิมพ์รายละเอียดปัญหาหรือข้อความที่ต้องการแจ้งผู้ดูแลระบบ"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-black text-slate-700 mb-1.5">อีเมลติดต่อกลับ</label>
+                                            <input id="schoolhub-contact-email" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="อีเมลสำหรับให้ผู้ดูแลติดต่อกลับ">
+                                        </div>
+                                        <button id="schoolhub-contact-submit-btn" type="submit" data-schoolhub-always-allowed="1" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2 text-base">
+                                            <i class="fas fa-paper-plane"></i> ส่งข้อความถึงผู้ดูแลระบบ
+                                        </button>
+                                    </form>
+                                </div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-admin-system" class="schoolhub-settings-panel hidden space-y-4">
+                                <div class="rounded-3xl border border-rose-100 bg-rose-50/50 p-5">
+                                    <h4 class="text-xl font-black text-slate-900"><i class="fas fa-sliders text-rose-500 mr-2"></i>ตั้งค่าระบบ</h4>
+                                    <p class="text-sm text-slate-500 mt-1">เมนูแอดมินที่เกี่ยวข้องกับการตั้งค่า แสดงในหน้าต่างตั้งค่านี้โดยไม่เปิดหน้าต่างซ้อน</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button type="button" onclick="schoolhubOpenSettingsTab('contact-messages')" data-schoolhub-always-allowed="1" class="rounded-3xl border border-sky-100 bg-white p-5 text-left hover:shadow-md transition"><i class="fas fa-inbox text-sky-600 text-2xl mb-3 block"></i><b class="text-slate-900">ข้อความจากผู้ใช้</b><p class="text-sm text-slate-500 mt-1">ดูรายการที่ผู้ใช้ส่งถึงผู้ดูแลระบบ</p></button>
+                                    <button type="button" onclick="schoolhubOpenSettingsTab('plans')" data-schoolhub-always-allowed="1" class="rounded-3xl border border-emerald-100 bg-white p-5 text-left hover:shadow-md transition"><i class="fas fa-layer-group text-emerald-600 text-2xl mb-3 block"></i><b class="text-slate-900">จัดการแผน</b><p class="text-sm text-slate-500 mt-1">ดูแผนและรายการแผนในพื้นที่ด้านขวา</p></button>
+                                </div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-contact-messages" class="schoolhub-settings-panel hidden space-y-4">
+                                <div class="rounded-3xl border border-rose-100 bg-rose-50/50 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                        <h4 class="text-xl font-black text-slate-900"><i class="fas fa-inbox text-rose-500 mr-2"></i>ข้อความจากผู้ใช้</h4>
+                                        <p class="text-sm text-slate-500 mt-1">รายการข้อความที่ผู้ใช้ส่งถึงผู้ดูแลระบบ</p>
+                                    </div>
+                                    <button type="button" onclick="loadAdminContactMessages()" data-schoolhub-always-allowed="1" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black"><i class="fas fa-sync-alt mr-1"></i> รีเฟรช</button>
+                                </div>
+                                <div id="schoolhub-admin-contact-message-list" class="grid grid-cols-1 gap-4">
+                                    <div class="text-center text-slate-400 py-10 bg-white rounded-3xl border border-dashed border-slate-200"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดข้อความ...</div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
         </main>
     </div>
 
@@ -4704,15 +5084,9 @@ document.addEventListener('click',function(){
             const userStatus = dirUser.status || '';
             const currentBox=document.getElementById('user-current-plan-box');
             if(currentBox){
-                let planHtml = '';
-                if(currentPlanName){
-                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(currentPlanName)}</div><div class="text-sm text-indigo-700/80">${escapeHTML(currentPlanPrice)}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                } else if(pendingPlanName){
-                    planHtml = `<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName)}</div><div class="text-sm text-amber-700/80">คำขอของคุณอยู่ระหว่างรอตรวจสอบ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
-                } else {
-                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">ยังไม่ได้เลือกแผน</div><div class="text-sm text-indigo-700/80">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                }
-                currentBox.innerHTML = planHtml;
+                const currentPlan = items.find(p => String(p.id || '') === String(currentPlanId || '')) || null;
+                const planForCard = currentPlan || { name: pendingPlanName || currentPlanName || 'ไม่มีแผน', price: pendingPlanName ? 'คำขออยู่ระหว่างรอตรวจสอบ' : currentPlanPrice, courseLimit: dirUser.courseLimit };
+                currentBox.innerHTML = window.renderCurrentPlanCardHTML ? window.renderCurrentPlanCardHTML(planForCard, dirUser) : '';
             }
             const hasPending = !!pendingPlanName;
             box.innerHTML=items.map(p=>{
@@ -6438,8 +6812,8 @@ async function submitPlanRequest(planId){
 
         function setAdminNavigationMode(enabled) {
             // เมนูปกติ (user): ซ่อนเมื่อเป็น admin
-            ['nav-main-label','nav-dashboard','nav-students','nav-user-plans',
-             'mobile-nav-dashboard','mobile-nav-students','mobile-nav-user-plans'].forEach(id => {
+            ['nav-main-label','nav-dashboard','nav-students','nav-user-plans','nav-settings',
+             'mobile-nav-dashboard','mobile-nav-students','mobile-nav-user-plans','mobile-nav-settings'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.toggle('hidden', enabled);
             });
@@ -6582,9 +6956,162 @@ async function submitPlanRequest(planId){
             showCustomAlert('ตั้งค่า Admin สำเร็จ', 'ครั้งต่อไปให้กรอกอีเมลว่า Admin และกรอกรหัสผ่าน Admin ที่ตั้งไว้');
         };
 
+
+
+        /* SchoolHub Settings Center + Admin Contact Messages
+           เพิ่มเมนูตั้งค่าและติดต่อผู้ดูแลระบบแบบแยก namespace ไม่แตะระบบคะแนน/เกรด/Export/สิทธิ์เดิม */
+        function schoolhubGetContactUserEmail() {
+            const u = currentUser || (auth && auth.currentUser) || {};
+            return String(u.email || u.username || localStorage.getItem('schoolhub_admin_email') || localStorage.getItem('schoolhub_user_email') || '').trim();
+        }
+
+        function schoolhubPrefillContactEmail() {
+            const emailInput = document.getElementById('schoolhub-contact-email');
+            if (emailInput && !emailInput.value) emailInput.value = schoolhubGetContactUserEmail();
+        }
+
+        function schoolhubNormalizeSettingsTab(tab) {
+            tab = String(tab || 'general').trim() || 'general';
+            if (tab === 'admin-messages') tab = 'contact-messages';
+            return tab;
+        }
+
+        function schoolhubUnlockSettingsControls() {
+            const modal = document.getElementById('settings-modal');
+            if (!modal) return;
+            modal.querySelectorAll('button, input, textarea, select, a').forEach(el => {
+                try {
+                    el.setAttribute('data-schoolhub-always-allowed', '1');
+                    if (el.closest('#settings-modal')) {
+                        el.disabled = false;
+                        el.removeAttribute('disabled');
+                        el.removeAttribute('aria-disabled');
+                        el.style.pointerEvents = 'auto';
+                        el.style.opacity = '';
+                    }
+                } catch(e) {}
+            });
+        }
+
+        window.switchSettingsTab = function(tab = 'general') {
+            return window.schoolhubOpenSettingsTab(schoolhubNormalizeSettingsTab(tab));
+        };
+
+        window.openSettingsModal = function(tab = 'general') {
+            const modal = document.getElementById('settings-modal');
+            if (!modal) return;
+            window.__schoolhubSettingsActiveTab = schoolhubNormalizeSettingsTab(tab);
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('schoolhub-settings-modal-open');
+            schoolhubUnlockSettingsControls();
+            if (typeof window.renderSchoolHubSettings === 'function') window.renderSchoolHubSettings();
+            else if (typeof window.schoolhubOpenSettingsTab === 'function') window.schoolhubOpenSettingsTab(window.__schoolhubSettingsActiveTab);
+            setTimeout(schoolhubUnlockSettingsControls, 0);
+            setTimeout(function(){ document.querySelector('#settings-modal .settings-close')?.focus?.(); }, 0);
+        };
+
+        window.closeSettingsModal = function() {
+            const modal = document.getElementById('settings-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('schoolhub-settings-modal-open');
+        };
+
+        window.openSchoolHubSettings = function(tab = 'general') {
+            if (!currentUser && !(auth && auth.currentUser)) {
+                return showCustomAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนเปิดเมนูตั้งค่า', true);
+            }
+            try {
+                currentActiveCourseId = null;
+                document.getElementById('course-context-menu')?.classList.add('hidden');
+                const headerActions = document.getElementById('header-actions');
+                if (headerActions) headerActions.innerHTML = '';
+            } catch(e) {}
+            window.openSettingsModal(tab || 'general');
+        };
+
+        window.renderSchoolHubSettings = function() {
+            const adminMode = !!isAdmin;
+            const badge = document.getElementById('schoolhub-settings-role-badge');
+            if (badge) {
+                badge.textContent = adminMode ? 'แอดมิน' : 'ผู้ใช้งานทั่วไป';
+                badge.className = adminMode
+                    ? 'settings-role-badge bg-rose-50 text-rose-600 border-rose-100'
+                    : 'settings-role-badge bg-indigo-50 text-primary border-indigo-100';
+            }
+            document.getElementById('schoolhub-settings-admin-messages-tab')?.classList.toggle('hidden', !adminMode);
+            document.getElementById('schoolhub-settings-user-shortcuts')?.classList.toggle('hidden', adminMode);
+            document.getElementById('schoolhub-settings-admin-shortcuts')?.classList.toggle('hidden', !adminMode);
+            schoolhubPrefillContactEmail();
+            schoolhubUnlockSettingsControls();
+            window.schoolhubOpenSettingsTab(window.__schoolhubSettingsActiveTab || 'general');
+        };
+
+        window.schoolhubOpenSettingsTab = function(tab = 'general') {
+            tab = schoolhubNormalizeSettingsTab(tab);
+            if (tab === 'contact-messages' && !isAdmin) {
+                tab = 'contact-admin';
+                showCustomAlert('สำหรับแอดมินเท่านั้น', 'เมนูข้อความจากผู้ใช้เปิดได้เฉพาะแอดมิน', true);
+            }
+            window.__schoolhubSettingsActiveTab = tab;
+            document.querySelectorAll('.schoolhub-settings-tab, .settings-tab').forEach(btn => {
+                const active = btn.dataset.settingsTab === tab;
+                btn.classList.toggle('active', active);
+                btn.classList.toggle('bg-indigo-50', active && tab !== 'contact-messages');
+                btn.classList.toggle('text-primary', active && tab !== 'contact-messages');
+                btn.classList.toggle('border-indigo-100', active && tab !== 'contact-messages');
+                btn.classList.toggle('bg-rose-50', active && tab === 'contact-messages');
+                btn.classList.toggle('text-rose-600', active && tab === 'contact-messages');
+                btn.classList.toggle('border-rose-100', active && tab === 'contact-messages');
+                btn.classList.toggle('bg-slate-50', !active);
+                btn.classList.toggle('text-slate-700', !active);
+                btn.classList.toggle('border-slate-100', !active);
+            });
+            document.querySelectorAll('.schoolhub-settings-panel').forEach(panel => panel.classList.add('hidden'));
+            document.getElementById(`schoolhub-settings-panel-${tab}`)?.classList.remove('hidden');
+            if (tab === 'contact-admin') schoolhubPrefillContactEmail();
+            if (tab === 'contact-messages') loadAdminContactMessages();
+            schoolhubUnlockSettingsControls();
+        };
+
+        document.addEventListener('click', function(e) {
+            const settingsBtn = e.target.closest && e.target.closest('[data-open-settings], .settings-menu-btn');
+            if (settingsBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.openSchoolHubSettings(settingsBtn.dataset.settingsTab || 'general');
+                return;
+            }
+            const tabBtn = e.target.closest && e.target.closest('#settings-modal .settings-tab[data-settings-tab], #settings-modal .schoolhub-settings-tab[data-settings-tab]');
+            if (tabBtn) {
+                e.preventDefault();
+                window.switchSettingsTab(tabBtn.dataset.settingsTab);
+                return;
+            }
+            const shortcutBtn = e.target.closest && e.target.closest('#settings-modal .settings-content button[onclick]');
+            if (shortcutBtn && !shortcutBtn.closest('#schoolhub-admin-contact-form')) {
+                const action = shortcutBtn.getAttribute('onclick') || '';
+                if (/openUserProfileSettings|openUserPlanSelector|openStudentsManager|switchView|openCustomMenuAdmin/.test(action) && !/schoolhubOpenSettingsTab|renderSchoolHubSettings/.test(action)) {
+                    setTimeout(window.closeSettingsModal, 0);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') window.closeSettingsModal();
+        });
+
         window.switchView = (viewId) => {
+            if (viewId === 'settings') {
+                window.openSettingsModal(window.__schoolhubSettingsActiveTab || 'general');
+                return;
+            }
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            const targetView = document.getElementById(`view-${viewId}`);
+            if (!targetView) return;
+            targetView.classList.remove('hidden');
 
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-50', 'text-primary');
@@ -6596,6 +7123,7 @@ async function submitPlanRequest(planId){
             if(viewId === 'admin-dashboard' && isAdmin) { document.getElementById('page-title').textContent = 'แดชบอร์ดรวม'; document.getElementById('page-subtitle').textContent = 'ภาพรวมข้อมูลทั้งหมดจาก global_stats/summary'; if(typeof loadAdminGlobalDashboard === 'function') loadAdminGlobalDashboard(); }
             if(viewId === 'admin-announcements' && isAdmin) { document.getElementById('page-title').textContent = 'ประกาศ'; document.getElementById('page-subtitle').textContent = 'จัดการประกาศหน้าแรก แถบบน และป็อปอัพ'; loadPublicAnnouncements(); renderAdminAnnouncements(); }
             if(viewId === 'admin-plans' && isAdmin) { document.getElementById('page-title').textContent = 'แผนการใช้งาน'; document.getElementById('page-subtitle').textContent = 'ตั้งค่าระดับ ราคา และสิทธิ์การใช้งาน'; loadPublicPlans(); renderAdminPlans(); }
+            /* settings opens as modal; no standalone settings page */
         };
 
         window.goToHome = () => {
@@ -7910,11 +8438,9 @@ async function submitPlanRequest(planId){
             const dirUser=window.__currentUserDir||{}; const currentPlanId=dirUser.planId||''; const pendingPlanName=dirUser.requestedPlanName||''; const hasPending=!!pendingPlanName || dirUser.status==='pending_plan';
             const currentBox=document.getElementById('user-current-plan-box');
             if(currentBox){
-                let statusHtml='';
-                if(hasPending) statusHtml=`<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName||'คำขอแผน')}</div><div class="text-sm text-amber-700/80">ส่งคำขอแล้ว จึงส่งซ้ำไม่ได้จนกว่าแอดมินจะอนุมัติ/ไม่อนุมัติ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
-                else if(currentPlanId) statusHtml=`<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(dirUser.planName||'')}</div><div class="text-sm text-indigo-700/80">${escapeHTML(dirUser.planPrice||'')}</div><div class="text-xs font-bold text-slate-500 mt-2">เรียกเก็บครั้งต่อไป: ${escapeHTML(formatNextBilling(dirUser))}</div><div class="text-xs font-bold text-slate-500">เพิ่มรายวิชาได้: ${escapeHTML(dirUser.courseLimit?dirUser.courseLimit+' วิชา':'ไม่จำกัด')}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                else statusHtml=`<div class="bg-slate-50 border border-slate-200 text-slate-900 rounded-3xl p-5"><div class="text-sm font-bold text-slate-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-slate-600/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
-                currentBox.innerHTML=statusHtml;
+                const currentPlan = items.find(p => String(p.id || '') === String(currentPlanId || '')) || null;
+                const planForCard = currentPlan || { name: pendingPlanName || dirUser.planName || 'ไม่มีแผน', price: hasPending ? 'คำขออยู่ระหว่างรอตรวจสอบ' : (dirUser.planPrice || ''), courseLimit: dirUser.courseLimit };
+                currentBox.innerHTML = window.renderCurrentPlanCardHTML ? window.renderCurrentPlanCardHTML(planForCard, dirUser) : '';
             }
             box.innerHTML=items.map(p=>{ const active=p.id===currentPlanId&&!!currentPlanId; let btn=''; if(hasPending&&!active) btn=`<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผนที่รอตรวจสอบอยู่ ไม่สามารถส่งซ้ำได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`; else btn=`<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas ${active?'fa-rotate':'fa-paper-plane'} mr-1"></i> ${active?'ต่ออายุ/เปลี่ยนรอบ':'เลือกแผนนี้'}</button>`; return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1 mt-6">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3">เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br>${p.freeForever||p.billingCycle==='forever'?'ฟรีตลอด ไม่มีรอบเก็บเงิน':'รอบถัดไปจะแจ้งหลังอนุมัติ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>${btn}</div>`; }).join('');
         };
@@ -8327,9 +8853,6 @@ async function submitPlanRequest(planId){
         window.renderUserPlans = function(){
             __oldRenderUserPlansDetailed && __oldRenderUserPlansDetailed();
             const box=document.getElementById('user-current-plan-box'); const dir=window.__currentUserDir||{}; const plan=getPlanById(dir.planId);
-            if(box && plan && dir.planId){
-                const detail=document.createElement('div'); detail.className='mt-3 bg-white border border-slate-100 rounded-2xl p-4 text-xs font-bold text-slate-600'; detail.innerHTML=`<i class="fas fa-sliders text-primary mr-1"></i> สิทธิ์แผน: ${escapeHTML(describePlanLimits(plan))}`; box.appendChild(detail);
-            }
         };
         try{ window.initStaticDropdowns(); }catch(e){}
 </script>
@@ -13691,7 +14214,7 @@ window.requestOwnPasswordReset = function(event){
   hookRender();
   document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildFixedMobileOverviewCards, 300); });
   window.addEventListener('resize', function(){ setTimeout(buildFixedMobileOverviewCards, 100); });
-  document.addEventListener('click', function(){ setTimeout(buildFixedMobileOverviewCards, 120); });
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(buildFixedMobileOverviewCards, 120); });
 })();
 </script>
 
@@ -13728,7 +14251,7 @@ window.requestOwnPasswordReset = function(event){
     document.addEventListener('change', function(e){
         if(e && e.target && e.target.id === 'score-week') setTimeout(syncMobileScoreGuard, 0);
     }, true);
-    document.addEventListener('click', function(){ setTimeout(syncMobileScoreGuard, 80); }, true);
+    document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(syncMobileScoreGuard, 80); }, true);
 
     var originalSwitchCourseTab = window.switchCourseTab;
     if (typeof originalSwitchCourseTab === 'function' && !originalSwitchCourseTab.__schoolhubMobileScoreGuardWrapped) {
@@ -13752,7 +14275,7 @@ window.requestOwnPasswordReset = function(event){
         window.renderScoreList = wrappedRenderScoreList;
     }
 
-    setInterval(syncMobileScoreGuard, 700);
+    // Performance: removed polling; updates run on render/tab/change/resize instead.
 })();
 </script>
 
@@ -13825,7 +14348,7 @@ window.requestOwnPasswordReset = function(event){
     document.addEventListener('DOMContentLoaded', function(){ setTimeout(collapseScoreBlankStats, 80); setTimeout(collapseScoreBlankStats, 350); });
     window.addEventListener('resize', function(){ setTimeout(collapseScoreBlankStats, 80); });
     document.addEventListener('change', function(e){ if(e && e.target && e.target.id === 'score-week') { setTimeout(collapseScoreBlankStats, 0); setTimeout(collapseScoreBlankStats, 180); } }, true);
-    document.addEventListener('click', function(){ setTimeout(collapseScoreBlankStats, 100); }, true);
+    document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(collapseScoreBlankStats, 100); }, true);
 
     var oldRenderScoreList = window.renderScoreList;
     if(typeof oldRenderScoreList === 'function' && !oldRenderScoreList.__schoolhubMobileScoreBlankFinalWrapped){
@@ -13851,7 +14374,7 @@ window.requestOwnPasswordReset = function(event){
         window.switchCourseTab = wrappedTab;
     }
 
-    setInterval(collapseScoreBlankStats, 900);
+    // Performance: removed polling; updates run on render/tab/change/resize instead.
 })();
 </script>
 
@@ -14093,7 +14616,7 @@ window.requestOwnPasswordReset = function(event){
   hookRender();
   document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildOverviewCardsNoFoldCode, 300); });
   window.addEventListener('resize', function(){ setTimeout(buildOverviewCardsNoFoldCode, 100); });
-  document.addEventListener('click', function(){ setTimeout(buildOverviewCardsNoFoldCode, 140); });
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(buildOverviewCardsNoFoldCode, 140); });
 })();
 </script>
 
@@ -14241,7 +14764,7 @@ window.requestOwnPasswordReset = function(event){
     setTimeout(decorateCourseRoomPreviews, 200);
     setTimeout(function(){try{window.renderOverviewRoomFilter();}catch(e){}}, 250);
   });
-  document.addEventListener('click', function(){setTimeout(decorateCourseRoomPreviews, 120);}, true);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(decorateCourseRoomPreviews, 120);}, true);
 })();
 </script>
 
@@ -14401,7 +14924,7 @@ window.requestOwnPasswordReset = function(event){
     window.enterCourse=enterWrapped;
   }
   document.addEventListener('DOMContentLoaded',function(){setTimeout(decorateCourseRoomPreviews,300);setTimeout(afterOverviewRender,350);});
-  document.addEventListener('click',function(){setTimeout(decorateCourseRoomPreviews,120);},true);
+  document.addEventListener('click',function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(decorateCourseRoomPreviews,120);},true);
 })();
 </script>
 
@@ -14615,7 +15138,7 @@ window.requestOwnPasswordReset = function(event){
       new MutationObserver(function(){ setTimeout(afterDashboard,50); }).observe(grid,{childList:true,subtree:true});
     }
   });
-  document.addEventListener('click',function(){ setTimeout(afterDashboard,80); setTimeout(afterOverview,80); },true);
+  document.addEventListener('click',function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(afterDashboard,80); setTimeout(afterOverview,80); },true);
 })();
 </script>
 
@@ -16048,28 +16571,9 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   }
   function makeInviteLink(inviteId, email){const url=new URL(location.href); url.searchParams.set('teamInvite',inviteId); url.searchParams.set('teamOwner',ownerUid()); url.searchParams.set('teamEmail',email); return url.toString();}
   function ensureTeamLimitText(){
-    const currentBox=document.getElementById('user-current-plan-box');
-    if(!currentBox) return;
-    const d=getDir();
-    const p=getPlan();
-    const isTeamPlan = !!(d.teamStatus==='accepted' || d.teamOwnerUid || d.allowTeam === true || p.allowTeam === true);
-    const limit = isTeamPlan ? teamLimit() : 0;
-    let line=document.getElementById('schoolhub-current-plan-team-limit-text');
-    // ถ้ายังไม่ได้เลือกแผน หรือเป็นแผนใช้คนเดียว ห้ามสร้าง/แสดงบรรทัดนี้เด็ดขาด
-    if(!hasRealPlan() || !isTeamPlan || limit <= 1){
-      if(line) line.remove();
-      return;
-    }
-    const mainCard=currentBox.firstElementChild;
-    if(!mainCard) return;
-    const text='ใช้ร่วมกันได้สูงสุด '+limit+' คน';
-    if(line){ line.textContent=text; return; }
-    const target=mainCard.querySelector('div div') || mainCard;
-    const div=document.createElement('div');
-    div.id='schoolhub-current-plan-team-limit-text';
-    div.className='text-xs font-black text-indigo-700 mt-1';
-    div.textContent=text;
-    target.appendChild(div);
+    const line=document.getElementById('schoolhub-current-plan-team-limit-text');
+    if(line) line.remove();
+    return;
   }
 
   function closeTeamInvitePopup(){ document.getElementById('schoolhub-team-invite-popup')?.remove(); }
@@ -17766,6 +18270,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   }
 
   document.addEventListener('click', function(e){
+    if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return;
     var el=e.target && e.target.closest ? e.target.closest('button,a') : null;
     if(!el) return;
     var onclick=String(el.getAttribute('onclick')||'');
@@ -17967,8 +18472,8 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     });
   }
   document.addEventListener('DOMContentLoaded', forceExportCancelButtons);
-  document.addEventListener('click', function(){ setTimeout(forceExportCancelButtons,0); }, true);
-  setInterval(forceExportCancelButtons, 500);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(forceExportCancelButtons,0); }, true);
+  // Performance: removed polling; export close buttons are fixed on DOMContentLoaded/click/render wrappers.
 
   function wrapExportFunction(name){
     var fn = window[name];
@@ -17998,7 +18503,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 
     // สำคัญ: ปุ่มปิด/กากบาท/ยกเลิกในกล่องดาวน์โหลด ต้องปิดได้เสมอ
     // เดิมระบบมอง id/class ที่มีคำว่า excel เป็นปุ่ม Export จึงเด้งเตือนสิทธิ์แทนการปิด
-    var isDismiss = /close|cancel|dismiss|ยกเลิก|ปิด/i.test(txt + ' ' + oc + ' ' + idClass) ||
+    var isDismiss = btn.hasAttribute('data-export-dismiss') ||
+                    (window.schoolhubIsExportDismissButton && window.schoolhubIsExportDismissButton(btn)) ||
+                    /^(×|x)$/i.test(txt) ||
+                    !!btn.querySelector('i.fa-times, i.fa-xmark, i.fa-close, .fa-times, .fa-xmark, .fa-close') ||
+                    /close|cancel|dismiss|ยกเลิก|ปิด|fa-times|fa-xmark|modal-close/i.test(txt + ' ' + oc + ' ' + idClass) ||
                     btn.hasAttribute('data-close') ||
                     btn.closest('[data-export-dismiss="true"]');
     if(isDismiss) return;
@@ -18023,15 +18532,40 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 #schoolhub-attendance-export-modal.hidden,
 #student-export-room-modal.hidden,
 #export-date-modal.hidden,
-#download-modal.hidden{
+#download-modal.hidden,
+#attendance-export-modal.hidden,
+#export-room-modal.hidden,
+#schoolhub-overview-excel-room-modal.hidden,
+#schoolhub-overview-excel-room-modal-force.hidden{
     display:none !important;
     pointer-events:none !important;
     visibility:hidden !important;
 }
-.schoolhub-export-popup:not(.hidden){
-    display:flex !important;
+.schoolhub-export-popup:not(.hidden),
+#schoolhub-overview-export-room-modal:not(.hidden),
+#schoolhub-attendance-export-modal:not(.hidden),
+#student-export-room-modal:not(.hidden),
+#export-date-modal:not(.hidden),
+#download-modal:not(.hidden),
+#attendance-export-modal:not(.hidden),
+#export-room-modal:not(.hidden),
+#schoolhub-overview-excel-room-modal:not(.hidden),
+#schoolhub-overview-excel-room-modal-force:not(.hidden){
     pointer-events:auto !important;
     visibility:visible !important;
+}
+.schoolhub-export-popup [data-export-dismiss],
+#schoolhub-overview-export-room-modal [data-export-dismiss],
+#schoolhub-attendance-export-modal [data-export-dismiss],
+#student-export-room-modal [data-export-dismiss],
+#export-date-modal [data-export-dismiss],
+#download-modal [data-export-dismiss],
+#attendance-export-modal [data-export-dismiss],
+#export-room-modal [data-export-dismiss],
+#schoolhub-overview-excel-room-modal [data-export-dismiss],
+#schoolhub-overview-excel-room-modal-force [data-export-dismiss]{
+    pointer-events:auto !important;
+    cursor:pointer !important;
 }
 </style>
 <script id="schoolhub-export-popup-real-close-fix">
@@ -18039,20 +18573,29 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   if(window.__schoolhubExportPopupRealCloseFix) return;
   window.__schoolhubExportPopupRealCloseFix = true;
 
-  var EXPORT_MODAL_SELECTOR = '.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal';
+  var EXPORT_MODAL_SELECTOR = [
+    '.schoolhub-export-popup',
+    '#schoolhub-overview-export-room-modal',
+    '#schoolhub-attendance-export-modal',
+    '#student-export-room-modal',
+    '#export-date-modal',
+    '#download-modal',
+    '#attendance-export-modal',
+    '#export-room-modal',
+    '#schoolhub-overview-excel-room-modal',
+    '#schoolhub-overview-excel-room-modal-force'
+  ].join(',');
 
   function closeExportModal(modal){
     if(!modal) return false;
+
     modal.classList.add('hidden');
     modal.style.display = 'none';
     modal.style.pointerEvents = 'none';
     modal.style.visibility = 'hidden';
-    // modal กล่อง export ถูกสร้างใหม่ทุกครั้งได้ จึงลบออกเพื่อตัด event ค้าง/onclick ซ้อน
-    setTimeout(function(){
-      try{
-        if(modal && modal.parentNode && modal.classList.contains('hidden')) modal.parentNode.removeChild(modal);
-      }catch(e){}
-    }, 0);
+
+    document.body.classList.remove('modal-open', 'overflow-hidden');
+
     return true;
   }
 
@@ -18061,78 +18604,90 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     return closeExportModal(modal);
   };
 
-  function isDismissButton(btn){
+  function isExportDismissButton(btn){
     if(!btn) return false;
+
     var text = (btn.textContent || '').trim();
     var oc = btn.getAttribute('onclick') || '';
     var idClass = (btn.id || '') + ' ' + (btn.className || '');
     var aria = btn.getAttribute('aria-label') || '';
-    var iconTimes = !!btn.querySelector('i.fa-times,.fa-xmark,.fa-close');
-    return iconTimes || /ยกเลิก|ปิด|close|cancel|dismiss|times|xmark|fa-times/i.test(text + ' ' + oc + ' ' + idClass + ' ' + aria) || btn.hasAttribute('data-export-dismiss');
-  }
 
-  function normalizeExportDismissButtons(root){
+    var hasCloseIcon = !!btn.querySelector(
+      'i.fa-times, i.fa-xmark, i.fa-close, .fa-times, .fa-xmark, .fa-close'
+    );
+
+    return (
+      btn.hasAttribute('data-export-dismiss') ||
+      hasCloseIcon ||
+      /^(×|x)$/i.test(text) ||
+      /ยกเลิก|ปิด|close|cancel|dismiss|fa-times|fa-xmark|modal-close/i.test(
+        text + ' ' + oc + ' ' + idClass + ' ' + aria
+      )
+    );
+  }
+  window.schoolhubIsExportDismissButton = isExportDismissButton;
+
+  function markExportDismissButtons(root){
     root = root || document;
-    root.querySelectorAll(EXPORT_MODAL_SELECTOR + ' button').forEach(function(btn){
-      if(isDismissButton(btn)){
-        btn.type = 'button';
-        btn.setAttribute('data-export-dismiss','true');
-        if(!btn.__schoolhubExportDismissDirect){
-          btn.__schoolhubExportDismissDirect = true;
-          btn.addEventListener('click', function(ev){
-            var modal = btn.closest(EXPORT_MODAL_SELECTOR);
-            if(modal){
-              ev.preventDefault();
-              ev.stopPropagation();
-              if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-              closeExportModal(modal);
-            }
-          }, true);
-        }
-      }
+
+    root.querySelectorAll(EXPORT_MODAL_SELECTOR + ' button, ' + EXPORT_MODAL_SELECTOR + ' a').forEach(function(btn){
+      if(!isExportDismissButton(btn)) return;
+
+      btn.type = 'button';
+      btn.setAttribute('data-export-dismiss', 'true');
+      btn.setAttribute('aria-label', btn.getAttribute('aria-label') || 'ปิด');
+      btn.style.pointerEvents = 'auto';
+      btn.disabled = false;
+      btn.removeAttribute('disabled');
+      btn.classList.remove('sh-permission-disabled', 'schoolhub-locked-action-stable', 'pointer-events-none', 'schoolhub-plan-right-locked', 'schoolhub-permission-disabled-soft', 'opacity-50', 'opacity-40', 'cursor-not-allowed', 'grayscale', 'disabled');
     });
   }
 
-  // ดักแบบ capture ก่อนระบบสิทธิ์/onclick อื่น ๆ เพื่อให้ปิดได้แน่นอน
-  document.addEventListener('click', function(ev){
-    var target = ev.target;
-    var modal = target && target.closest ? target.closest(EXPORT_MODAL_SELECTOR) : null;
+  document.addEventListener('click', function(e){
+    var modal = e.target && e.target.closest ? e.target.closest(EXPORT_MODAL_SELECTOR) : null;
     if(!modal) return;
-    var btn = target.closest && target.closest('button,a,[role="button"]');
-    if(btn && isDismissButton(btn)){
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+
+    var btn = e.target.closest && e.target.closest('button,a,[role="button"]');
+
+    if(btn && isExportDismissButton(btn)){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
       closeExportModal(modal);
-      return;
+      return false;
     }
-    // กดพื้นหลังมืดด้านนอกกล่อง ให้ปิดด้วย เฉพาะกรณีกดตัว backdrop โดยตรง
-    if(target === modal){
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+
+    if(e.target === modal){
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
       closeExportModal(modal);
+      return false;
     }
   }, true);
 
-  document.addEventListener('keydown', function(ev){
-    if(ev.key !== 'Escape') return;
-    var modals = Array.prototype.slice.call(document.querySelectorAll(EXPORT_MODAL_SELECTOR + ':not(.hidden)'));
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+
+    var modals = Array.prototype.slice.call(document.querySelectorAll(EXPORT_MODAL_SELECTOR))
+      .filter(function(m){ return !m.classList.contains('hidden') && m.style.display !== 'none'; });
+
     if(!modals.length) return;
-    ev.preventDefault();
-    closeExportModal(modals[modals.length-1]);
+
+    e.preventDefault();
+    closeExportModal(modals[modals.length - 1]);
   }, true);
 
-  // แก้ modal ที่ถูกสร้างใหม่แบบ dynamic ให้ปุ่ม X/ยกเลิกมี handler ปิดเสมอ
-  normalizeExportDismissButtons(document);
-  document.addEventListener('DOMContentLoaded', function(){ normalizeExportDismissButtons(document); });
+  markExportDismissButtons(document);
+  document.addEventListener('DOMContentLoaded', function(){ markExportDismissButtons(document); });
+
   new MutationObserver(function(ms){
     ms.forEach(function(m){
-      m.addedNodes && Array.prototype.forEach.call(m.addedNodes,function(n){
-        if(n && n.nodeType === 1) normalizeExportDismissButtons(n);
+      Array.prototype.slice.call(m.addedNodes || []).forEach(function(n){
+        if(n && n.nodeType === 1) markExportDismissButtons(n);
       });
     });
-  }).observe(document.documentElement,{childList:true,subtree:true});
+  }).observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>
 
@@ -18181,9 +18736,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 
   // ปิด popup ดาวน์โหลดที่อาจถูกเปิดค้างจากโค้ดชุดเก่า
   function closeExportPopups(){
-    ['schoolhub-overview-export-room-modal','schoolhub-overview-excel-room-modal-force','schoolhub-overview-excel-room-modal','export-room-modal','attendance-export-modal'].forEach(function(id){
+    ['schoolhub-overview-export-room-modal','schoolhub-attendance-export-modal','student-export-room-modal','export-date-modal','download-modal','schoolhub-overview-excel-room-modal-force','schoolhub-overview-excel-room-modal','export-room-modal','attendance-export-modal'].forEach(function(id){
       var el = document.getElementById(id);
-      if (el) { el.classList.add('hidden'); el.style.display = 'none'; }
+      if (!el) return;
+      if (window.schoolhubCloseExportModal) window.schoolhubCloseExportModal(el);
+      else { el.classList.add('hidden'); el.style.display = 'none'; el.style.pointerEvents = 'none'; el.style.visibility = 'hidden'; }
     });
   }
 
@@ -18204,6 +18761,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   document.addEventListener('click', function(e){
     var btn = e.target && e.target.closest && e.target.closest('button, a');
     if(!btn) return;
+    if(btn.hasAttribute('data-export-dismiss') || (window.schoolhubIsExportDismissButton && window.schoolhubIsExportDismissButton(btn))) return;
     var text = (btn.textContent || '').replace(/\s+/g,' ').trim();
     var on = btn.getAttribute('onclick') || '';
     var inOverview = !!(btn.closest && btn.closest('#course-tab-overview'));
@@ -19103,7 +19661,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   document.addEventListener('change',function(e){
     if(e.target && e.target.id==='grade-type-select') syncGradeTypeUI();
   },true);
-  document.addEventListener('click',function(e){ if(e.target && e.target.closest && e.target.closest('select')) return; ensureExtraUI(); },true);
+  document.addEventListener('click',function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; ensureExtraUI(); },true);
   // ปิด polling เกรดซ้ำทุก 1.5 วิ เพื่อลดอาการหน่วงของ dropdown บนมือถือ
 })();
 </script>
@@ -19351,9 +19909,14 @@ label:has(#plan-sub-allow-team){
   function isModalCloseButton(el){
     if(!el || !el.matches) return false;
     var txt = String((el.textContent || '').trim());
-    return el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
+    var inExportModal = !!(el.closest && el.closest('.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal,#attendance-export-modal,#export-room-modal,#schoolhub-overview-excel-room-modal,#schoolhub-overview-excel-room-modal-force'));
+    var hasExportDismiss = inExportModal && (el.hasAttribute('data-export-dismiss') ||
+      (window.schoolhubIsExportDismissButton && window.schoolhubIsExportDismissButton(el)));
+    var hasCloseIcon = inExportModal && !!(el.querySelector && el.querySelector('i.fa-times, i.fa-xmark, i.fa-close, .fa-times, .fa-xmark, .fa-close'));
+    return hasExportDismiss || hasCloseIcon ||
+      el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
       /^(×|x|X|ปิด|ยกเลิก)$/.test(txt) ||
-      /closeModal\(|closeCustomAlert\(|closePlanModal\(/.test(String(el.getAttribute('onclick') || ''));
+      /closeModal\(|closeCustomAlert\(|closePlanModal\(|schoolhubCloseExportModal\(/.test(String(el.getAttribute('onclick') || ''));
   }
   function classify(el){
     if(isModalCloseButton(el)) return '';
@@ -19425,9 +19988,8 @@ label:has(#plan-sub-allow-team){
     setTimeout(fixAll, 1000);
     setTimeout(fixAll, 2000);
   });
-  document.addEventListener('click', function(){ setTimeout(fixAll, 180); }, true);
-  document.addEventListener('change', function(){ setTimeout(fixAll, 180); }, true);
-  setInterval(fixAll, 1600);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(fixAll, 180); }, true);
+  document.addEventListener('change', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(fixAll, 180); }, true);
 
   window.schoolhubFixGreyPlanButtons = fixAll;
 })();
@@ -19592,9 +20154,9 @@ label:has(#plan-sub-allow-team){
     setTimeout(run,300);
     setTimeout(run,1000);
   });
-  document.addEventListener('click', function(){ setTimeout(run,120); }, true);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(run,120); }, true);
   window.addEventListener('resize', function(){ setTimeout(run,80); });
-  setInterval(run, 2000);
+  // Performance: removed polling; scroll state is refreshed on DOMContentLoaded/click/resize.
 })();
 </script>
 
@@ -19944,10 +20506,10 @@ label:has(#plan-sub-allow-team){
     setTimeout(fixSidebarMode,1200);
   });
 
-  document.addEventListener('click', function(){ setTimeout(fixSidebarMode,80); }, true);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(fixSidebarMode,80); }, true);
   window.addEventListener('resize', function(){ setTimeout(fixSidebarMode,60); });
   window.addEventListener('orientationchange', function(){ setTimeout(fixSidebarMode,120); });
-  setInterval(fixSidebarMode, 1200);
+  // Performance: removed polling; sidebar mode refreshes on DOMContentLoaded/click/resize/orientationchange.
 
   window.schoolhubFixMobileSidebarNow = fixSidebarMode;
 })();
@@ -20457,8 +21019,8 @@ label:has(#plan-sub-allow-team){
     setTimeout(install, 300);
     setTimeout(install, 1000);
   });
-  document.addEventListener('click', function(){ setTimeout(schedule, 80); }, true);
-  document.addEventListener('change', function(){ setTimeout(schedule, 80); }, true);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(schedule, 80); }, true);
+  document.addEventListener('change', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(schedule, 80); }, true);
 
   window.schoolhubFixReadonlyNoPermissionButtonsNow = install;
 })();
@@ -21192,6 +21754,187 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
 
 
 
+
+
+<!-- SchoolHub patch: unified current plan card helper/style -->
+<style id="schoolhub-current-plan-card-unified-style">
+.schoolhub-current-plan-card {
+  width: 100%;
+  background: #eef2ff;
+  border: 1px solid #dbe3ff;
+  border-radius: 24px;
+  padding: 26px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  box-shadow: none;
+}
+.schoolhub-current-plan-info {
+  min-width: 0;
+}
+.schoolhub-current-plan-label {
+  color: #4f46e5;
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.schoolhub-current-plan-name {
+  color: #0f172a;
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.schoolhub-current-plan-price {
+  color: #4f46e5;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.schoolhub-current-plan-meta {
+  color: #475569;
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 3px;
+}
+.schoolhub-current-plan-icon {
+  color: #4f46e5;
+  font-size: 32px;
+  flex: 0 0 auto;
+}
+#schoolhub-current-plan-team-limit-text {
+  display: none !important;
+}
+@media (max-width: 768px) {
+  .schoolhub-current-plan-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .schoolhub-current-plan-icon {
+    font-size: 28px;
+  }
+}
+</style>
+<script id="schoolhub-current-plan-card-unified-helper">
+(function(){
+  if (window.__schoolhubCurrentPlanCardUnifiedHelper) return;
+  window.__schoolhubCurrentPlanCardUnifiedHelper = true;
+
+  function esc(v){
+    try {
+      if (typeof window.escapeHTML === 'function') return window.escapeHTML(v == null ? '' : String(v));
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+    } catch(e) { return String(v == null ? '' : v); }
+  }
+
+  function toMillis(value){
+    if (!value) return 0;
+    try {
+      if (typeof value.toMillis === 'function') return value.toMillis();
+      if (typeof value.toDate === 'function') return value.toDate().getTime();
+      if (typeof value === 'object' && value.seconds) return Number(value.seconds) * 1000;
+      if (typeof value === 'string') {
+        var parsed = Date.parse(value);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      var n = Number(value);
+      if (!Number.isFinite(n) || !n) return 0;
+      return n < 10000000000 ? n * 1000 : n;
+    } catch(e) { return 0; }
+  }
+
+  function formatThaiDateTime(value){
+    var ms = toMillis(value);
+    if (!ms) return '-';
+    try {
+      return new Date(ms).toLocaleString('th-TH', {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    } catch(e) { return '-'; }
+  }
+  window.formatThaiDateTime = window.formatThaiDateTime || formatThaiDateTime;
+
+  function normalizePriceText(text){
+    return String(text == null ? '' : text)
+      .replace(/บาท\s*ต่อเดือน/g, 'บาท ต่อเดือน')
+      .replace(/บาท\s*\/\s*เดือน/g, 'บาท ต่อเดือน')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function amountText(value){
+    if (value == null || value === '') return '0';
+    if (typeof value === 'number') return Number(value || 0).toLocaleString('th-TH');
+    var s = normalizePriceText(value);
+    s = s.replace(/บาท\s*ต่อเดือน/g, '').replace(/บาท/g, '').trim();
+    return s || '0';
+  }
+
+  function getPriceText(plan, userDir){
+    plan = plan || {};
+    userDir = userDir || {};
+    var raw = plan.price || userDir.planPrice || userDir.price || '';
+    if (raw && /ฟรีเดือนแรก/.test(String(raw))) return normalizePriceText(raw);
+    if (plan.freeFirstMonth || userDir.freeFirstMonth) {
+      var monthly = plan.monthlyPrice ?? userDir.monthlyPrice ?? userDir.planAmount ?? raw ?? 0;
+      return 'ฟรีเดือนแรก / ต่อไป ' + amountText(monthly) + ' บาท ต่อเดือน';
+    }
+    if (raw) return normalizePriceText(raw);
+    var amount = plan.monthlyPrice ?? userDir.monthlyPrice ?? userDir.planAmount ?? 0;
+    return amountText(amount) + ' บาท ต่อเดือน';
+  }
+
+  function getPlanName(plan, userDir){
+    plan = plan || {};
+    userDir = userDir || {};
+    return plan.name || userDir.teamPlanName || userDir.planName || userDir.requestedPlanName || userDir.planId || 'ไม่มีแผน';
+  }
+
+  function getNextDate(userDir){
+    userDir = userDir || {};
+    return userDir.nextBillingAt || userDir.planNextBillingAt || userDir.planNextBillingDate || userDir.planExpiresAt || userDir.planStartAt || userDir.planStartedAt || userDir.startedAt || userDir.approvedAt || userDir.createdAt || '';
+  }
+
+  function getCourseLimit(plan, userDir){
+    plan = plan || {};
+    userDir = userDir || {};
+    var raw = plan.courseLimit ?? userDir.courseLimit ?? userDir.maxCourses ?? '-';
+    var n = Number(raw);
+    if (raw === '-' || raw == null || raw === '') return '-';
+    if (Number.isFinite(n) && n === 0) return 'ไม่จำกัด';
+    return raw;
+  }
+
+  window.renderCurrentPlanCardHTML = function(plan, userDir){
+    plan = plan || {};
+    userDir = userDir || {};
+    var planName = getPlanName(plan, userDir);
+    var priceText = getPriceText(plan, userDir);
+    var nextDate = getNextDate(userDir);
+    var courseLimit = getCourseLimit(plan, userDir);
+    return '' +
+      '<div class="schoolhub-current-plan-card" data-schoolhub-current-plan-unified="1">' +
+        '<div class="schoolhub-current-plan-info">' +
+          '<div class="schoolhub-current-plan-label" data-i18n="currentPlan">' + esc(window.t ? window.t('currentPlan') : 'แผนปัจจุบัน') + '</div>' +
+          '<div class="schoolhub-current-plan-name">' + esc(planName) + '</div>' +
+          '<div class="schoolhub-current-plan-price">' + esc(priceText) + '</div>' +
+          '<div class="schoolhub-current-plan-meta"><span data-i18n="nextBillingStart">' + esc(window.t ? window.t('nextBillingStart') : 'เริ่มเดือนถัดไป') + '</span>: ' + esc(formatThaiDateTime(nextDate)) + '</div>' +
+          '<div class="schoolhub-current-plan-meta"><span data-i18n="courseLimit">' + esc(window.t ? window.t('courseLimit') : 'เพิ่มรายวิชาได้') + '</span>: ' + esc(courseLimit) + ' <span data-i18n="courseUnit">' + esc(window.t ? window.t('courseUnit') : 'วิชา') + '</span></div>' +
+        '</div>' +
+        '<div class="schoolhub-current-plan-icon"><i class="fa-solid fa-id-card fas fa-id-card"></i></div>' +
+      '</div>';
+  };
+
+  window.schoolhubRenderCurrentPlanCardInto = function(target, plan, userDir){
+    var el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el || typeof window.renderCurrentPlanCardHTML !== 'function') return;
+    el.innerHTML = window.renderCurrentPlanCardHTML(plan, userDir || {});
+    el.classList.remove('schoolhub-no-plan-state', 'schoolhub-ultimate-no-plan');
+  };
+})();
+</script>
+
 <!-- =========================================================
      SchoolHub Canonical Plan Selector Stable Flow
      - Single openUserPlanSelector flow
@@ -21297,20 +22040,15 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
     lastCurrentPlanBoxHtml = html;
   }
   function renderNoPlanBox(){
-    return '<div class="schoolhub-current-plan-single-card none schoolhub-no-plan-card-proper">'+
-      '<div class="text-sm font-black text-rose-600"><i class="fas fa-circle-exclamation mr-1"></i>แผนปัจจุบัน</div>'+
-      '<div class="text-2xl font-black text-rose-900 mt-1">ยังไม่ได้เลือกแผน</div>'+
-      '<div class="meta-grid"><div class="meta-item">สถานะ: ยังไม่มีแผน</div><div class="meta-item">รอบชำระเงินครั้งต่อไป: ไม่มี</div></div>'+
-      '<p class="text-sm font-bold text-rose-700/80 mt-3">เลือกแผนด้านล่างเพื่อเริ่มใช้งาน หรือรอแอดมินอนุมัติคำขอแผน</p>'+
-    '</div>';
+    return window.renderCurrentPlanCardHTML
+      ? window.renderCurrentPlanCardHTML({ id:'none', name:'ไม่มีแผน', price:0, monthlyPrice:0, courseLimit:'-' }, {})
+      : '<div>แผนปัจจุบัน</div>';
   }
   function renderPendingBox(d){
-    const name = d.requestedPlanName || d.planName || d.planId || 'กำลังซิงก์ข้อมูลแผน';
-    return '<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">'+
-      '<div><div class="text-sm font-bold text-amber-600"><i class="fas fa-clock mr-1"></i>แผนปัจจุบัน</div>'+
-      '<div class="text-xl font-black">'+esc(name)+'</div>'+
-      '<div class="text-sm text-amber-700/80">ข้อมูลแผนยังไม่ครบ ระบบจะแสดงจาก cache ก่อนและอัปเดตเมื่อโหลดล่าสุดสำเร็จ</div></div>'+
-      '<i class="fas fa-id-card text-3xl text-amber-500"></i></div>';
+    d = d || {};
+    return window.renderCurrentPlanCardHTML
+      ? window.renderCurrentPlanCardHTML({ id:d.requestedPlanId || d.planId || 'pending', name:d.requestedPlanName || d.planName || 'รออนุมัติแผน', price:'คำขออยู่ระหว่างรอตรวจสอบ', courseLimit:d.courseLimit }, d)
+      : '<div>แผนปัจจุบัน</div>';
   }
   function isTeam(d){ return !!(d && (d.effectivePlanSource === 'team' || d.teamStatus === 'accepted' || d.teamOwnerUid || d.teamPlanId)); }
   function teamLimit(d, p){
@@ -21319,35 +22057,20 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
     return Number.isFinite(n) && n > 0 ? n : 1;
   }
   function currentPlanHtml(d, p){
-    const team = isTeam(d);
-    const name = team ? (d.teamPlanName || d.planName || (p && p.name) || 'แผนทีม') : (d.planName || (p && p.name) || '');
-    if(!name && !d.planId && !d.requestedPlanId && !d.requestedPlanName) return renderNoPlanBox();
-    if(!p && d.planId && !name) return renderPendingBox(d);
-    if(d.status === 'pending_plan' || d.requestedPlanId || d.requestedPlanName) return renderPendingBox(d);
-    const limit = teamLimit(d, p);
-    const courseLimit = d.courseLimit ?? (p && p.courseLimit);
-    const studentLimit = d.studentLimit ?? (p && p.studentLimit);
-    if(team){
-      return '<div class="schoolhub-current-plan-single-card team">'+
-        '<div class="text-sm font-black text-emerald-600"><i class="fas fa-users mr-1"></i>แผนปัจจุบัน: ทีม</div>'+
-        '<div class="text-2xl font-black text-slate-900 mt-1">'+esc(name || 'แผนทีม')+'</div>'+
-        '<div class="meta-grid">'+
-          '<div class="meta-item">เจ้าของ: '+esc(d.teamOwnerEmail || d.ownerEmail || d.teamOwnerUid || '-')+'</div>'+
-          '<div class="meta-item">สิทธิ์ของคุณ: '+esc(d.teamRole === 'co_owner' ? 'เจ้าของร่วม' : (d.teamRole === 'owner' ? 'เจ้าของ' : 'ผู้ใช้ร่วม'))+'</div>'+
-          '<div class="meta-item">ใช้ร่วมกันได้สูงสุด: '+esc(limit)+' คน</div>'+
-          '<div class="meta-item">รอบชำระเงินครั้งต่อไป: '+esc(fmtDate(d.planNextBillingAt || d.nextBillingAt || d.planExpiresAt))+'</div>'+
-        '</div></div>';
+    d = d || {};
+    let planForCard = p || null;
+    if(!planForCard){
+      if(d.requestedPlanName || d.requestedPlanId || d.status === 'pending_plan'){
+        planForCard = { id: d.requestedPlanId || d.planId || 'pending', name: d.requestedPlanName || d.planName || 'รออนุมัติแผน', price: 'คำขออยู่ระหว่างรอตรวจสอบ', courseLimit: d.courseLimit };
+      }else if(d.teamPlanName || d.planName || d.planId || d.teamPlanId){
+        planForCard = { id: d.teamPlanId || d.planId || '', name: d.teamPlanName || d.planName || d.planId || 'แผนปัจจุบัน', price: d.planPrice || '', monthlyPrice: d.monthlyPrice || 0, freeFirstMonth: d.freeFirstMonth, courseLimit: d.courseLimit };
+      }else{
+        planForCard = { id: 'none', name: 'ไม่มีแผน', price: 0, monthlyPrice: 0, courseLimit: d.courseLimit || '-' };
+      }
     }
-    return '<div class="schoolhub-current-plan-single-card">'+
-      '<div class="text-sm font-black text-indigo-600"><i class="fas fa-id-card mr-1"></i>แผนปัจจุบัน</div>'+
-      '<div class="text-2xl font-black text-slate-900 mt-1">'+esc(name || d.planId || 'แผนปัจจุบัน')+'</div>'+
-      (planPrice(p, d) ? '<div class="text-sm font-bold text-indigo-700 mt-1">'+esc(planPrice(p, d))+'</div>' : '')+
-      '<div class="meta-grid">'+
-        '<div class="meta-item">ประเภท: แผนส่วนตัว</div>'+
-        '<div class="meta-item">รอบชำระเงินครั้งต่อไป: '+esc(fmtDate(d.planNextBillingAt || d.nextBillingAt || d.planExpiresAt))+'</div>'+
-        '<div class="meta-item">เพิ่มรายวิชาได้: '+esc(Number(courseLimit || 0) === 0 ? 'ไม่จำกัด' : courseLimit + ' วิชา')+'</div>'+
-        '<div class="meta-item schoolhub-hide-when-no-plan">ใช้ร่วมกันได้สูงสุด: '+esc(limit)+' คน</div>'+
-      '</div></div>';
+    return window.renderCurrentPlanCardHTML
+      ? window.renderCurrentPlanCardHTML(planForCard, d)
+      : '<div class="schoolhub-current-plan-card"><div><div class="schoolhub-current-plan-label">แผนปัจจุบัน</div><div class="schoolhub-current-plan-name">'+esc(planForCard.name || 'ไม่มีแผน')+'</div></div></div>';
   }
   function renderCurrentPlanFromCacheOrFallback(){
     const d = getDir();
@@ -22534,9 +23257,14 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   function isModalCloseButton(el){
     if(!el || !el.matches) return false;
     const txt = String((el.textContent || '').trim());
-    return el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
+    const inExportModal = !!(el.closest && el.closest('.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal,#attendance-export-modal,#export-room-modal,#schoolhub-overview-excel-room-modal,#schoolhub-overview-excel-room-modal-force'));
+    const hasExportDismiss = inExportModal && (el.hasAttribute('data-export-dismiss') ||
+      (window.schoolhubIsExportDismissButton && window.schoolhubIsExportDismissButton(el)));
+    const hasCloseIcon = inExportModal && !!(el.querySelector && el.querySelector('i.fa-times, i.fa-xmark, i.fa-close, .fa-times, .fa-xmark, .fa-close'));
+    return hasExportDismiss || hasCloseIcon ||
+      el.matches('.modal-close, .close-modal, [data-close-modal], .btn-close, [aria-label*="ปิด"], [aria-label*="close" i]') ||
       /^(×|x|X|ปิด|ยกเลิก)$/.test(txt) ||
-      /closeModal\(|closeCustomAlert\(|closePlanModal\(/.test(String(el.getAttribute('onclick') || ''));
+      /closeModal\(|closeCustomAlert\(|closePlanModal\(|schoolhubCloseExportModal\(/.test(String(el.getAttribute('onclick') || ''));
   }
   function restoreCourseTabVisual(el){
     if(!el || !el.classList || !el.classList.contains('course-tab-btn')) return;
@@ -22626,6 +23354,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
   }
   let rightsUIRefreshQueued = false;
   function scheduleRightsUIRefresh(root){
+    if(root && root.nodeType === 1 && window.isDropdownRelatedElement && window.isDropdownRelatedElement(root)) return;
     if(rightsUIRefreshQueued) return;
     rightsUIRefreshQueued = true;
     const run = function(){
@@ -22676,8 +23405,11 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     window.switchCourseTab.__schoolhubStableRightsGuard = true;
   }
   document.addEventListener('click', function(e){
+    if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return;
     const el = e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
     if(!el) return;
+    const inExportModal = !!(el.closest && el.closest('.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal,#attendance-export-modal,#export-room-modal,#schoolhub-overview-excel-room-modal,#schoolhub-overview-excel-room-modal-force'));
+    if(inExportModal && (el.hasAttribute('data-export-dismiss') || (window.schoolhubIsExportDismissButton && window.schoolhubIsExportDismissButton(el)))) return;
     if(el.closest && el.closest('#admin-plan-popup,#schoolhub-plan-rights-popup,#schoolhub-plan-rights-summary-box')) return;
     if(isModalCloseButton(el)) return;
     const key = classifyAction(el);
@@ -23635,7 +24367,1958 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 
   document.addEventListener('DOMContentLoaded', function(){ ensureSpecialModal(); bindGradeCriteriaModalObserver(); try{ ensureMainGradeModalUI(); renderGradeSpecialRulesList(); }catch(e){} patchXlsxExport(); });
   setTimeout(patchXlsxExport, 500);
-  document.addEventListener('click', function(){ setTimeout(patchXlsxExport, 50); }, true);
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(patchXlsxExport, 50); }, true);
+})();
+</script>
+
+
+<!-- SchoolHub FINAL Export Close Guard: ต้องอยู่ท้ายไฟล์หลัง export/permission guard ทุกชุด -->
+<script id="schoolhub-export-close-final-tail-fix">
+(function(){
+  if (window.__schoolhubExportCloseFinalFix) return;
+  window.__schoolhubExportCloseFinalFix = true;
+
+  const EXPORT_MODAL_SELECTOR = [
+    '.schoolhub-export-popup',
+    '#schoolhub-overview-export-room-modal',
+    '#schoolhub-attendance-export-modal',
+    '#student-export-room-modal',
+    '#export-date-modal',
+    '#download-modal',
+    '#attendance-export-modal',
+    '#export-room-modal',
+    '#schoolhub-overview-excel-room-modal',
+    '#schoolhub-overview-excel-room-modal-force'
+  ].join(',');
+
+  function closeExportModal(modal) {
+    if (!modal) return false;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    modal.style.pointerEvents = 'none';
+    modal.style.visibility = 'hidden';
+
+    document.body.classList.remove('modal-open', 'overflow-hidden');
+
+    return true;
+  }
+
+  window.schoolhubCloseExportModal = function(idOrEl) {
+    const modal = typeof idOrEl === 'string'
+      ? document.getElementById(idOrEl)
+      : idOrEl;
+
+    return closeExportModal(modal);
+  };
+
+  function isExportDismissButton(btn) {
+    if (!btn) return false;
+
+    const text = (btn.textContent || '').trim();
+    const oc = btn.getAttribute('onclick') || '';
+    const idClass = (btn.id || '') + ' ' + (btn.className || '');
+    const aria = btn.getAttribute('aria-label') || '';
+
+    const hasCloseIcon = !!btn.querySelector(
+      'i.fa-times, i.fa-xmark, i.fa-close, .fa-times, .fa-xmark, .fa-close'
+    );
+
+    return (
+      btn.hasAttribute('data-export-dismiss') ||
+      hasCloseIcon ||
+      /^(×|x)$/i.test(text) ||
+      /ยกเลิก|ปิด|close|cancel|dismiss|fa-times|fa-xmark|modal-close/i.test(
+        text + ' ' + oc + ' ' + idClass + ' ' + aria
+      )
+    );
+  }
+  window.schoolhubIsExportDismissButton = isExportDismissButton;
+
+  function markExportDismissButtons(root) {
+    root = root || document;
+
+    root.querySelectorAll(EXPORT_MODAL_SELECTOR + ' button, ' + EXPORT_MODAL_SELECTOR + ' a').forEach(function(btn) {
+      if (!isExportDismissButton(btn)) return;
+
+      btn.type = 'button';
+      btn.setAttribute('data-export-dismiss', 'true');
+      btn.setAttribute('aria-label', btn.getAttribute('aria-label') || 'ปิด');
+      btn.style.pointerEvents = 'auto';
+      btn.disabled = false;
+      btn.removeAttribute('disabled');
+      btn.classList.remove('sh-permission-disabled', 'schoolhub-locked-action-stable', 'pointer-events-none', 'schoolhub-plan-right-locked', 'schoolhub-permission-disabled-soft', 'opacity-50', 'opacity-40', 'cursor-not-allowed', 'grayscale', 'disabled');
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    const modal = e.target && e.target.closest ? e.target.closest(EXPORT_MODAL_SELECTOR) : null;
+    if (!modal) return;
+
+    const btn = e.target.closest('button,a,[role="button"]');
+
+    if (btn && isExportDismissButton(btn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      closeExportModal(modal);
+      return false;
+    }
+
+    if (e.target === modal) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      closeExportModal(modal);
+      return false;
+    }
+  }, true);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+
+    const modals = Array.from(document.querySelectorAll(EXPORT_MODAL_SELECTOR))
+      .filter(m => !m.classList.contains('hidden') && m.style.display !== 'none');
+
+    if (!modals.length) return;
+
+    e.preventDefault();
+    closeExportModal(modals[modals.length - 1]);
+  }, true);
+
+  markExportDismissButtons(document);
+
+  new MutationObserver(function(ms) {
+    ms.forEach(function(m) {
+      Array.from(m.addedNodes || []).forEach(function(n) {
+        if (n && n.nodeType === 1) markExportDismissButtons(n);
+      });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
+
+
+
+<style id="schoolhub-settings-scroll-and-plan-final-fix-style">
+/* SchoolHub settings modal final scroll/current-plan fix */
+#settings-modal .settings-dialog{
+  max-height:90vh!important;
+  overflow:hidden!important;
+  min-height:0!important;
+}
+#settings-modal .settings-content,
+#settings-modal .settings-content-wrapper,
+#settings-modal .settings-main{
+  min-height:0!important;
+}
+#settings-modal .settings-content{
+  max-height:90vh!important;
+  overflow-y:auto!important;
+  padding-bottom:80px!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+#settings-modal .settings-sidebar{
+  min-height:0!important;
+  max-height:90vh!important;
+  overflow-y:auto!important;
+}
+#settings-modal #schoolhub-settings-user-plan-host #user-plan-list,
+#settings-modal #schoolhub-settings-user-plan-host #user-current-plan-box,
+#settings-modal #schoolhub-settings-user-plan-host #user-payment-history-box{
+  display:none!important;
+}
+@media (max-width:768px){
+  #settings-modal .settings-dialog{
+    height:100dvh!important;
+    max-height:100dvh!important;
+  }
+  #settings-modal .settings-content{
+    height:auto!important;
+    max-height:calc(100dvh - 120px)!important;
+    overflow-y:auto!important;
+    padding-bottom:120px!important;
+  }
+  #settings-modal .settings-sidebar{
+    max-height:120px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+}
+</style>
+
+<script id="schoolhub-language-early-apply-script">
+(function(){
+  try {
+    var lang = localStorage.getItem('schoolhub_language') || 'th';
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  } catch(e) {}
+})();
+</script>
+
+
+<script id="schoolhub-runtime-translation-final-script">
+(function() {
+  if (window.__schoolhubRuntimeTranslationFinal) return;
+  window.__schoolhubRuntimeTranslationFinal = true;
+
+  var CORE_TRANSLATIONS = {
+  "en": {
+    "ตั้งค่า": "Settings",
+    "การตั้งค่า": "Settings",
+    "ทั่วไป": "General",
+    "การตั้งค่าทั่วไป": "General Settings",
+    "แผนการใช้งาน": "Subscription Plan",
+    "ภาษา": "Language",
+    "ติดต่อผู้ดูแลระบบ": "Contact Admin",
+    "ข้อความจากผู้ใช้": "User Messages",
+    "ตั้งค่าระบบ": "System Settings",
+    "ศูนย์รวมโปรไฟล์ แผนการใช้งาน ภาษา และช่องทางติดต่อผู้ดูแลระบบ": "Profile, subscription, language, and admin contact settings in one place",
+    "เลือกภาษาที่ต้องการใช้ในระบบ": "Choose the language you want to use in the system",
+    "เลือกภาษา": "Select Language",
+    "บันทึกภาษา": "Save Language",
+    "ระบบจะจำภาษาที่เลือกไว้ และใช้อีกครั้งเมื่อเปิดเว็บใหม่": "The system will remember your selected language and use it again when you reopen the website",
+    "โปรไฟล์ผู้ใช้งาน": "User Profile",
+    "บันทึกโปรไฟล์": "Save Profile",
+    "ข้อมูลบัญชี": "Account Information",
+    "กำลังโหลดข้อมูลบัญชี...": "Loading account information...",
+    "โหมดการตั้งค่า": "Settings Mode",
+    "แก้ไขใน popup เดียว": "Edit in one popup",
+    "การแจ้งเตือน": "Notifications",
+    "ธีม / รูปแบบการแสดงผล": "Theme / Display",
+    "เลือกภาษาได้จากเมนูภาษาในแถบตั้งค่า": "Choose the language from the Language menu in settings",
+    "แดชบอร์ด": "Dashboard",
+    "หน้าหลัก": "Home",
+    "กลับหน้าหลัก": "Back to Home",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "Choose / Change Plan",
+    "เลือก/เปลี่ยนแผนการใช้งาน": "Choose / Change Plan",
+    "เลือกแผนการใช้งาน": "Choose Plan",
+    "เปลี่ยนแผนการใช้งาน": "Change Plan",
+    "รายวิชา": "Courses",
+    "วิชา": "Course",
+    "เพิ่มรายวิชา": "Add Course",
+    "แก้ไขรายวิชา": "Edit Course",
+    "ลบรายวิชา": "Delete Course",
+    "จัดการรายวิชา": "Manage Courses",
+    "นักเรียน": "Students",
+    "เพิ่มนักเรียน": "Add Student",
+    "แก้ไขนักเรียน": "Edit Student",
+    "ลบนักเรียน": "Delete Student",
+    "จัดการนักเรียน": "Manage Students",
+    "ห้องเรียน": "Classroom",
+    "ห้อง": "Room",
+    "ชั้น": "Class",
+    "ชั้น/ห้อง": "Class/Room",
+    "รหัสนักเรียน": "Student ID",
+    "ชื่อ-นามสกุล": "Full Name",
+    "เลขที่": "No.",
+    "ชื่อรายวิชา": "Course Name",
+    "ครูผู้สอน": "Teacher",
+    "ภาคเรียน": "Semester",
+    "ปีการศึกษา": "Academic Year",
+    "เช็คชื่อ": "Attendance",
+    "บันทึกคะแนน": "Record Scores",
+    "คะแนน": "Scores",
+    "ภาพรวมคะแนน": "Overview",
+    "ภาพรวม": "Overview",
+    "เอ็กพอร์ต": "Export",
+    "Export": "Export",
+    "ส่งออก": "Export",
+    "รายงาน": "Reports",
+    "ตั้งค่าเกณฑ์เกรด": "Grade Criteria Settings",
+    "จัดการแผนคะแนน": "Manage Score Plan",
+    "แผนคะแนน": "Score Plan",
+    "แชร์ให้นักเรียน": "Share to Students",
+    "ใช้งานแบบทีม": "Team Use",
+    "จัดการครูในรายวิชา": "Manage Course Teachers",
+    "สิทธิ์การใช้งาน": "Usage Rights",
+    "ตั้งค่าสิทธิ์แบบละเอียด": "Detailed Permission Settings",
+    "แผนปัจจุบัน": "Current Plan",
+    "ประวัติการใช้งาน / ประวัติแผน": "Usage / Plan History",
+    "ประวัติการใช้งาน": "Usage History",
+    "ประวัติแผน": "Plan History",
+    "ประวัติการชำระเงิน": "Payment History",
+    "กำลังตรวจสอบสถานะแผนปัจจุบัน...": "Checking current plan status...",
+    "กำลังโหลดประวัติ...": "Loading history...",
+    "โหลดประวัติแล้ว": "History loaded",
+    "รีเฟรช": "Refresh",
+    "เริ่มเดือนถัดไป": "Next billing start",
+    "วันที่เริ่มต้นครั้งต่อไป": "Next start date",
+    "เพิ่มรายวิชาได้": "Courses allowed",
+    "ไม่จำกัด": "Unlimited",
+    "ไม่มีแผน": "No Plan",
+    "ฟรีเดือนแรก": "Free first month",
+    "ต่อไป": "Then",
+    "บาท": "Baht",
+    "ต่อเดือน": "per month",
+    "ต่อปี": "per year",
+    "มาตรฐาน": "Standard",
+    "โปร": "Pro",
+    "ทีม": "Team",
+    "สมัครแผน": "Subscribe",
+    "เปลี่ยนแผน": "Change Plan",
+    "คำขอรออนุมัติ": "Pending Request",
+    "มีคำขอรออนุมัติอยู่แล้ว": "A request is already pending",
+    "อนุมัติแล้ว": "Approved",
+    "รออนุมัติ": "Pending Approval",
+    "ถูกปฏิเสธ": "Rejected",
+    "บันทึก": "Save",
+    "ยกเลิก": "Cancel",
+    "ปิด": "Close",
+    "ตกลง": "OK",
+    "ยืนยัน": "Confirm",
+    "ย้อนกลับ": "Back",
+    "กลับ": "Back",
+    "แก้ไข": "Edit",
+    "ลบ": "Delete",
+    "เพิ่ม": "Add",
+    "ค้นหา": "Search",
+    "ดาวน์โหลด": "Download",
+    "อัปโหลด": "Upload",
+    "ส่ง": "Send",
+    "คัดลอก": "Copy",
+    "เปิด": "Open",
+    "ดู": "View",
+    "รายละเอียด": "Details",
+    "รีเซ็ต": "Reset",
+    "ล้างค่า": "Clear",
+    "เลือก": "Select",
+    "โหลดใหม่": "Reload",
+    "บันทึกแล้ว": "Saved",
+    "บันทึกสำเร็จ": "Saved Successfully",
+    "สำเร็จ": "Success",
+    "เกิดข้อผิดพลาด": "Error",
+    "ผิดพลาด": "Error",
+    "ไม่สำเร็จ": "Failed",
+    "ข้อมูลไม่ครบ": "Incomplete Information",
+    "ไม่มีสิทธิ์": "No Permission",
+    "เฉพาะแอดมินเท่านั้น": "Admin only",
+    "กรุณากรอก": "Please enter",
+    "ไม่พบข้อมูล": "No data found",
+    "โหลดไม่สำเร็จ": "Failed to load",
+    "กำลังโหลด": "Loading",
+    "กำลังบันทึก": "Saving",
+    "กำลังส่ง": "Sending",
+    "รอสักครู่": "Please wait",
+    "ชื่อ": "Name",
+    "อีเมล": "Email",
+    "รหัสผ่าน": "Password",
+    "สถานะ": "Status",
+    "ผู้ใช้งานทั่วไป": "Regular User",
+    "แอดมิน": "Admin",
+    "ผู้ใช้งาน": "User",
+    "เข้าสู่ระบบ": "Log In",
+    "ออกจากระบบ": "Log Out",
+    "สมัครสมาชิก": "Sign Up",
+    "ลืมรหัสผ่าน": "Forgot Password",
+    "รีเซ็ตรหัสผ่าน": "Reset Password",
+    "ขอรีเซ็ตรหัสผ่าน": "Reset Password",
+    "เข้าสู่ระบบด้วย Google": "Sign in with Google",
+    "ยืนยันอีเมล": "Verify Email",
+    "บัญชีถูกบล็อก": "Account Blocked",
+    "วันที่": "Date",
+    "สัปดาห์": "Week",
+    "วันนี้": "Today",
+    "มา": "Present",
+    "สาย": "Late",
+    "ขาด": "Absent",
+    "ลา": "Leave",
+    "ลาออก": "Withdrawn",
+    "ปกติ": "Normal",
+    "เหตุผลการลาออก": "Withdrawal Reason",
+    "ตั้งสถานะลาออก": "Set Withdrawn Status",
+    "ยกเลิกสถานะลาออก": "Cancel Withdrawn Status",
+    "บันทึกเช็คชื่อ": "Save Attendance",
+    "ประวัติการเช็คชื่อ": "Attendance History",
+    "สายกี่ครั้ง": "Late Count",
+    "คะแนนรวม": "Total Score",
+    "รวมคะแนน": "Total Score",
+    "คะแนนเต็ม": "Full Score",
+    "คะแนนที่ได้": "Score",
+    "กรอกคะแนน": "Enter Score",
+    "เกรด": "Grade",
+    "เกรดจริง": "Final Grade",
+    "เกณฑ์เกรด": "Grade Criteria",
+    "เกณฑ์แปลงคะแนนเป็นเกรด": "Score-to-Grade Criteria",
+    "เกณฑ์พิเศษจากการเข้าเรียน": "Special Attendance Rules",
+    "เพิ่มเกณฑ์พิเศษ": "Add Special Rule",
+    "ยังไม่มีเกณฑ์พิเศษ": "No special rules yet",
+    "รูปแบบเกรด": "Grade Format",
+    "งาน": "Assignment",
+    "เพิ่มงาน": "Add Assignment",
+    "ชื่องาน": "Assignment Name",
+    "ผ่าน": "Pass",
+    "ไม่ผ่าน": "Fail",
+    "รวม": "Total",
+    "หัวข้อ": "Title",
+    "รายละเอียดปัญหา": "Problem Details",
+    "อีเมลติดต่อกลับ": "Contact Email",
+    "ส่งข้อความถึงผู้ดูแลระบบ": "Send Message to Admin",
+    "ส่งข้อความแล้ว": "Message Sent",
+    "บันทึกข้อความถึงผู้ดูแลระบบเรียบร้อยแล้ว": "Your message to the admin has been saved",
+    "ยังไม่มีข้อความจากผู้ใช้": "No user messages yet",
+    "กำลังโหลดข้อความ...": "Loading messages...",
+    "โหลดข้อความไม่สำเร็จ": "Failed to load messages",
+    "ไม่สามารถโหลดข้อความได้ กรุณาตรวจสอบสิทธิ์ Firestore": "Unable to load messages. Please check Firestore permissions",
+    "ผู้ส่ง": "Sender",
+    "แหล่งข้อมูล": "Source",
+    "เมนู": "Menu",
+    "เลือกไฟล์": "Choose File",
+    "รูปภาพ": "Image",
+    "สลิป": "Payment Slip",
+    "ยอดเงิน": "Amount",
+    "เวลา": "Time",
+    "ครู": "Teacher",
+    "เจ้าของรายวิชา": "Course Owner",
+    "ดูอย่างเดียว": "View Only",
+    "ตอบรับแล้ว": "Accepted",
+    "ปฏิเสธแล้ว": "Declined",
+    "ส่งคำเชิญแล้ว": "Invitation Sent",
+    "สร้างลิงก์แล้ว": "Link Created"
+  },
+  "zh": {
+    "ตั้งค่า": "设置",
+    "ทั่วไป": "常规",
+    "แผนการใช้งาน": "订阅方案",
+    "ภาษา": "语言",
+    "ติดต่อผู้ดูแลระบบ": "联系管理员",
+    "ข้อความจากผู้ใช้": "用户消息",
+    "แผนปัจจุบัน": "当前方案",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "选择 / 更改方案",
+    "กลับหน้าหลัก": "返回首页",
+    "บันทึกโปรไฟล์": "保存个人资料",
+    "ขอรีเซ็ตรหัสผ่าน": "重置密码",
+    "บันทึกภาษา": "保存语言",
+    "เช็คชื่อ": "考勤",
+    "คะแนน": "成绩",
+    "ภาพรวมคะแนน": "总览",
+    "เอ็กพอร์ต": "导出",
+    "บันทึก": "保存",
+    "ยกเลิก": "取消",
+    "ปิด": "关闭",
+    "ลบ": "删除",
+    "แก้ไข": "编辑",
+    "เพิ่ม": "添加",
+    "ค้นหา": "搜索",
+    "สำเร็จ": "成功",
+    "เกิดข้อผิดพลาด": "错误",
+    "ไม่มีสิทธิ์": "无权限",
+    "ข้อมูลไม่ครบ": "信息不完整",
+    "กำลังโหลด": "加载中",
+    "ชื่อ": "姓名",
+    "อีเมล": "邮箱",
+    "รหัสผ่าน": "密码",
+    "เข้าสู่ระบบ": "登录",
+    "ออกจากระบบ": "退出登录",
+    "นักเรียน": "学生",
+    "รายวิชา": "课程",
+    "วันที่": "日期",
+    "เกรด": "等级",
+    "คะแนนรวม": "总分",
+    "ไม่จำกัด": "无限",
+    "ฟรีเดือนแรก": "首月免费",
+    "บาท": "泰铢",
+    "ต่อเดือน": "每月"
+  },
+  "ja": {
+    "ตั้งค่า": "設定",
+    "ทั่วไป": "一般",
+    "แผนการใช้งาน": "サブスクリプション",
+    "ภาษา": "言語",
+    "ติดต่อผู้ดูแลระบบ": "管理者に連絡",
+    "ข้อความจากผู้ใช้": "ユーザーメッセージ",
+    "แผนปัจจุบัน": "現在のプラン",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "プランを選択 / 変更",
+    "กลับหน้าหลัก": "ホームへ戻る",
+    "บันทึกโปรไฟล์": "プロフィールを保存",
+    "ขอรีเซ็ตรหัสผ่าน": "パスワードをリセット",
+    "บันทึกภาษา": "言語を保存",
+    "เช็คชื่อ": "出席",
+    "คะแนน": "スコア",
+    "ภาพรวมคะแนน": "概要",
+    "เอ็กพอร์ต": "エクスポート",
+    "บันทึก": "保存",
+    "ยกเลิก": "キャンセル",
+    "ปิด": "閉じる",
+    "ลบ": "削除",
+    "แก้ไข": "編集",
+    "เพิ่ม": "追加",
+    "ค้นหา": "検索",
+    "สำเร็จ": "成功",
+    "เกิดข้อผิดพลาด": "エラー",
+    "ไม่มีสิทธิ์": "権限がありません",
+    "ข้อมูลไม่ครบ": "情報が不足しています",
+    "กำลังโหลด": "読み込み中",
+    "ชื่อ": "名前",
+    "อีเมล": "メール",
+    "รหัสผ่าน": "パスワード",
+    "เข้าสู่ระบบ": "ログイン",
+    "ออกจากระบบ": "ログアウト",
+    "นักเรียน": "学生",
+    "รายวิชา": "科目",
+    "วันที่": "日付",
+    "เกรด": "成績",
+    "คะแนนรวม": "合計点",
+    "ไม่จำกัด": "無制限",
+    "ฟรีเดือนแรก": "初月無料",
+    "บาท": "バーツ",
+    "ต่อเดือน": "月額"
+  },
+  "ko": {
+    "ตั้งค่า": "설정",
+    "ทั่วไป": "일반",
+    "แผนการใช้งาน": "구독 플랜",
+    "ภาษา": "언어",
+    "ติดต่อผู้ดูแลระบบ": "관리자 문의",
+    "ข้อความจากผู้ใช้": "사용자 메시지",
+    "แผนปัจจุบัน": "현재 플랜",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "플랜 선택 / 변경",
+    "กลับหน้าหลัก": "홈으로",
+    "บันทึกโปรไฟล์": "프로필 저장",
+    "ขอรีเซ็ตรหัสผ่าน": "비밀번호 재설정",
+    "บันทึกภาษา": "언어 저장",
+    "เช็คชื่อ": "출석",
+    "คะแนน": "점수",
+    "ภาพรวมคะแนน": "개요",
+    "เอ็กพอร์ต": "내보내기",
+    "บันทึก": "저장",
+    "ยกเลิก": "취소",
+    "ปิด": "닫기",
+    "ลบ": "삭제",
+    "แก้ไข": "수정",
+    "เพิ่ม": "추가",
+    "ค้นหา": "검색",
+    "สำเร็จ": "성공",
+    "เกิดข้อผิดพลาด": "오류",
+    "ไม่มีสิทธิ์": "권한 없음",
+    "ข้อมูลไม่ครบ": "정보 부족",
+    "กำลังโหลด": "로딩 중",
+    "ชื่อ": "이름",
+    "อีเมล": "이메일",
+    "รหัสผ่าน": "비밀번호",
+    "เข้าสู่ระบบ": "로그인",
+    "ออกจากระบบ": "로그아웃",
+    "นักเรียน": "학생",
+    "รายวิชา": "과목",
+    "วันที่": "날짜",
+    "เกรด": "등급",
+    "คะแนนรวม": "총점",
+    "ไม่จำกัด": "무제한",
+    "ฟรีเดือนแรก": "첫 달 무료",
+    "บาท": "바트",
+    "ต่อเดือน": "월"
+  },
+  "fr": {
+    "ตั้งค่า": "Paramètres",
+    "ทั่วไป": "Général",
+    "แผนการใช้งาน": "Abonnement",
+    "ภาษา": "Langue",
+    "ติดต่อผู้ดูแลระบบ": "Contacter l’admin",
+    "ข้อความจากผู้ใช้": "Messages utilisateurs",
+    "แผนปัจจุบัน": "Offre actuelle",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "Choisir / Changer d’offre",
+    "กลับหน้าหลัก": "Retour à l’accueil",
+    "บันทึกโปรไฟล์": "Enregistrer le profil",
+    "ขอรีเซ็ตรหัสผ่าน": "Réinitialiser le mot de passe",
+    "บันทึกภาษา": "Enregistrer la langue",
+    "เช็คชื่อ": "Présence",
+    "คะแนน": "Scores",
+    "ภาพรวมคะแนน": "Aperçu",
+    "เอ็กพอร์ต": "Exporter",
+    "บันทึก": "Enregistrer",
+    "ยกเลิก": "Annuler",
+    "ปิด": "Fermer",
+    "ลบ": "Supprimer",
+    "แก้ไข": "Modifier",
+    "เพิ่ม": "Ajouter",
+    "ค้นหา": "Rechercher",
+    "สำเร็จ": "Succès",
+    "เกิดข้อผิดพลาด": "Erreur",
+    "ไม่มีสิทธิ์": "Aucune autorisation",
+    "ข้อมูลไม่ครบ": "Informations incomplètes",
+    "กำลังโหลด": "Chargement",
+    "ชื่อ": "Nom",
+    "อีเมล": "E-mail",
+    "รหัสผ่าน": "Mot de passe",
+    "เข้าสู่ระบบ": "Connexion",
+    "ออกจากระบบ": "Déconnexion",
+    "นักเรียน": "Étudiants",
+    "รายวิชา": "Cours",
+    "วันที่": "Date",
+    "เกรด": "Note",
+    "คะแนนรวม": "Score total",
+    "ไม่จำกัด": "Illimité",
+    "ฟรีเดือนแรก": "Premier mois gratuit",
+    "บาท": "Baht",
+    "ต่อเดือน": "par mois"
+  },
+  "de": {
+    "ตั้งค่า": "Einstellungen",
+    "ทั่วไป": "Allgemein",
+    "แผนการใช้งาน": "Abo-Plan",
+    "ภาษา": "Sprache",
+    "ติดต่อผู้ดูแลระบบ": "Admin kontaktieren",
+    "ข้อความจากผู้ใช้": "Benutzernachrichten",
+    "แผนปัจจุบัน": "Aktueller Plan",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "Plan wählen / ändern",
+    "กลับหน้าหลัก": "Zur Startseite",
+    "บันทึกโปรไฟล์": "Profil speichern",
+    "ขอรีเซ็ตรหัสผ่าน": "Passwort zurücksetzen",
+    "บันทึกภาษา": "Sprache speichern",
+    "เช็คชื่อ": "Anwesenheit",
+    "คะแนน": "Punkte",
+    "ภาพรวมคะแนน": "Übersicht",
+    "เอ็กพอร์ต": "Export",
+    "บันทึก": "Speichern",
+    "ยกเลิก": "Abbrechen",
+    "ปิด": "Schließen",
+    "ลบ": "Löschen",
+    "แก้ไข": "Bearbeiten",
+    "เพิ่ม": "Hinzufügen",
+    "ค้นหา": "Suchen",
+    "สำเร็จ": "Erfolgreich",
+    "เกิดข้อผิดพลาด": "Fehler",
+    "ไม่มีสิทธิ์": "Keine Berechtigung",
+    "ข้อมูลไม่ครบ": "Unvollständige Angaben",
+    "กำลังโหลด": "Wird geladen",
+    "ชื่อ": "Name",
+    "อีเมล": "E-Mail",
+    "รหัสผ่าน": "Passwort",
+    "เข้าสู่ระบบ": "Anmelden",
+    "ออกจากระบบ": "Abmelden",
+    "นักเรียน": "Schüler",
+    "รายวิชา": "Kurse",
+    "วันที่": "Datum",
+    "เกรด": "Note",
+    "คะแนนรวม": "Gesamtpunktzahl",
+    "ไม่จำกัด": "Unbegrenzt",
+    "ฟรีเดือนแรก": "Erster Monat kostenlos",
+    "บาท": "Baht",
+    "ต่อเดือน": "pro Monat"
+  },
+  "es": {
+    "ตั้งค่า": "Configuración",
+    "ทั่วไป": "General",
+    "แผนการใช้งาน": "Plan de suscripción",
+    "ภาษา": "Idioma",
+    "ติดต่อผู้ดูแลระบบ": "Contactar admin",
+    "ข้อความจากผู้ใช้": "Mensajes de usuarios",
+    "แผนปัจจุบัน": "Plan actual",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "Elegir / Cambiar plan",
+    "กลับหน้าหลัก": "Volver al inicio",
+    "บันทึกโปรไฟล์": "Guardar perfil",
+    "ขอรีเซ็ตรหัสผ่าน": "Restablecer contraseña",
+    "บันทึกภาษา": "Guardar idioma",
+    "เช็คชื่อ": "Asistencia",
+    "คะแนน": "Puntuaciones",
+    "ภาพรวมคะแนน": "Resumen",
+    "เอ็กพอร์ต": "Exportar",
+    "บันทึก": "Guardar",
+    "ยกเลิก": "Cancelar",
+    "ปิด": "Cerrar",
+    "ลบ": "Eliminar",
+    "แก้ไข": "Editar",
+    "เพิ่ม": "Agregar",
+    "ค้นหา": "Buscar",
+    "สำเร็จ": "Éxito",
+    "เกิดข้อผิดพลาด": "Error",
+    "ไม่มีสิทธิ์": "Sin permiso",
+    "ข้อมูลไม่ครบ": "Información incompleta",
+    "กำลังโหลด": "Cargando",
+    "ชื่อ": "Nombre",
+    "อีเมล": "Correo",
+    "รหัสผ่าน": "Contraseña",
+    "เข้าสู่ระบบ": "Iniciar sesión",
+    "ออกจากระบบ": "Cerrar sesión",
+    "นักเรียน": "Estudiantes",
+    "รายวิชา": "Cursos",
+    "วันที่": "Fecha",
+    "เกรด": "Calificación",
+    "คะแนนรวม": "Puntuación total",
+    "ไม่จำกัด": "Ilimitado",
+    "ฟรีเดือนแรก": "Primer mes gratis",
+    "บาท": "Baht",
+    "ต่อเดือน": "por mes"
+  },
+  "ar": {
+    "ตั้งค่า": "الإعدادات",
+    "ทั่วไป": "عام",
+    "แผนการใช้งาน": "خطة الاشتراك",
+    "ภาษา": "اللغة",
+    "ติดต่อผู้ดูแลระบบ": "التواصل مع المسؤول",
+    "ข้อความจากผู้ใช้": "رسائل المستخدمين",
+    "แผนปัจจุบัน": "الخطة الحالية",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "اختيار / تغيير الخطة",
+    "กลับหน้าหลัก": "العودة للرئيسية",
+    "บันทึกโปรไฟล์": "حفظ الملف الشخصي",
+    "ขอรีเซ็ตรหัสผ่าน": "إعادة تعيين كلمة المرور",
+    "บันทึกภาษา": "حفظ اللغة",
+    "เช็คชื่อ": "الحضور",
+    "คะแนน": "الدرجات",
+    "ภาพรวมคะแนน": "نظرة عامة",
+    "เอ็กพอร์ต": "تصدير",
+    "บันทึก": "حفظ",
+    "ยกเลิก": "إلغاء",
+    "ปิด": "إغلاق",
+    "ลบ": "حذف",
+    "แก้ไข": "تعديل",
+    "เพิ่ม": "إضافة",
+    "ค้นหา": "بحث",
+    "สำเร็จ": "تم بنجاح",
+    "เกิดข้อผิดพลาด": "خطأ",
+    "ไม่มีสิทธิ์": "لا يوجد إذن",
+    "ข้อมูลไม่ครบ": "معلومات غير مكتملة",
+    "กำลังโหลด": "جارٍ التحميل",
+    "ชื่อ": "الاسم",
+    "อีเมล": "البريد الإلكتروني",
+    "รหัสผ่าน": "كلمة المرور",
+    "เข้าสู่ระบบ": "تسجيل الدخول",
+    "ออกจากระบบ": "تسجيل الخروج",
+    "นักเรียน": "الطلاب",
+    "รายวิชา": "المقررات",
+    "วันที่": "التاريخ",
+    "เกรด": "التقدير",
+    "คะแนนรวม": "المجموع",
+    "ไม่จำกัด": "غير محدود",
+    "ฟรีเดือนแรก": "الشهر الأول مجاني",
+    "บาท": "بات",
+    "ต่อเดือน": "شهريًا"
+  },
+  "lo": {
+    "ตั้งค่า": "ຕັ້ງຄ່າ",
+    "ทั่วไป": "ທົ່ວໄປ",
+    "แผนการใช้งาน": "ແຜນການໃຊ້ງານ",
+    "ภาษา": "ພາສາ",
+    "ติดต่อผู้ดูแลระบบ": "ຕິດຕໍ່ຜູ້ດູແລ",
+    "ข้อความจากผู้ใช้": "ຂໍ້ຄວາມຈາກຜູ້ໃຊ້",
+    "แผนปัจจุบัน": "ແຜນປັດຈຸບັນ",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "ເລືອກ / ປ່ຽນແຜນ",
+    "กลับหน้าหลัก": "ກັບໜ້າຫຼັກ",
+    "บันทึกโปรไฟล์": "ບັນທຶກໂປຣໄຟລ໌",
+    "ขอรีเซ็ตรหัสผ่าน": "ຣີເຊັດລະຫັດຜ່ານ",
+    "บันทึกภาษา": "ບັນທຶກພາສາ",
+    "เช็คชื่อ": "ເຊັກຊື່",
+    "คะแนน": "ຄະແນນ",
+    "ภาพรวมคะแนน": "ພາບລວມ",
+    "เอ็กพอร์ต": "ສົ່ງອອກ",
+    "บันทึก": "ບັນທຶກ",
+    "ยกเลิก": "ຍົກເລີກ",
+    "ปิด": "ປິດ"
+  },
+  "my": {
+    "ตั้งค่า": "ဆက်တင်များ",
+    "ทั่วไป": "အထွေထွေ",
+    "แผนการใช้งาน": "အသုံးပြုမှုအစီအစဉ်",
+    "ภาษา": "ဘာသာစကား",
+    "ติดต่อผู้ดูแลระบบ": "အက်ဒမင်ကို ဆက်သွယ်ရန်",
+    "ข้อความจากผู้ใช้": "အသုံးပြုသူ မက်ဆေ့ချ်များ",
+    "แผนปัจจุบัน": "လက်ရှိအစီအစဉ်",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "အစီအစဉ် ရွေး / ပြောင်း",
+    "กลับหน้าหลัก": "မူလစာမျက်နှာသို့",
+    "บันทึกโปรไฟล์": "ပရိုဖိုင် သိမ်းမည်",
+    "ขอรีเซ็ตรหัสผ่าน": "စကားဝှက် ပြန်သတ်မှတ်",
+    "บันทึกภาษา": "ဘာသာစကား သိမ်းမည်",
+    "เช็คชื่อ": "တက်ရောက်မှု",
+    "คะแนน": "အမှတ်",
+    "ภาพรวมคะแนน": "ခြုံငုံသုံးသပ်ချက်",
+    "เอ็กพอร์ต": "ထုတ်ရန်",
+    "บันทึก": "သိမ်းမည်",
+    "ยกเลิก": "မလုပ်တော့ပါ",
+    "ปิด": "ပိတ်မည်"
+  },
+  "km": {
+    "ตั้งค่า": "ការកំណត់",
+    "ทั่วไป": "ទូទៅ",
+    "แผนการใช้งาน": "គម្រោងប្រើប្រាស់",
+    "ภาษา": "ភាសា",
+    "ติดต่อผู้ดูแลระบบ": "ទាក់ទងអ្នកគ្រប់គ្រង",
+    "ข้อความจากผู้ใช้": "សារពីអ្នកប្រើ",
+    "แผนปัจจุบัน": "គម្រោងបច្ចុប្បន្ន",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "ជ្រើស / ប្តូរគម្រោង",
+    "กลับหน้าหลัก": "ត្រឡប់ទៅទំព័រដើម",
+    "บันทึกโปรไฟล์": "រក្សាទុកប្រវត្តិរូប",
+    "ขอรีเซ็ตรหัสผ่าน": "កំណត់ពាក្យសម្ងាត់ឡើងវិញ",
+    "บันทึกภาษา": "រក្សាទុកភាសា",
+    "เช็คชื่อ": "វត្តមាន",
+    "คะแนน": "ពិន្ទុ",
+    "ภาพรวมคะแนน": "ទិដ្ឋភាពទូទៅ",
+    "เอ็กพอร์ต": "នាំចេញ",
+    "บันทึก": "រក្សាទុក",
+    "ยกเลิก": "បោះបង់",
+    "ปิด": "បិទ"
+  },
+  "vi": {
+    "ตั้งค่า": "Cài đặt",
+    "ทั่วไป": "Chung",
+    "แผนการใช้งาน": "Gói đăng ký",
+    "ภาษา": "Ngôn ngữ",
+    "ติดต่อผู้ดูแลระบบ": "Liên hệ quản trị",
+    "ข้อความจากผู้ใช้": "Tin nhắn người dùng",
+    "แผนปัจจุบัน": "Gói hiện tại",
+    "เลือก / เปลี่ยนแผนการใช้งาน": "Chọn / Đổi gói",
+    "กลับหน้าหลัก": "Về trang chủ",
+    "บันทึกโปรไฟล์": "Lưu hồ sơ",
+    "ขอรีเซ็ตรหัสผ่าน": "Đặt lại mật khẩu",
+    "บันทึกภาษา": "Lưu ngôn ngữ",
+    "เช็คชื่อ": "Điểm danh",
+    "คะแนน": "Điểm",
+    "ภาพรวมคะแนน": "Tổng quan",
+    "เอ็กพอร์ต": "Xuất",
+    "บันทึก": "Lưu",
+    "ยกเลิก": "Hủy",
+    "ปิด": "Đóng"
+  }
+};
+
+  window.SCHOOLHUB_TRANSLATIONS = Object.assign({}, window.SCHOOLHUB_TRANSLATIONS || {});
+  Object.keys(CORE_TRANSLATIONS).forEach(function(lang) {
+    window.SCHOOLHUB_TRANSLATIONS[lang] = Object.assign({}, CORE_TRANSLATIONS[lang], window.SCHOOLHUB_TRANSLATIONS[lang] || {});
+  });
+
+  function getRuntimeLang() {
+    try {
+      var lang = localStorage.getItem('schoolhub_language') || 'th';
+      return window.SCHOOLHUB_TRANSLATIONS[lang] || lang === 'th' ? lang : 'th';
+    } catch(e) { return 'th'; }
+  }
+
+  function mergeLegacyI18nDictionary() {
+    if (window.__schoolhubRuntimeI18nMerged || !window.SCHOOLHUB_I18N || !window.SCHOOLHUB_I18N.th) return;
+    Object.keys(window.SCHOOLHUB_I18N).forEach(function(lang) {
+      if (lang === 'th') return;
+      var thPack = window.SCHOOLHUB_I18N.th || {};
+      var langPack = window.SCHOOLHUB_I18N[lang] || {};
+      window.SCHOOLHUB_TRANSLATIONS[lang] = Object.assign({}, window.SCHOOLHUB_TRANSLATIONS[lang] || {});
+      Object.keys(thPack).forEach(function(key) {
+        var thText = thPack[key];
+        var translated = langPack[key];
+        if (typeof thText === 'string' && thText && typeof translated === 'string' && translated && translated !== thText) {
+          window.SCHOOLHUB_TRANSLATIONS[lang][thText] = translated;
+        }
+      });
+    });
+    window.__schoolhubRuntimeI18nMerged = true;
+  }
+
+  function safeReplaceAll(text, find, replace) {
+    return String(text).split(find).join(replace);
+  }
+
+  function normalizeText(text) {
+    return String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+  }
+
+  function hasThai(text) {
+    return /[฀-๿]/.test(String(text || ''));
+  }
+
+  var translationTextCache = window.__schoolhubTranslationTextCache || new Map();
+  var translationDictKeysCache = window.__schoolhubTranslationDictKeysCache || new WeakMap();
+  window.__schoolhubTranslationTextCache = translationTextCache;
+  window.__schoolhubTranslationDictKeysCache = translationDictKeysCache;
+
+  function isDropdownRelatedElement(el) {
+    return !!(window.isDropdownRelatedElement && window.isDropdownRelatedElement(el));
+  }
+
+  function getSortedDictKeys(dict) {
+    if (!dict) return [];
+    var cached = translationDictKeysCache.get(dict);
+    if (cached) return cached;
+    cached = Object.keys(dict).sort(function(a, b) { return b.length - a.length; });
+    translationDictKeysCache.set(dict, cached);
+    return cached;
+  }
+
+  function getDict(lang) {
+    mergeLegacyI18nDictionary();
+    if (lang === 'th') return null;
+    return window.SCHOOLHUB_TRANSLATIONS && window.SCHOOLHUB_TRANSLATIONS[lang] ? window.SCHOOLHUB_TRANSLATIONS[lang] : null;
+  }
+
+  function dictHasMatch(text, dict) {
+    if (!dict || !text) return false;
+    var raw = String(text);
+    if (!hasThai(raw)) return false;
+    var exact = normalizeText(raw);
+    return getSortedDictKeys(dict).some(function(th) {
+      if (!th) return false;
+      if (th.length <= 2) return exact === th;
+      return raw.indexOf(th) !== -1;
+    });
+  }
+
+  function looksLikeUserDataText(text, parent) {
+    var raw = String(text || '');
+    var clean = normalizeText(raw);
+    if (!clean) return true;
+    if (/https?:\/\/|www\.|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/.test(clean)) return true;
+    if (/^[\d\s.,:/\-+%()]+$/.test(clean)) return true;
+    if (parent && isDropdownRelatedElement(parent)) return true;
+    if (parent && parent.closest && parent.closest('[data-no-i18n], [data-schoolhub-no-translate], .no-translate, .notranslate, [contenteditable="true"], canvas, svg, script, style, textarea, input, pre, code, kbd, samp')) return true;
+    return false;
+  }
+
+  window.translateTextNode = function(text, lang) {
+    lang = lang || getRuntimeLang();
+    var source = String(text == null ? '' : text);
+    if (!hasThai(source)) return text;
+    var dict = getDict(lang);
+    if (!dict) return text;
+    var cacheKey = lang + '::' + source;
+    if (translationTextCache.has(cacheKey)) return translationTextCache.get(cacheKey);
+    var out = source;
+    getSortedDictKeys(dict).forEach(function(th) {
+      if (!th) return;
+      if (th.length <= 2) {
+        if (normalizeText(out) === th) out = out.replace(th, dict[th]);
+        return;
+      }
+      out = safeReplaceAll(out, th, dict[th]);
+    });
+    translationTextCache.set(cacheKey, out);
+    return out;
+  };
+
+  window.restoreThaiText = function(root) {
+    root = root || document;
+    if (root.nodeType === 1 && isDropdownRelatedElement(root)) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        if (!node || !node.nodeValue) return NodeFilter.FILTER_REJECT;
+        var parent = node.parentElement;
+        if (parent && isDropdownRelatedElement(parent)) return NodeFilter.FILTER_REJECT;
+        if (parent && parent.closest && parent.closest('script, style, textarea, input, pre, code, kbd, samp')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(node) {
+      if (node.__schoolhubThaiText != null && node.nodeValue !== node.__schoolhubThaiText) node.nodeValue = node.__schoolhubThaiText;
+      node.__schoolhubTranslatedLang = 'th';
+    });
+    root.querySelectorAll && root.querySelectorAll('[placeholder], [title], [aria-label], input[type="button"], input[type="submit"], input[type="reset"]').forEach(function(el) {
+      if (isDropdownRelatedElement(el)) return;
+      ['placeholder', 'title', 'aria-label', 'value'].forEach(function(attr) {
+        if (attr === 'value' && !/^(button|submit|reset)$/i.test(el.type || '')) return;
+        var key = '__schoolhubThai_' + attr;
+        if (el[key] != null) el.setAttribute(attr, el[key]);
+      });
+    });
+  };
+
+  window.translatePlaceholders = function(root, lang) {
+    root = root || document;
+    if (root.nodeType === 1 && isDropdownRelatedElement(root)) return;
+    lang = lang || getRuntimeLang();
+    var dict = getDict(lang);
+    if (!dict || !root.querySelectorAll) return;
+    root.querySelectorAll('[placeholder], [title], [aria-label], input[type="button"], input[type="submit"], input[type="reset"]').forEach(function(el) {
+      if (isDropdownRelatedElement(el)) return;
+      if (el.closest && el.closest('[data-no-i18n], [data-schoolhub-no-translate], .no-translate, .notranslate')) return;
+      ['placeholder', 'title', 'aria-label', 'value'].forEach(function(attr) {
+        if (attr === 'value' && !/^(button|submit|reset)$/i.test(el.type || '')) return;
+        var val = el.getAttribute(attr);
+        if (!val || !hasThai(val)) return;
+        var key = '__schoolhubThai_' + attr;
+        if (el[key] == null) el[key] = val;
+        if (!dictHasMatch(el[key], dict)) return;
+        var translated = window.translateTextNode(el[key], lang);
+        if (el.getAttribute(attr) !== translated) el.setAttribute(attr, translated);
+      });
+    });
+  };
+
+  var isApplyingRuntimeTranslation = false;
+  window.applyRuntimeTranslation = function(root) {
+    root = root || document;
+    if (!root) return;
+    if (root.nodeType === 1 && isDropdownRelatedElement(root)) return;
+    var lang = getRuntimeLang();
+    try {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    } catch(e) {}
+    if (isApplyingRuntimeTranslation) return;
+    isApplyingRuntimeTranslation = true;
+    try {
+      if (lang === 'th') {
+        window.restoreThaiText(root);
+        return;
+      }
+      var dict = getDict(lang);
+      if (!dict) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(node) {
+          if (!node || !node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          var parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          if (isDropdownRelatedElement(parent)) return NodeFilter.FILTER_REJECT;
+          if (looksLikeUserDataText(node.nodeValue, parent)) return NodeFilter.FILTER_REJECT;
+          var thaiText = node.__schoolhubThaiText != null ? node.__schoolhubThaiText : node.nodeValue;
+          if (!hasThai(thaiText)) return NodeFilter.FILTER_REJECT;
+          if (!dictHasMatch(thaiText, dict)) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      var nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(node) {
+        if (node.__schoolhubThaiText == null || hasThai(node.nodeValue)) node.__schoolhubThaiText = node.__schoolhubThaiText || node.nodeValue;
+        var translated = window.translateTextNode(node.__schoolhubThaiText, lang);
+        if (node.nodeValue !== translated) node.nodeValue = translated;
+        node.__schoolhubTranslatedLang = lang;
+      });
+      window.translatePlaceholders(root, lang);
+    } finally {
+      isApplyingRuntimeTranslation = false;
+    }
+  };
+
+  function translateArguments(args) {
+    var lang = getRuntimeLang();
+    if (lang === 'th') return args;
+    return Array.prototype.slice.call(args).map(function(value) {
+      return typeof value === 'string' ? window.translateTextNode(value, lang) : value;
+    });
+  }
+
+  function wrapAlertFunctions() {
+    ['showCustomAlert', 'showCustomConfirm'].forEach(function(name) {
+      var fn = window[name];
+      if (typeof fn !== 'function' || fn.__schoolhubRuntimeTranslationWrapped) return;
+      var wrapped = function() {
+        return fn.apply(this, translateArguments(arguments));
+      };
+      wrapped.__schoolhubRuntimeTranslationWrapped = true;
+      window[name] = wrapped;
+    });
+  }
+
+  function wrapRenderFunctions() {
+    wrapAlertFunctions();
+  }
+
+  var translationQueue = new Set();
+  var translationScheduled = false;
+
+  function flushTranslationQueue() {
+    translationScheduled = false;
+    var items = Array.from(translationQueue);
+    translationQueue.clear();
+    items.forEach(function(node) {
+      if (node && node.isConnected !== false && node.nodeType === 1 && !isDropdownRelatedElement(node)) {
+        window.applyRuntimeTranslation(node);
+      }
+    });
+  }
+
+  function queueTranslate(root) {
+    var lang = getRuntimeLang();
+    if (lang === 'th') return;
+    if (!root || root.nodeType !== 1) return;
+    if (isDropdownRelatedElement(root)) return;
+    translationQueue.add(root);
+    if (translationScheduled) return;
+    translationScheduled = true;
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(flushTranslationQueue, { timeout: 500 });
+    } else if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(flushTranslationQueue);
+    } else {
+      setTimeout(flushTranslationQueue, 0);
+    }
+  }
+
+  window.schoolhubQueueRuntimeTranslation = queueTranslate;
+  window.applyLanguageFullOnce = function() {
+    if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(function() { window.applyRuntimeTranslation(document.body || document); });
+    } else {
+      setTimeout(function() { window.applyRuntimeTranslation(document.body || document); }, 0);
+    }
+  };
+
+  function scheduleRuntimeTranslation(root) {
+    queueTranslate(root && root.nodeType === 1 ? root : document.body);
+    wrapRenderFunctions();
+  }
+
+  function startRuntimeObserver() {
+    if (!document.body || window.__schoolhubRuntimeTranslationObserverStarted) return;
+    window.__schoolhubRuntimeTranslationObserverStarted = true;
+    var translationObserver = new MutationObserver(function(mutations) {
+      if (isApplyingRuntimeTranslation) return;
+      if (getRuntimeLang() === 'th') return;
+      mutations.forEach(function(m) {
+        Array.prototype.forEach.call(m.addedNodes || [], function(node) {
+          if (node.nodeType === 1 && !isDropdownRelatedElement(node)) {
+            queueTranslate(node);
+          } else if (node.nodeType === 3 && node.parentElement && !isDropdownRelatedElement(node.parentElement)) {
+            queueTranslate(node.parentElement);
+          }
+        });
+      });
+    });
+    translationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function initRuntimeTranslation() {
+    startRuntimeObserver();
+    wrapRenderFunctions();
+    window.applyLanguageFullOnce();
+    setTimeout(wrapRenderFunctions, 250);
+    setTimeout(wrapRenderFunctions, 900);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRuntimeTranslation);
+  else initRuntimeTranslation();
+})();
+</script>
+
+<script type="module" id="schoolhub-settings-single-modal-final-script">
+/* =========================================================
+   SchoolHub Settings Single Modal Final Patch
+   - รวมเมนูทั่วไปให้เหลืออันเดียว
+   - โปรไฟล์/แผน/ติดต่อผู้ดูแลระบบทำงานใน settings modal เดิม
+   - ไม่แตะระบบคะแนน เกรด Export X ลาออก สิทธิ์ หรือ login
+   ========================================================= */
+import { getApps, getApp, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+(function(){
+  if (window.__schoolhubSettingsSingleModalFinal) return;
+  window.__schoolhubSettingsSingleModalFinal = true;
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
+  };
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const __schoolhubSettingsOriginalOpenUserPlanSelector = window.openUserPlanSelector;
+  const __schoolhubSettingsOriginalRenderUserPlans = window.renderUserPlans;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const norm = (v) => String(v || '').trim();
+  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
+
+
+  const LANGUAGE_OPTIONS = [
+    ['th','ไทย'], ['en','English'], ['zh','中文'], ['ja','日本語'], ['ko','한국어'], ['fr','Français'], ['de','Deutsch'], ['es','Español'], ['ar','العربية'], ['lo','ລາວ'], ['my','မြန်မာ'], ['km','ខ្មែរ'], ['vi','Tiếng Việt']
+  ];
+  const LOCALE_BY_LANG = { th:'th-TH', en:'en-US', zh:'zh-CN', ja:'ja-JP', ko:'ko-KR', fr:'fr-FR', de:'de-DE', es:'es-ES', ar:'ar-SA', lo:'lo-LA', my:'my-MM', km:'km-KH', vi:'vi-VN' };
+
+  const I18N_BASE = {
+    th: {
+      settings:'ตั้งค่า', general:'ทั่วไป', plans:'แผนการใช้งาน', language:'ภาษา', contactAdmin:'ติดต่อผู้ดูแลระบบ', userMessages:'ข้อความจากผู้ใช้', systemSettings:'ตั้งค่าระบบ', saveLanguage:'บันทึกภาษา', currentPlan:'แผนปัจจุบัน', backHome:'กลับหน้าหลัก',
+      settingsDescription:'ศูนย์รวมโปรไฟล์ แผนการใช้งาน ภาษา และช่องทางติดต่อผู้ดูแลระบบ', generalDescription:'รวมข้อมูลโปรไฟล์ บัญชี และตัวเลือกพื้นฐานไว้ในหน้าเดียว แก้ไขได้จากด้านขวาของหน้าต่างนี้โดยไม่เปิดหน้าต่างซ้อน', userProfile:'โปรไฟล์ผู้ใช้งาน', profileDescription:'แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้', accountInfo:'ข้อมูลบัญชี', loadingAccount:'กำลังโหลดข้อมูลบัญชี...', displayTheme:'ธีม / รูปแบบการแสดงผล', displayThemeDescription:'ใช้ธีมและรูปแบบการแสดงผลเดิมของระบบ เพื่อไม่กระทบหน้าคะแนน เกรด และ Export', languageCardDescription:'เลือกภาษาได้จากเมนูภาษาในแถบตั้งค่า', notifications:'การแจ้งเตือน', notificationsDescription:'ใช้การแจ้งเตือนเดิมของระบบและแสดงผลในหน้าต่างเดียวกัน', plansDescription:'ดูเฉพาะแผนปัจจุบันและประวัติการใช้งาน ส่วนการเลือกหรือเปลี่ยนแผนให้เปิดจากเมนูหลักเดิม', chooseLanguageDescription:'เลือกภาษาที่ต้องการใช้ในระบบ', selectLanguageLabel:'เลือกภาษา', languagePersistHint:'ระบบจะจำภาษาที่เลือกไว้ และใช้อีกครั้งเมื่อเปิดเว็บใหม่', contactAdminDescription:'หากพบปัญหาการใช้งาน สามารถติดต่อผู้ดูแลระบบได้ ระบบจะบันทึกข้อความไว้ให้แอดมินตรวจสอบ', planHistory:'ประวัติการใช้งาน / ประวัติแผน', planHistoryDescription:'แสดงเฉพาะประวัติคำขอแผนและการชำระเงิน ไม่แสดงรายการเลือกแผนเต็มใน popup', refresh:'รีเฟรช', loadingHistory:'กำลังโหลดประวัติ...', admin:'แอดมิน', regularUser:'ผู้ใช้งานทั่วไป', name:'ชื่อ', email:'อีเมล', status:'สถานะ', settingsMode:'โหมดการตั้งค่า', editInSinglePopup:'แก้ไขใน popup เดียว', nextBillingStart:'เริ่มเดือนถัดไป', courseLimit:'เพิ่มรายวิชาได้', courseUnit:'วิชา', unlimited:'ไม่จำกัด', saveSuccess:'สำเร็จ', saveLanguageDone:'บันทึกภาษาเรียบร้อยแล้ว', saveLocalSuccess:'บันทึกในเครื่องแล้ว', firebaseLanguageSaveFailed:'แต่ยังบันทึกภาษาขึ้น Firebase ไม่ได้', dashboard:'แดชบอร์ด', subscriptionPlan:'แผนการใช้งาน', contactTitle:'หัวข้อ', contactMessage:'รายละเอียดปัญหา', contactEmail:'อีเมลติดต่อกลับ'
+    },
+    en: {
+      settings:'Settings', general:'General', plans:'Subscription Plan', language:'Language', contactAdmin:'Contact Admin', userMessages:'User messages', systemSettings:'System settings', saveLanguage:'Save language', currentPlan:'Current plan', backHome:'Back to home',
+      settingsDescription:'Profile, plan, language, and contact settings in one place', generalDescription:'Manage profile, account, and basic options here without opening another popup.', userProfile:'User profile', profileDescription:'Edit your display information here.', accountInfo:'Account information', loadingAccount:'Loading account information...', displayTheme:'Theme / Display', displayThemeDescription:'Keeps the existing display style so scores, grades, and exports are not affected.', languageCardDescription:'Choose the language from the Language menu in settings.', notifications:'Notifications', notificationsDescription:'Uses the existing notification system in the same window.', plansDescription:'Shows only the current plan and usage history. Choose or change plans from the original main menu.', chooseLanguageDescription:'Choose the language you want to use in the system', selectLanguageLabel:'Select language', languagePersistHint:'The system remembers your language and applies it when you reopen the website.', contactAdminDescription:'Contact the administrator if you have a problem. The system records your message for admin review.', planHistory:'Usage / plan history', planHistoryDescription:'Shows only plan requests and payment history, not the full plan selector inside the popup.', refresh:'Refresh', loadingHistory:'Loading history...', admin:'Admin', regularUser:'Regular user', name:'Name', email:'Email', status:'Status', settingsMode:'Settings mode', editInSinglePopup:'Edit in one popup', nextBillingStart:'Next billing start', courseLimit:'Courses allowed', courseUnit:'courses', unlimited:'Unlimited', saveSuccess:'Success', saveLanguageDone:'Language saved successfully', saveLocalSuccess:'Saved locally', firebaseLanguageSaveFailed:'but Firebase language sync failed', dashboard:'Dashboard', subscriptionPlan:'Subscription Plan', contactTitle:'Title', contactMessage:'Problem details', contactEmail:'Contact email'
+    }
+  };
+  const EXTRA_I18N = {
+    zh: { settings:'设置', general:'常规', plans:'订阅方案', language:'语言', contactAdmin:'联系管理员', userMessages:'用户消息', systemSettings:'系统设置', saveLanguage:'保存语言', currentPlan:'当前方案', backHome:'返回首页', chooseLanguageDescription:'选择你想在系统中使用的语言', selectLanguageLabel:'选择语言', saveSuccess:'成功', saveLanguageDone:'语言已保存', planHistory:'使用 / 方案历史', refresh:'刷新', admin:'管理员', regularUser:'普通用户', nextBillingStart:'下个计费周期开始', courseLimit:'可添加课程', courseUnit:'门课程', unlimited:'无限' },
+    ja: { settings:'設定', general:'一般', plans:'サブスクリプション', language:'言語', contactAdmin:'管理者に連絡', userMessages:'ユーザーメッセージ', systemSettings:'システム設定', saveLanguage:'言語を保存', currentPlan:'現在のプラン', backHome:'ホームへ戻る', chooseLanguageDescription:'システムで使用する言語を選択してください', selectLanguageLabel:'言語を選択', saveSuccess:'完了', saveLanguageDone:'言語を保存しました', planHistory:'利用 / プラン履歴', refresh:'更新', admin:'管理者', regularUser:'一般ユーザー', nextBillingStart:'次回開始日', courseLimit:'追加できる科目', courseUnit:'科目', unlimited:'無制限' },
+    ko: { settings:'설정', general:'일반', plans:'구독 플랜', language:'언어', contactAdmin:'관리자 문의', userMessages:'사용자 메시지', systemSettings:'시스템 설정', saveLanguage:'언어 저장', currentPlan:'현재 플랜', backHome:'홈으로 돌아가기', chooseLanguageDescription:'시스템에서 사용할 언어를 선택하세요', selectLanguageLabel:'언어 선택', saveSuccess:'성공', saveLanguageDone:'언어가 저장되었습니다', planHistory:'사용 / 플랜 기록', refresh:'새로고침', admin:'관리자', regularUser:'일반 사용자', nextBillingStart:'다음 시작일', courseLimit:'추가 가능한 과목', courseUnit:'과목', unlimited:'무제한' },
+    fr: { settings:'Paramètres', general:'Général', plans:'Abonnement', language:'Langue', contactAdmin:'Contacter l’admin', userMessages:'Messages des utilisateurs', systemSettings:'Paramètres système', saveLanguage:'Enregistrer la langue', currentPlan:'Offre actuelle', backHome:'Retour à l’accueil', chooseLanguageDescription:'Choisissez la langue à utiliser dans le système', selectLanguageLabel:'Choisir la langue', saveSuccess:'Succès', saveLanguageDone:'Langue enregistrée', planHistory:'Historique d’utilisation / d’offre', refresh:'Actualiser', admin:'Admin', regularUser:'Utilisateur', nextBillingStart:'Prochain début', courseLimit:'Cours autorisés', courseUnit:'cours', unlimited:'Illimité' },
+    de: { settings:'Einstellungen', general:'Allgemein', plans:'Abo-Plan', language:'Sprache', contactAdmin:'Admin kontaktieren', userMessages:'Benutzernachrichten', systemSettings:'Systemeinstellungen', saveLanguage:'Sprache speichern', currentPlan:'Aktueller Plan', backHome:'Zur Startseite', chooseLanguageDescription:'Wählen Sie die Sprache für das System', selectLanguageLabel:'Sprache auswählen', saveSuccess:'Erfolgreich', saveLanguageDone:'Sprache gespeichert', planHistory:'Nutzungs- / Planverlauf', refresh:'Aktualisieren', admin:'Admin', regularUser:'Benutzer', nextBillingStart:'Nächster Start', courseLimit:'Erlaubte Kurse', courseUnit:'Kurse', unlimited:'Unbegrenzt' },
+    es: { settings:'Configuración', general:'General', plans:'Plan de suscripción', language:'Idioma', contactAdmin:'Contactar admin', userMessages:'Mensajes de usuarios', systemSettings:'Configuración del sistema', saveLanguage:'Guardar idioma', currentPlan:'Plan actual', backHome:'Volver al inicio', chooseLanguageDescription:'Elige el idioma que quieres usar en el sistema', selectLanguageLabel:'Seleccionar idioma', saveSuccess:'Éxito', saveLanguageDone:'Idioma guardado', planHistory:'Historial de uso / plan', refresh:'Actualizar', admin:'Admin', regularUser:'Usuario', nextBillingStart:'Próximo inicio', courseLimit:'Cursos permitidos', courseUnit:'cursos', unlimited:'Ilimitado' },
+    ar: { settings:'الإعدادات', general:'عام', plans:'خطة الاشتراك', language:'اللغة', contactAdmin:'التواصل مع المسؤول', userMessages:'رسائل المستخدمين', systemSettings:'إعدادات النظام', saveLanguage:'حفظ اللغة', currentPlan:'الخطة الحالية', backHome:'العودة للرئيسية', chooseLanguageDescription:'اختر اللغة التي تريد استخدامها في النظام', selectLanguageLabel:'اختر اللغة', saveSuccess:'تم بنجاح', saveLanguageDone:'تم حفظ اللغة', planHistory:'سجل الاستخدام / الخطة', refresh:'تحديث', admin:'مسؤول', regularUser:'مستخدم عادي', nextBillingStart:'بداية الفترة التالية', courseLimit:'عدد المقررات المسموح', courseUnit:'مقررات', unlimited:'غير محدود' },
+    lo: { settings:'ຕັ້ງຄ່າ', general:'ທົ່ວໄປ', plans:'ແຜນການໃຊ້ງານ', language:'ພາສາ', contactAdmin:'ຕິດຕໍ່ຜູ້ດູແລ', userMessages:'ຂໍ້ຄວາມຈາກຜູ້ໃຊ້', systemSettings:'ຕັ້ງຄ່າລະບົບ', saveLanguage:'ບັນທຶກພາສາ', currentPlan:'ແຜນປັດຈຸບັນ', backHome:'ກັບໜ້າຫຼັກ', chooseLanguageDescription:'ເລືອກພາສາທີ່ຕ້ອງການໃຊ້ໃນລະບົບ', selectLanguageLabel:'ເລືອກພາສາ', saveSuccess:'ສຳເລັດ', saveLanguageDone:'ບັນທຶກພາສາແລ້ວ', planHistory:'ປະຫວັດແຜນ', refresh:'ໂຫຼດໃໝ່', admin:'ແອດມິນ', regularUser:'ຜູ້ໃຊ້ທົ່ວໄປ', nextBillingStart:'ເລີ່ມເດືອນຕໍ່ໄປ', courseLimit:'ເພີ່ມວິຊາໄດ້', courseUnit:'ວິຊາ', unlimited:'ບໍ່ຈຳກັດ' },
+    my: { settings:'ဆက်တင်များ', general:'အထွေထွေ', plans:'အသုံးပြုမှုအစီအစဉ်', language:'ဘာသာစကား', contactAdmin:'အက်ဒမင်ကို ဆက်သွယ်ရန်', userMessages:'အသုံးပြုသူ မက်ဆေ့ချ်များ', systemSettings:'စနစ်ဆက်တင်များ', saveLanguage:'ဘာသာစကား သိမ်းမည်', currentPlan:'လက်ရှိအစီအစဉ်', backHome:'မူလစာမျက်နှာသို့', chooseLanguageDescription:'စနစ်တွင် အသုံးပြုလိုသော ဘာသာစကားကို ရွေးပါ', selectLanguageLabel:'ဘာသာစကားရွေးပါ', saveSuccess:'အောင်မြင်သည်', saveLanguageDone:'ဘာသာစကား သိမ်းပြီးပါပြီ', planHistory:'အသုံးပြုမှု / အစီအစဉ် မှတ်တမ်း', refresh:'ပြန်လည်တင်ရန်', admin:'အက်ဒမင်', regularUser:'ပုံမှန်အသုံးပြုသူ', nextBillingStart:'နောက်လ စတင်ချိန်', courseLimit:'ထည့်နိုင်သောဘာသာရပ်', courseUnit:'ဘာသာရပ်', unlimited:'အကန့်အသတ်မရှိ' },
+    km: { settings:'ការកំណត់', general:'ទូទៅ', plans:'គម្រោងប្រើប្រាស់', language:'ភាសា', contactAdmin:'ទាក់ទងអ្នកគ្រប់គ្រង', userMessages:'សារពីអ្នកប្រើ', systemSettings:'ការកំណត់ប្រព័ន្ធ', saveLanguage:'រក្សាទុកភាសា', currentPlan:'គម្រោងបច្ចុប្បន្ន', backHome:'ត្រឡប់ទៅទំព័រដើម', chooseLanguageDescription:'ជ្រើសរើសភាសាដែលចង់ប្រើក្នុងប្រព័ន្ធ', selectLanguageLabel:'ជ្រើសរើសភាសា', saveSuccess:'ជោគជ័យ', saveLanguageDone:'បានរក្សាទុកភាសា', planHistory:'ប្រវត្តិប្រើប្រាស់ / គម្រោង', refresh:'ផ្ទុកឡើងវិញ', admin:'អ្នកគ្រប់គ្រង', regularUser:'អ្នកប្រើធម្មតា', nextBillingStart:'ចាប់ផ្តើមខែក្រោយ', courseLimit:'បន្ថែមមុខវិជ្ជាបាន', courseUnit:'មុខវិជ្ជា', unlimited:'មិនកំណត់' },
+    vi: { settings:'Cài đặt', general:'Chung', plans:'Gói đăng ký', language:'Ngôn ngữ', contactAdmin:'Liên hệ quản trị', userMessages:'Tin nhắn người dùng', systemSettings:'Cài đặt hệ thống', saveLanguage:'Lưu ngôn ngữ', currentPlan:'Gói hiện tại', backHome:'Về trang chủ', chooseLanguageDescription:'Chọn ngôn ngữ bạn muốn dùng trong hệ thống', selectLanguageLabel:'Chọn ngôn ngữ', saveSuccess:'Thành công', saveLanguageDone:'Đã lưu ngôn ngữ', planHistory:'Lịch sử sử dụng / gói', refresh:'Làm mới', admin:'Quản trị', regularUser:'Người dùng thường', nextBillingStart:'Bắt đầu kỳ tới', courseLimit:'Số môn được thêm', courseUnit:'môn', unlimited:'Không giới hạn' }
+  };
+  window.SCHOOLHUB_I18N = Object.assign({}, I18N_BASE, Object.fromEntries(Object.entries(EXTRA_I18N).map(([lang, value]) => [lang, Object.assign({}, I18N_BASE.en, value)])));
+  Object.assign(window.SCHOOLHUB_I18N.th, { saveProfile:'บันทึกโปรไฟล์' });
+  Object.assign(window.SCHOOLHUB_I18N.en, { saveProfile:'Save profile' });
+  Object.keys(window.SCHOOLHUB_I18N).forEach(lang => { if (!window.SCHOOLHUB_I18N[lang].saveProfile) window.SCHOOLHUB_I18N[lang].saveProfile = window.SCHOOLHUB_I18N.en.saveProfile; });
+
+  function currentLang(){
+    const raw = localStorage.getItem('schoolhub_language') || 'th';
+    return window.SCHOOLHUB_I18N?.[raw] ? raw : 'th';
+  }
+  function languageLocale(){ return LOCALE_BY_LANG[currentLang()] || 'th-TH'; }
+  function t(key){
+    const lang = currentLang();
+    return window.SCHOOLHUB_I18N?.[lang]?.[key] || window.SCHOOLHUB_I18N?.th?.[key] || key;
+  }
+  window.t = t;
+
+  function setDocumentLanguage(){
+    const lang = currentLang();
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }
+
+  function bindButtonLabel(id, key){
+    const btn = $(id);
+    if (!btn || btn.dataset.schoolhubI18nBound === key) return;
+    const icon = btn.querySelector('i')?.outerHTML || '';
+    btn.innerHTML = `${icon ? icon + ' ' : ''}<span data-i18n="${key}">${esc(t(key))}</span>`;
+    btn.dataset.schoolhubI18nBound = key;
+  }
+
+  function bindImportantI18nElements(){
+    bindButtonLabel('nav-admin-settings', 'settings');
+    bindButtonLabel('mobile-nav-settings', 'settings');
+    bindButtonLabel('mobile-nav-admin-settings', 'settings');
+    bindButtonLabel('nav-admin-plans', 'plans');
+    const pageTitle = $('page-title');
+    if (pageTitle && pageTitle.children.length === 0) {
+      const pageMap = {'ตั้งค่า':'settings','Settings':'settings','แผนการใช้งาน':'plans','Subscription Plan':'plans'};
+      const key = pageMap[norm(pageTitle.textContent)];
+      pageTitle.removeAttribute('data-i18n');
+      if (key) pageTitle.textContent = t(key);
+    }
+    document.querySelectorAll('a,button,span,h1,h2,h3,h4,h5,label,p,div').forEach(el => {
+      if (el.id === 'page-title' || el.children.length > 0 || el.dataset.i18n) return;
+      const exact = norm(el.textContent);
+      const autoMap = {
+        'ตั้งค่า':'settings', 'ทั่วไป':'general', 'แผนการใช้งาน':'plans', 'ภาษา':'language', 'ติดต่อผู้ดูแลระบบ':'contactAdmin', 'ข้อความจากผู้ใช้':'userMessages', 'กลับหน้าหลัก':'backHome',
+        'Settings':'settings', 'General':'general', 'Subscription Plan':'plans', 'Language':'language', 'Contact Admin':'contactAdmin', 'User messages':'userMessages', 'Back to home':'backHome'
+      };
+      if (autoMap[exact]) el.setAttribute('data-i18n', autoMap[exact]);
+    });
+  }
+
+  function applyLanguage(){
+    setDocumentLanguage();
+    bindImportantI18nElements();
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.dataset.i18nPlaceholder;
+      el.setAttribute('placeholder', t(key));
+    });
+    const select = $('settings-language-select');
+    if (select) select.value = currentLang();
+    try {
+      const langNow = currentLang();
+      const scope = $('settings-modal') || document.getElementById('schoolhub-settings-modal') || null;
+      if (langNow !== 'th' && scope && typeof window.schoolhubQueueRuntimeTranslation === 'function') window.schoolhubQueueRuntimeTranslation(scope);
+    } catch(e) {}
+  }
+  window.applyLanguage = applyLanguage;
+
+  function buildLanguageOptions(){
+    const lang = currentLang();
+    return LANGUAGE_OPTIONS.map(([code, label]) => `<option value="${esc(code)}" ${code === lang ? 'selected' : ''}>${esc(label)} (${esc(code)})</option>`).join('');
+  }
+
+  function renderLanguagePanel(){
+    const select = $('settings-language-select');
+    if (select) {
+      select.innerHTML = buildLanguageOptions();
+      select.value = currentLang();
+    }
+    applyLanguage();
+  }
+
+  async function saveUserLanguageToFirebase(lang){
+    const authUser = auth.currentUser || window.currentUser || null;
+    const email = norm(authUser?.email || $('user-display-email')?.textContent || localStorage.getItem('schoolhub_admin_email')).toLowerCase();
+    const payload = { language: lang, preferredLanguage: lang, settings: { language: lang }, updatedAt: serverTimestamp() };
+    if (isAdminSession()) {
+      try { await setDoc(doc(db, 'admin_settings', 'credentials'), payload, { merge:true }); } catch(e) { console.warn('admin language sync skipped:', e); }
+    }
+    if (!email && !authUser?.uid) return;
+    const key = email || authUser.uid;
+    await setDoc(doc(db, 'public_users_directory', key), Object.assign({}, payload, { uid: authUser?.uid || '', email: email || authUser?.email || '' }), { merge:true });
+  }
+  window.saveUserLanguageToFirebase = saveUserLanguageToFirebase;
+
+  window.saveLanguageSetting = async function(){
+    const lang = $('settings-language-select')?.value || 'th';
+    localStorage.setItem('schoolhub_language', lang);
+    setDocumentLanguage();
+    try { if (typeof window.applyLanguageFullOnce === 'function') window.applyLanguageFullOnce(); } catch(e) {}
+    try {
+      await saveUserLanguageToFirebase(lang);
+      applyLanguage();
+      try { renderCurrentPlanCard('schoolhub-settings-current-plan-card'); renderCurrentPlanCard('user-current-plan-box'); } catch(e){}
+      try { if (typeof window.renderSchoolHubSettings === 'function') window.renderSchoolHubSettings(); } catch(e){}
+      applyLanguage();
+      alertBox(t('saveSuccess'), t('saveLanguageDone'));
+    } catch(e) {
+      applyLanguage();
+      try { if (typeof window.renderSchoolHubSettings === 'function') window.renderSchoolHubSettings(); } catch(err){}
+      alertBox(t('saveLocalSuccess'), `${t('firebaseLanguageSaveFailed')}: ${e?.message || String(e)}`, true);
+    }
+  };
+
+  function alertBox(title, message, danger){
+    if (typeof window.showCustomAlert === 'function') return window.showCustomAlert(title, message, !!danger);
+    window.alert(`${title}\n${message || ''}`);
+  }
+  function loader(show){ try { if (typeof window.toggleLoader === 'function') window.toggleLoader(!!show); } catch(e){} }
+
+  function isAdminSession(){
+    const nameText = norm($('user-display-name')?.textContent).toLowerCase();
+    const emailText = norm($('user-display-email')?.textContent).toLowerCase();
+    return window.isAdmin === true
+      || window.isAdminUser === true
+      || localStorage.getItem('schoolhub_admin_active') === 'true'
+      || localStorage.getItem('schoolhub_admin_logged_in') === 'true'
+      || localStorage.getItem('schoolhub_admin_bypass') === 'true'
+      || nameText.includes('admin')
+      || emailText === 'admin';
+  }
+
+  function normalizeTab(tab){
+    tab = norm(tab || 'general') || 'general';
+    const map = {
+      'general-settings': 'general',
+      'profile': 'general',
+      'account': 'general',
+      'plan': 'plans',
+      'user-plans': 'plans',
+      'subscription': 'plans',
+      'lang': 'language',
+      'languages': 'language',
+      'locale': 'language',
+      'admin-contact': 'contact-admin',
+      'admin-messages': 'contact-messages',
+      'messages': 'contact-messages',
+      'system': 'admin-system'
+    };
+    return map[tab] || tab;
+  }
+
+  function unlockSettingsControls(){
+    const modal = $('settings-modal');
+    if (!modal) return;
+    modal.querySelectorAll('button,input,textarea,select,a').forEach(el => {
+      el.setAttribute('data-schoolhub-always-allowed', '1');
+      el.disabled = false;
+      el.removeAttribute('disabled');
+      el.removeAttribute('aria-disabled');
+      el.style.pointerEvents = 'auto';
+      el.classList.remove('pointer-events-none','opacity-50','opacity-40','cursor-not-allowed','schoolhub-locked-action-stable','sh-permission-disabled');
+    });
+  }
+
+  function ensureAdminProfileFields(){
+    const emailInput = $('profile-email-input');
+    if (emailInput && !$('profile-admin-username-input')) {
+      const wrap = document.createElement('div');
+      wrap.id = 'profile-admin-username-wrap';
+      wrap.className = 'hidden';
+      wrap.innerHTML = `
+        <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อผู้ใช้ Admin</label>
+        <input id="profile-admin-username-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Admin">
+      `;
+      emailInput.closest('div')?.insertAdjacentElement('beforebegin', wrap);
+    }
+    const saveBtn = document.querySelector('#schoolhub-settings-profile-host button[onclick*="saveUserProfileChanges"]');
+      if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> <span data-i18n="saveProfile">' + (window.t ? window.t('saveProfile') : 'บันทึกโปรไฟล์') + '</span>';
+  }
+
+  function moveProfileIntoSettings(){
+    const host = $('schoolhub-settings-profile-host');
+    const modalBody = document.querySelector('#user-profile-modal .p-6.space-y-4');
+    if (!host || !modalBody || host.contains(modalBody)) return;
+    host.appendChild(modalBody);
+    $('user-profile-modal')?.classList.add('hidden');
+    ensureAdminProfileFields();
+  }
+
+  function movePlansIntoSettings(){
+    const host = $('schoolhub-settings-user-plan-host');
+    if (!host) return;
+    if (!host.querySelector('#schoolhub-settings-current-plan-card')) {
+      host.innerHTML = `
+        <div id="schoolhub-settings-current-plan-card"></div>
+        <div id="schoolhub-settings-payment-history-box" class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-slate-50/60">
+            <div>
+              <h3 class="text-lg font-black text-slate-900"><i class="fas fa-receipt text-primary mr-2"></i><span data-i18n="planHistory">${esc(t('planHistory'))}</span></h3>
+              <p class="text-sm text-slate-500 mt-1" data-i18n="planHistoryDescription">${esc(t('planHistoryDescription'))}</p>
+            </div>
+            <button type="button" onclick="schoolhubLoadSettingsPlanHistory(true)" data-schoolhub-always-allowed="1" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-sync-alt mr-1"></i> <span data-i18n="refresh">${esc(t('refresh'))}</span></button>
+          </div>
+          <div id="schoolhub-settings-payment-history-list" class="p-5 space-y-3">
+            <div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i> <span data-i18n="loadingHistory">${esc(t('loadingHistory'))}</span></div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  async function readAdminCred(){
+    try{
+      const snap = await getDoc(doc(db, 'admin_settings', 'credentials'));
+      return snap.exists() ? (snap.data() || {}) : {};
+    }catch(e){ return {}; }
+  }
+
+  async function fillProfilePanel(){
+    moveProfileIntoSettings();
+    ensureAdminProfileFields();
+    const admin = isAdminSession();
+    const authUser = auth.currentUser;
+    const displayInput = $('profile-display-name-input');
+    const emailInput = $('profile-email-input');
+    const usernameWrap = $('profile-admin-username-wrap');
+    const usernameInput = $('profile-admin-username-input');
+    const passWrap = $('admin-profile-password-wrap');
+    const passInput = $('admin-profile-password-input');
+    const resetBtn = document.querySelector('#schoolhub-settings-profile-host [data-reset-password]');
+
+    if (admin) {
+      const d = await readAdminCred();
+      const username = norm(d.username || localStorage.getItem('schoolhub_admin_username') || 'Admin');
+      const displayName = norm(d.displayName || d.name || localStorage.getItem('schoolhub_admin_name') || $('user-display-name')?.textContent || 'Administrator');
+      const email = norm(d.email || localStorage.getItem('schoolhub_admin_email') || $('user-display-email')?.textContent || username);
+      if (displayInput) displayInput.value = displayName;
+      if (usernameInput) usernameInput.value = username;
+      if (emailInput) {
+        emailInput.value = email === 'Admin' ? '' : email;
+        emailInput.removeAttribute('readonly');
+        emailInput.classList.remove('bg-slate-100','text-slate-500');
+        emailInput.classList.add('bg-slate-50');
+      }
+      usernameWrap?.classList.remove('hidden');
+      passWrap?.classList.remove('hidden');
+      if (passInput) passInput.value = '';
+      resetBtn?.classList.add('hidden');
+      localStorage.setItem('schoolhub_admin_active', 'true');
+      localStorage.setItem('schoolhub_admin_username', username);
+      localStorage.setItem('schoolhub_admin_name', displayName);
+      localStorage.setItem('schoolhub_admin_email', email || username);
+    } else {
+      usernameWrap?.classList.add('hidden');
+      passWrap?.classList.add('hidden');
+      if (displayInput) displayInput.value = authUser?.displayName || norm($('user-display-name')?.textContent) || '';
+      if (emailInput) {
+        emailInput.value = authUser?.email || norm($('user-display-email')?.textContent) || '';
+        emailInput.setAttribute('readonly','readonly');
+        emailInput.classList.add('bg-slate-100','text-slate-500');
+      }
+      resetBtn?.classList.remove('hidden');
+    }
+    renderAccountSummary();
+  }
+
+  function setHeader(name, email){
+    if ($('user-display-name')) $('user-display-name').textContent = name || 'ผู้ใช้งาน';
+    if ($('user-display-email')) $('user-display-email').textContent = email || '';
+    if ($('user-avatar-initial')) $('user-avatar-initial').textContent = (name || 'U').trim().charAt(0).toUpperCase();
+  }
+
+  async function saveInlineProfile(){
+    moveProfileIntoSettings();
+    ensureAdminProfileFields();
+    const displayName = norm($('profile-display-name-input')?.value);
+    if (!displayName) return alertBox('กรอกข้อมูลไม่ครบ', 'กรุณากรอกชื่อที่แสดง', true);
+    const admin = isAdminSession();
+    loader(true);
+    try{
+      if (admin) {
+        const old = await readAdminCred();
+        const username = norm($('profile-admin-username-input')?.value || old.username || 'Admin') || 'Admin';
+        const email = norm($('profile-email-input')?.value || old.email || '');
+        const newPass = norm($('admin-profile-password-input')?.value);
+        const password = newPass || old.password || localStorage.getItem('schoolhub_admin_password') || 'Admin123';
+        if (password.length < 6) throw new Error('รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร');
+        if (email && !isEmail(email)) throw new Error('กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้');
+        await setDoc(doc(db, 'admin_settings', 'credentials'), {
+          username, email, displayName, password,
+          name: displayName,
+          updatedAt: serverTimestamp(),
+          updatedBy: 'admin'
+        }, { merge: true });
+        await setDoc(doc(db, 'admin_settings', 'security'), {
+          requirePasswordChange: false,
+          updatedAt: serverTimestamp(),
+          lastPasswordChange: newPass ? serverTimestamp() : (old.lastPasswordChange || serverTimestamp())
+        }, { merge: true });
+        localStorage.setItem('schoolhub_admin_active', 'true');
+        localStorage.setItem('schoolhub_admin_username', username);
+        localStorage.setItem('schoolhub_admin_name', displayName);
+        localStorage.setItem('schoolhub_admin_email', email || username);
+        if (newPass) localStorage.setItem('schoolhub_admin_password', newPass);
+        setHeader(displayName, email || username);
+        if ($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+        renderAccountSummary();
+        alertBox('บันทึกสำเร็จ', 'บันทึกโปรไฟล์ Admin ลง Firebase แล้ว');
+      } else {
+        const user = auth.currentUser;
+        if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้ที่เข้าสู่ระบบ');
+        await updateProfile(user, { displayName });
+        try {
+          if (typeof window.addUserToDirectory === 'function') await window.addUserToDirectory(user, displayName, 'user');
+          else await setDoc(doc(db, 'public_users_directory', String(user.email || user.uid).toLowerCase()), { uid:user.uid, email:user.email || '', name:displayName, displayName, role:'user', updatedAt:serverTimestamp() }, { merge:true });
+        } catch(e) { console.warn('directory profile sync skipped:', e); }
+        setHeader(displayName, user.email || norm($('profile-email-input')?.value));
+        renderAccountSummary();
+        alertBox('บันทึกสำเร็จ', 'แก้ไขข้อมูลแสดงผลของบัญชีเรียบร้อยแล้ว');
+      }
+    }catch(e){
+      alertBox('บันทึกไม่สำเร็จ', e?.message || String(e), true);
+    }finally{ loader(false); }
+  }
+
+  function renderAccountSummary(){
+    const box = $('schoolhub-settings-account-summary');
+    if (!box) return;
+    box.removeAttribute('data-i18n');
+    const admin = isAdminSession();
+    const name = norm($('profile-display-name-input')?.value || $('user-display-name')?.textContent || (admin ? 'Administrator' : 'ผู้ใช้งาน'));
+    const email = norm($('profile-email-input')?.value || $('user-display-email')?.textContent || (admin ? localStorage.getItem('schoolhub_admin_email') : auth.currentUser?.email) || '');
+    const role = admin ? t('admin') : t('regularUser');
+    box.innerHTML = `
+      <div><b>${esc(t('name'))}:</b> ${esc(name || '-')}</div>
+      <div><b>${esc(t('email'))}:</b> ${esc(email || '-')}</div>
+      <div><b>${esc(t('status'))}:</b> ${esc(role)}</div>
+      <div><b>${esc(t('settingsMode'))}:</b> ${esc(t('editInSinglePopup'))}</div>
+    `;
+  }
+
+  function prefillContactEmail(){
+    const input = $('schoolhub-contact-email');
+    if (!input || input.value) return;
+    input.value = norm(auth.currentUser?.email || $('user-display-email')?.textContent || localStorage.getItem('schoolhub_admin_email') || '');
+  }
+
+  function getPlanDir(){
+    const fromWindow = window.__currentUserDir || {};
+    if (fromWindow && Object.keys(fromWindow).length) return fromWindow;
+    const email = norm(auth.currentUser?.email || window.currentUser?.email || $('user-display-email')?.textContent).toLowerCase();
+    if (email) {
+      try {
+        const cached = JSON.parse(localStorage.getItem('schoolhub_current_user_dir_cache_' + email) || '{}');
+        if (cached && Object.keys(cached).length) return cached;
+      } catch(e) {}
+    }
+    return {};
+  }
+
+  function getPlanList(){
+    if (Array.isArray(window.subscriptionPlans) && window.subscriptionPlans.length) return window.subscriptionPlans;
+    for (const key of ['schoolhub_subscription_plans_cache','schoolhub_subscription_plans','schoolhub_public_plans']) {
+      try {
+        const items = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(items) && items.length) return items;
+      } catch(e) {}
+    }
+    return [];
+  }
+
+  function findPlanById(id){
+    return getPlanList().find(p => String(p?.id || '') === String(id || '')) || null;
+  }
+
+  function planDisplayText(plan, dir){
+    if (dir?.planPrice) return dir.planPrice;
+    if (!plan) return '';
+    if (typeof window.planDisplayPrice === 'function') {
+      try { return window.planDisplayPrice(plan); } catch(e) {}
+    }
+    return plan.price || (Number(plan.monthlyPrice || 0) ? Number(plan.monthlyPrice).toLocaleString('th-TH') + ' บาท/เดือน' : '');
+  }
+
+  function planDateText(value){
+    if (!value) return '-';
+    try {
+      const ms = typeof value?.toMillis === 'function' ? value.toMillis() : (typeof value?.toDate === 'function' ? value.toDate().getTime() : Number(value));
+      if (!Number.isFinite(ms) || !ms) return '-';
+      return new Date(ms).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    } catch(e) { return '-'; }
+  }
+
+  function courseLimitText(plan, dir){
+    const raw = dir?.courseLimit ?? plan?.courseLimit;
+    const n = Number(raw || 0);
+    return n === 0 ? 'ไม่จำกัด' : (Number.isFinite(n) && n > 0 ? n + ' วิชา' : '-');
+  }
+
+  function renderCurrentPlanCard(target, options = {}){
+    const el = typeof target === 'string' ? $(target) : target;
+    if (!el) return;
+    const dir = getPlanDir();
+    const planId = dir.teamPlanId || dir.planId || dir.requestedPlanId || '';
+    const plan = findPlanById(planId) || {
+      id: planId || 'none',
+      name: dir.requestedPlanName || dir.teamPlanName || dir.planName || (planId ? planId : 'ไม่มีแผน'),
+      price: dir.requestedPlanName || dir.requestedPlanId ? 'คำขออยู่ระหว่างรอตรวจสอบ' : (dir.planPrice || ''),
+      monthlyPrice: dir.monthlyPrice || 0,
+      freeFirstMonth: dir.freeFirstMonth,
+      courseLimit: dir.courseLimit
+    };
+    el.innerHTML = window.renderCurrentPlanCardHTML ? window.renderCurrentPlanCardHTML(plan, dir) : '';
+    el.classList.remove('schoolhub-no-plan-state','schoolhub-ultimate-no-plan');
+  }
+
+  window.renderCurrentPlanCard = renderCurrentPlanCard;
+
+  function formatPlanHistoryDate(v){
+    if (!v) return '-';
+    try {
+      const ms = typeof v?.toMillis === 'function' ? v.toMillis() : (typeof v?.toDate === 'function' ? v.toDate().getTime() : Number(v));
+      return Number.isFinite(ms) && ms ? new Date(ms).toLocaleString(languageLocale(), { dateStyle:'medium', timeStyle:'short' }) : '-';
+    } catch(e) { return '-'; }
+  }
+
+  function currentUserForHistory(){
+    try { return auth.currentUser || window.currentUser || JSON.parse(localStorage.getItem('schoolhub_web_session_v1') || '{}'); }
+    catch(e) { return auth.currentUser || window.currentUser || null; }
+  }
+
+  async function loadSettingsPlanHistory(showToast = false){
+    const box = $('schoolhub-settings-payment-history-list');
+    if (!box) return;
+    const u = currentUserForHistory();
+    const email = norm(u?.email || $('user-display-email')?.textContent).toLowerCase();
+    const uid = norm(u?.uid || '');
+    if (!email && !uid) {
+      box.innerHTML = '<div class="text-center text-slate-400 py-8"><i class="fas fa-user-lock text-2xl mb-2 block"></i>กรุณาเข้าสู่ระบบผู้ใช้ก่อนดูประวัติ</div>';
+      return;
+    }
+    box.innerHTML = '<div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดประวัติ...</div>';
+    try {
+      const snap = await getDocs(collection(db, 'subscription_requests'));
+      const rows = [];
+      snap.forEach(d => rows.push(Object.assign({ id:d.id }, d.data() || {})));
+      const filtered = rows.filter(r => {
+        const keys = [r.userKey, r.email, r.uid].map(x => norm(x).toLowerCase());
+        return (email && keys.includes(email)) || (uid && keys.includes(uid));
+      }).sort((a,b) => Number(b.createdAt || b.updatedAt || b.approvedAt || 0) - Number(a.createdAt || a.updatedAt || a.approvedAt || 0));
+      if (!filtered.length) {
+        box.innerHTML = '<div class="text-center text-slate-400 py-8"><i class="fas fa-receipt text-4xl text-slate-200 mb-3 block"></i>ยังไม่มีประวัติการใช้งานหรือคำขอแผน</div>';
+        return;
+      }
+      box.innerHTML = filtered.slice(0, 30).map(r => {
+        const status = norm(r.status || 'pending');
+        const label = status === 'approved' ? 'อนุมัติแล้ว' : (status === 'rejected' || status === 'denied' ? 'ไม่อนุมัติ' : (status === 'cancelled' || status === 'canceled' ? 'ยกเลิกแล้ว' : 'รอตรวจสอบ'));
+        return `<div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            <div class="min-w-0">
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-white border border-slate-200 text-slate-700"><i class="fas fa-circle-info"></i> ${esc(label)}</span>
+              <div class="mt-2 text-lg font-black text-slate-900">${esc(r.planName || '-')}</div>
+              <div class="mt-1 text-sm text-slate-600 leading-7">ราคา/ยอดชำระ: <b>${esc(r.planPrice || (r.planAmount ? Number(r.planAmount).toLocaleString('th-TH') + ' บาท' : '-'))}</b><br>ผู้ชำระ: <b>${esc(r.payerName || r.name || '-')}</b></div>
+            </div>
+            <div class="text-xs text-slate-500 md:text-right shrink-0 leading-6">ส่งคำขอ: <b>${esc(formatPlanHistoryDate(r.createdAt))}</b><br>อัปเดตล่าสุด: <b>${esc(formatPlanHistoryDate(r.updatedAt || r.approvedAt || r.rejectedAt))}</b></div>
+          </div>
+        </div>`;
+      }).join('');
+      if (showToast) alertBox('โหลดประวัติแล้ว', 'อัปเดตประวัติการใช้งานล่าสุดเรียบร้อย');
+    } catch(e) {
+      box.innerHTML = `<div class="text-center text-rose-500 py-6"><i class="fas fa-triangle-exclamation mr-1"></i> โหลดประวัติไม่ได้: ${esc(e?.message || String(e))}</div>`;
+    }
+  }
+
+  window.schoolhubLoadSettingsPlanHistory = loadSettingsPlanHistory;
+
+  async function renderPlansPanel(){
+    movePlansIntoSettings();
+    renderCurrentPlanCard('schoolhub-settings-current-plan-card');
+    if (typeof window.loadLatestPlanDataInBackground === 'function') {
+      window.loadLatestPlanDataInBackground().then(() => {
+        try { renderCurrentPlanCard('schoolhub-settings-current-plan-card'); } catch(e){}
+      }).catch(()=>{});
+    }
+    try { loadSettingsPlanHistory(false); } catch(e){}
+  }
+
+  function setActiveTab(tab){
+    tab = normalizeTab(tab);
+    if ((tab === 'contact-messages' || tab === 'admin-system') && !isAdminSession()) tab = 'contact-admin';
+    window.__schoolhubSettingsActiveTab = tab;
+    document.querySelectorAll('#settings-modal .settings-tab[data-settings-tab]').forEach(btn => {
+      const active = btn.dataset.settingsTab === tab;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('#settings-modal .schoolhub-settings-panel').forEach(panel => panel.classList.add('hidden'));
+    const panel = $(`schoolhub-settings-panel-${tab}`) || $('schoolhub-settings-panel-general');
+    panel?.classList.remove('hidden');
+    unlockSettingsControls();
+    if (tab === 'general') fillProfilePanel();
+    if (tab === 'plans') renderPlansPanel();
+    if (tab === 'language') renderLanguagePanel();
+    if (tab === 'contact-admin') prefillContactEmail();
+    if (tab === 'contact-messages') window.loadAdminContactMessages?.();
+    return tab;
+  }
+
+  function renderSettings(){
+    moveProfileIntoSettings();
+    movePlansIntoSettings();
+    const admin = isAdminSession();
+    const badge = $('schoolhub-settings-role-badge');
+    if (badge) {
+      badge.textContent = admin ? t('admin') : t('regularUser');
+      badge.className = admin
+        ? 'settings-role-badge bg-rose-50 text-rose-600 border-rose-100'
+        : 'settings-role-badge bg-indigo-50 text-primary border-indigo-100';
+    }
+    $('schoolhub-settings-admin-messages-tab')?.classList.toggle('hidden', !admin);
+    $('schoolhub-settings-admin-system-tab')?.classList.toggle('hidden', !admin);
+    unlockSettingsControls();
+    setActiveTab(window.__schoolhubSettingsActiveTab || 'general');
+    applyLanguage();
+  }
+
+  window.schoolhubOpenSettingsTab = function(tab='general'){
+    return setActiveTab(tab);
+  };
+  window.switchSettingsTab = function(tab='general'){
+    return setActiveTab(tab);
+  };
+  window.renderSchoolHubSettings = renderSettings;
+
+  window.openSettingsModal = function(tab='general'){
+    const modal = $('settings-modal');
+    if (!modal) return;
+    window.__schoolhubSettingsActiveTab = normalizeTab(tab);
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden','false');
+    document.body.classList.add('schoolhub-settings-modal-open');
+    renderSettings();
+    setTimeout(unlockSettingsControls, 0);
+  };
+  window.openSchoolHubSettings = function(tab='general'){
+    return window.openSettingsModal(tab);
+  };
+  window.closeSettingsModal = function(){
+    const modal = $('settings-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('schoolhub-settings-modal-open');
+  };
+
+  window.openUserProfileSettings = function(){
+    window.openSettingsModal('general');
+    fillProfilePanel();
+    return false;
+  };
+  window.saveUserProfileChanges = saveInlineProfile;
+  window.renderUserPlans = function(){
+    const result = typeof __schoolhubSettingsOriginalRenderUserPlans === 'function'
+      ? __schoolhubSettingsOriginalRenderUserPlans.apply(this, arguments)
+      : undefined;
+    try { renderCurrentPlanCard('user-current-plan-box'); } catch(e){}
+    return result;
+  };
+  window.openUserPlanSelector = function(){
+    try { window.closeSettingsModal?.(); } catch(e){}
+    let result;
+    if (typeof __schoolhubSettingsOriginalOpenUserPlanSelector === 'function') {
+      result = __schoolhubSettingsOriginalOpenUserPlanSelector.apply(this, arguments);
+    } else if (typeof window.switchView === 'function') {
+      window.switchView('user-plans');
+    }
+    try { if (typeof window.renderUserPlans === 'function') window.renderUserPlans(); } catch(e){}
+    try { renderCurrentPlanCard('user-current-plan-box'); } catch(e){}
+    try { if (typeof window.loadUserPaymentHistory === 'function') setTimeout(() => window.loadUserPaymentHistory(false), 150); } catch(e){}
+    return result === undefined ? false : result;
+  };
+  window.openAdminContactModal = function(){
+    window.openSettingsModal('contact-admin');
+    prefillContactEmail();
+    return false;
+  };
+  window.openGeneralSettings = function(){
+    window.openSettingsModal('general');
+    return false;
+  };
+
+  const __schoolhubSettingsOldOpenModal = window.openModal;
+  window.openModal = function(id){
+    if (id === 'user-profile-modal') {
+      window.openSettingsModal('general');
+      return false;
+    }
+    return typeof __schoolhubSettingsOldOpenModal === 'function'
+      ? __schoolhubSettingsOldOpenModal.apply(this, arguments)
+      : undefined;
+  };
+
+  window.submitSchoolHubAdminContactMessage = async function(event){
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    const title = norm($('schoolhub-contact-title')?.value);
+    const message = norm($('schoolhub-contact-message')?.value);
+    const contactEmail = norm($('schoolhub-contact-email')?.value || auth.currentUser?.email || $('user-display-email')?.textContent);
+    if (!title || !message) return alertBox('กรอกข้อมูลไม่ครบ', 'กรุณากรอกหัวข้อและรายละเอียด', true);
+    if (contactEmail && !isEmail(contactEmail) && !isAdminSession()) return alertBox('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลติดต่อกลับให้ถูกต้อง', true);
+    const btn = $('schoolhub-contact-submit-btn');
+    const oldHtml = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังส่งข้อความ...'; }
+    try{
+      const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const payload = {
+        id,
+        title,
+        message,
+        contactEmail,
+        userEmail: norm(auth.currentUser?.email || $('user-display-email')?.textContent || localStorage.getItem('schoolhub_admin_email')),
+        userName: norm($('user-display-name')?.textContent || auth.currentUser?.displayName || localStorage.getItem('schoolhub_admin_name')),
+        uid: auth.currentUser?.uid || (isAdminSession() ? 'admin-bypass' : ''),
+        role: isAdminSession() ? 'admin' : 'user',
+        status: 'new',
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+        source: 'settings-modal'
+      };
+      try {
+        await setDoc(doc(db, 'admin_contact_messages', id), payload, { merge: true });
+      } catch(writeError) {
+        const adminKey = norm(localStorage.getItem('schoolhub_admin_email') || 'admin').toLowerCase() || 'admin';
+        await setDoc(doc(db, 'users', adminKey, 'admin_contact_messages', id), payload, { merge: true });
+      }
+      if ($('schoolhub-contact-title')) $('schoolhub-contact-title').value = '';
+      if ($('schoolhub-contact-message')) $('schoolhub-contact-message').value = '';
+      alertBox('ส่งข้อความแล้ว', 'บันทึกข้อความถึงผู้ดูแลระบบเรียบร้อยแล้ว');
+    }catch(e){
+      alertBox('ส่งข้อความไม่สำเร็จ', e?.message || String(e), true);
+    }finally{
+      if (btn) { btn.disabled = false; btn.innerHTML = oldHtml || '<i class="fas fa-paper-plane"></i> ส่งข้อความถึงผู้ดูแลระบบ'; }
+    }
+  };
+
+  function isPermissionError(e){
+    const msg = String(e?.message || e || '');
+    return e?.code === 'permission-denied' || /Missing or insufficient permissions|permission/i.test(msg);
+  }
+
+  function adminMessagePathCandidates(){
+    const adminEmail = norm(localStorage.getItem('schoolhub_admin_email') || auth.currentUser?.email || $('user-display-email')?.textContent || 'admin').toLowerCase();
+    const paths = [
+      { label:'admin_contact_messages', ref: collection(db, 'admin_contact_messages') }
+    ];
+    if (adminEmail) paths.push({ label:`users/${adminEmail}/admin_contact_messages`, ref: collection(db, 'users', adminEmail, 'admin_contact_messages') });
+    if (adminEmail !== 'admin') paths.push({ label:'users/admin/admin_contact_messages', ref: collection(db, 'users', 'admin', 'admin_contact_messages') });
+    return paths;
+  }
+
+  function renderAdminMessages(box, items, sourceLabel){
+    items.sort((a,b) => Number(b.createdAtMs || b.createdAt?.toMillis?.() || b.createdAt || 0) - Number(a.createdAtMs || a.createdAt?.toMillis?.() || a.createdAt || 0));
+    if (!items.length) {
+      box.innerHTML = '<div class="text-center text-slate-400 py-10 bg-white rounded-3xl border border-dashed border-slate-200"><i class="fas fa-inbox mr-1"></i> ยังไม่มีข้อความจากผู้ใช้</div>';
+      return;
+    }
+    box.innerHTML = items.slice(0, 80).map(item => {
+      const date = item.createdAt?.toDate ? item.createdAt.toDate() : (item.createdAtMs ? new Date(item.createdAtMs) : null);
+      const dateText = date ? date.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' }) : '-';
+      return `<article class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          <div>
+            <h5 class="font-black text-slate-900 text-lg">${esc(item.title || 'ไม่มีหัวข้อ')}</h5>
+            <p class="text-xs text-slate-400 mt-1"><i class="fas fa-clock mr-1"></i>${esc(dateText)}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-black self-start">${esc(item.status || 'new')}</span>
+        </div>
+        <div class="text-sm text-slate-600 leading-7 mt-4 whitespace-pre-line">${esc(item.message || '')}</div>
+        <div class="mt-4 rounded-2xl bg-slate-50 border border-slate-100 p-3 text-xs text-slate-500 leading-6">
+          <b>ผู้ส่ง:</b> ${esc(item.userName || '-')}<br>
+          <b>อีเมลติดต่อกลับ:</b> ${esc(item.contactEmail || item.userEmail || '-')}
+        </div>
+        ${sourceLabel ? `<div class="mt-3 text-[11px] text-slate-400">แหล่งข้อมูล: ${esc(sourceLabel)}</div>` : ''}
+      </article>`;
+    }).join('');
+  }
+
+  window.loadAdminContactMessages = async function(){
+    const box = $('schoolhub-admin-contact-message-list');
+    if (!box) return;
+    if (!isAdminSession()) {
+      box.innerHTML = '<div class="text-center text-rose-500 py-10 bg-white rounded-3xl border border-rose-100">เมนูนี้เปิดได้เฉพาะแอดมิน</div>';
+      return;
+    }
+    box.innerHTML = '<div class="text-center text-slate-400 py-10 bg-white rounded-3xl border border-dashed border-slate-200"><i class="fas fa-spinner fa-spin mr-1"></i> กำลังโหลดข้อความ...</div>';
+    const errors = [];
+    for (const source of adminMessagePathCandidates()) {
+      try {
+        const snap = await getDocs(source.ref);
+        const items = [];
+        snap.forEach(d => items.push(Object.assign({ id:d.id }, d.data() || {})));
+        renderAdminMessages(box, items, source.label);
+        return;
+      } catch(e) {
+        errors.push(e);
+        if (!isPermissionError(e)) console.warn('load admin contact messages failed at', source.label, e);
+      }
+    }
+    const permissionOnly = errors.length && errors.every(isPermissionError);
+    box.innerHTML = permissionOnly
+      ? '<div class="text-center text-rose-600 py-10 bg-white rounded-3xl border border-rose-100"><i class="fas fa-shield-halved mr-1"></i> ไม่สามารถโหลดข้อความได้ กรุณาตรวจสอบสิทธิ์ Firestore</div>'
+      : `<div class="text-center text-rose-600 py-10 bg-white rounded-3xl border border-rose-100"><i class="fas fa-triangle-exclamation mr-1"></i> โหลดข้อความไม่สำเร็จ: ${esc(errors[0]?.message || String(errors[0] || 'ไม่ทราบสาเหตุ'))}</div>`;
+  };
+
+  document.addEventListener('click', function(e){
+    const openBtn = e.target.closest?.('[data-open-settings], .settings-menu-btn');
+    if (openBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      window.openSettingsModal(openBtn.dataset.settingsTab || 'general');
+      return false;
+    }
+    const inSettings = e.target.closest?.('#settings-modal');
+    if (!inSettings) return;
+    const tabBtn = e.target.closest?.('#settings-modal .settings-tab[data-settings-tab]');
+    if (tabBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      setActiveTab(tabBtn.dataset.settingsTab);
+      return false;
+    }
+    const onclickBtn = e.target.closest?.('#settings-modal [onclick]');
+    if (!onclickBtn) return;
+    const action = onclickBtn.getAttribute('onclick') || '';
+    if (/openUserProfileSettings|openProfileModal/.test(action)) {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
+      window.openUserProfileSettings();
+      return false;
+    }
+    if (/openUserPlanSelector|user-plans/.test(action)) {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
+      window.openUserPlanSelector();
+      return false;
+    }
+    if (/openAdminContactModal/.test(action)) {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
+      window.openAdminContactModal();
+      return false;
+    }
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setDocumentLanguage();
+    moveProfileIntoSettings();
+    movePlansIntoSettings();
+    renderLanguagePanel();
+    renderSettings();
+    applyLanguage();
+    try { if (typeof window.schoolhubQueueRuntimeTranslation === 'function') window.schoolhubQueueRuntimeTranslation(document.body); } catch(e) {}
+  });
+  if (document.readyState !== 'loading') {
+    setDocumentLanguage();
+    moveProfileIntoSettings();
+    movePlansIntoSettings();
+    renderLanguagePanel();
+    renderSettings();
+    applyLanguage();
+    try { if (typeof window.schoolhubQueueRuntimeTranslation === 'function') window.schoolhubQueueRuntimeTranslation(document.body); } catch(e) {}
+  }
 })();
 </script>
 
