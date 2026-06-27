@@ -1087,6 +1087,12 @@
         /* SchoolHub popup stacking fix: ทุกป็อปอัพต้องอยู่หน้าสุดเสมอ */
         #custom-alert, #custom-confirm { z-index: 999999 !important; }
         #user-profile-modal, #admin-first-setup-modal, #admin-plan-request-popup, #slip-result-popup, #public-announcement-popup, #plan-payment-modal, #course-modal, #student-edit-modal, #grade-criteria-modal, #multi-student-modal, #share-student-modal { z-index: 900000 !important; }
+        #student-share-create-popup { z-index: 950000 !important; }
+        #student-share-create-popup.student-share-popup-closing > div {
+          transform: translateY(24px) scale(0.98);
+          opacity: 0;
+          transition: transform 0.25s ease, opacity 0.25s ease;
+        }
         /* Patch: ให้หน้าหลักเลื่อนแนวตั้งได้เมื่อข้อมูลเกิน และกันตาราง/การ์ดล้น */
         body #main-app { min-height: 100vh !important; height: 100vh !important; overflow: hidden !important; }
         body #main-app main { min-height: 0 !important; overflow: hidden !important; }
@@ -4072,9 +4078,58 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
     <!-- Share Student Data Modal -->
     <div id="share-student-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center fade-in p-4">
         <div class="bg-white rounded-[2rem] w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b flex justify-between items-center bg-slate-50 shrink-0"><div><h3 class="text-xl font-bold text-slate-800"><i class="fas fa-share-nodes text-primary mr-2"></i>แชร์ข้อมูลให้นักเรียน</h3><p class="text-sm text-slate-500 mt-1">ลิงก์จะเริ่มนับเวลาหมดอายุจากครั้งแรกที่นักเรียนกดดู</p></div><button onclick="closeModal('share-student-modal')" class="w-10 h-10 bg-white border rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100"><i class="fas fa-times"></i></button></div>
-            <div class="p-6 bg-slate-50/70 border-b flex flex-col md:flex-row gap-3 md:items-end"><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมดอายุหลังเปิดดูครั้งแรก (นาที)</label><input id="share-expire-minutes" type="number" inputmode="decimal" pattern="[0-9]*" min="1" value="60" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"></div><div class="flex-1"><label class="block text-sm font-semibold text-slate-600 mb-1">หมายเหตุถึงนักเรียน</label><input id="share-note" type="text" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น ตรวจสอบคะแนนของตนเอง"></div></div>
+            <div class="p-6 border-b flex justify-between items-start bg-slate-50 shrink-0 gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-share-nodes text-primary mr-2"></i>แชร์ข้อมูลให้นักเรียน</h3>
+                    <p class="text-sm text-slate-500 mt-1">ค้นหาและเลือกนักเรียนที่ต้องการสร้างลิงก์แชร์</p>
+                </div>
+                <button type="button" onclick="closeShareStudentModal(); return false;" class="w-10 h-10 bg-white border rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 shrink-0" aria-label="ปิดหน้าต่างแชร์ให้นักเรียน"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-slate-50/70 border-b">
+                <label class="block text-sm font-black text-slate-700 mb-2">ค้นหานักเรียน</label>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input id="share-student-search-input" type="text" autocomplete="off" class="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 focus:ring-4 focus:ring-indigo-100 focus:border-primary focus:outline-none" placeholder="ค้นหาด้วยชื่อ หรือรหัสนักเรียน">
+                </div>
+            </div>
             <div class="p-6 overflow-y-auto flex-1"><div id="share-student-list" class="space-y-3"></div></div>
+        </div>
+    </div>
+
+    <!-- Create Student Share Link Popup -->
+    <div id="student-share-create-popup" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center fade-in p-4" style="z-index:950000;">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="p-6 border-b bg-slate-50 flex justify-between items-start gap-4">
+                <div>
+                    <h3 id="student-share-create-title" class="text-xl font-black text-slate-800"><i class="fas fa-link text-primary mr-2"></i>สร้างลิงก์แชร์ให้นักเรียน</h3>
+                    <p class="text-sm text-slate-500 mt-1">กำหนดเวลาหมดอายุและข้อความที่จะส่งถึงนักเรียน</p>
+                </div>
+                <button type="button" onclick="closeCreateStudentShareLinkPopup(); return false;" class="w-10 h-10 bg-white border rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 shrink-0" aria-label="ปิดหน้าต่างสร้างลิงก์"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div id="student-share-create-form" class="space-y-5">
+                    <div id="student-share-create-detail" class="rounded-3xl border border-indigo-100 bg-indigo-50/70 p-4"></div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">หมดอายุหลังเปิดดูครั้งแรก (นาที)</label>
+                        <input id="student-share-expire-minutes" type="number" inputmode="numeric" pattern="[0-9]*" min="1" value="1" class="w-full bg-white border border-slate-200 rounded-2xl p-3 focus:ring-4 focus:ring-indigo-100 focus:border-primary focus:outline-none font-bold text-primary">
+                        <p class="text-xs text-slate-400 mt-1">ค่าเริ่มต้น 1 นาที และปรับเพิ่มได้ตามต้องการ</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">ข้อความที่จะส่งถึงนักเรียน</label>
+                        <textarea id="student-share-note" rows="3" class="w-full bg-white border border-slate-200 rounded-2xl p-3 focus:ring-4 focus:ring-indigo-100 focus:border-primary focus:outline-none resize-none" placeholder="เช่น ตรวจสอบคะแนนของตนเอง"></textarea>
+                    </div>
+                    <button type="button" onclick="confirmCreateStudentShareLink(); return false;" class="w-full bg-primary hover:bg-indigo-700 text-white rounded-2xl py-3.5 font-black shadow-lg shadow-indigo-100"><i class="fas fa-wand-magic-sparkles mr-1"></i> สร้างลิงก์</button>
+                </div>
+                <div id="student-share-created-panel" class="hidden space-y-5 text-center">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl"><i class="fas fa-check"></i></div>
+                    <div>
+                        <h4 class="text-2xl font-black text-emerald-600">สร้างลิงก์แล้ว</h4>
+                        <p id="student-share-created-detail" class="text-sm text-slate-500 mt-2"></p>
+                    </div>
+                    <input id="student-share-created-url" type="text" readonly class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-mono text-slate-600">
+                    <button id="student-share-copy-btn" type="button" onclick="copyStudentShareLink(); return false;" class="w-full bg-primary hover:bg-indigo-700 text-white rounded-2xl py-3.5 font-black shadow-lg shadow-indigo-100"><i class="fas fa-copy mr-1"></i> คัดลอกลิงก์</button>
+                </div>
+            </div>
         </div>
     </div>
     <div id="public-share-view" class="fixed inset-0 share-public-bg z-[210] hidden overflow-y-auto p-4 md:p-8"><div class="max-w-4xl mx-auto"><div class="flex items-center gap-3 mb-5"><div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg"><i class="fas fa-graduation-cap"></i></div><div><h1 class="text-2xl font-black text-slate-900">SchoolHub</h1><p class="text-sm text-slate-500">ข้อมูลที่ครูแชร์ให้ดู</p></div></div><div id="public-share-content" class="share-mini-card rounded-[2rem] p-6 md:p-8 shadow-xl"></div></div></div>
@@ -6008,11 +6063,356 @@ async function submitPlanRequest(planId){
         window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 3 ระดับ (มาตรฐาน / โปร / ทีม) ขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
 
         // --- Timed Student Share ---
-        function buildStudentSharePayload(studentId,expireMinutes,note){const student=state.students.find(s=>s.id===studentId);const course=state.courses.find(c=>c.id===currentActiveCourseId);if(!student||!course)return null;const cid=currentActiveCourseId;const plans=(state.coursePlans[cid]||[]).sort((a,b)=>a.week-b.week);const courseScores=state.scores.filter(x=>x.courseId===cid);const attendanceHistory=state.attendance[cid]||{};const attDates=Object.keys(attendanceHistory).sort();let present=0,late=0,absent=0;attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[studentId];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});let totalScore=0,totalMax=0;const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>ts.week===p.week&&ts.title===p.title);const raw=task&&task.records?task.records[studentId]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax=window.addScoreToTotal(totalMax,p.maxScore,2);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''&&window.scoreNumberOrNull(raw)!==null){totalScore=window.addScoreToTotal(totalScore,raw,2);display=`${window.formatScoreDisplay(raw,2)}/${window.formatScoreDisplay(p.maxScore,2)}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});return{student,course,note,expireMinutes:Number(expireMinutes||60),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore:window.normalizeScoreNumber(totalScore,2),totalMax:window.normalizeScoreNumber(totalMax,2)},scoreRows};}
-        window.openShareStudentModal=()=>{if(!currentActiveCourseId)return;renderShareStudentList();window.openModal('share-student-modal');};
-        function renderShareStudentList(){const box=document.getElementById('share-student-list');if(!box)return;const students=window.getCourseStudents(currentActiveCourseId);if(!students.length){box.innerHTML='<div class="text-center text-slate-400 p-8">ยังไม่มีนักเรียนในวิชานี้</div>';return;}box.innerHTML=students.map(s=>`<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"><div><div class="font-bold text-slate-800">${escapeHTML(s.name)}</div><div class="text-xs text-slate-400 font-mono">${escapeHTML(s.code)} • ${escapeHTML(window.getStudentClassName(s))}</div></div><button onclick="createStudentShareLink('${s.id}')" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm"><i class="fas fa-link"></i> สร้างลิงก์</button></div>`).join('');}
-        window.createStudentShareLink=async(studentId)=>{const expireMinutes=Math.max(1,Number(document.getElementById('share-expire-minutes').value||60));const note=document.getElementById('share-note').value.trim();const payload=buildStudentSharePayload(studentId,expireMinutes,note);if(!payload)return;const token=`sh_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;toggleLoader(true);try{await setDoc(getShareDocRef(token),payload);const url=`${location.origin}${location.pathname}?share=${encodeURIComponent(token)}`;try{await navigator.clipboard.writeText(url);showCustomAlert('สร้างลิงก์แล้ว',`คัดลอกลิงก์แล้ว\nหมดอายุหลังเปิดดูครั้งแรก ${expireMinutes} นาที`);}catch(e){showCustomAlert('สร้างลิงก์แล้ว',url);}}catch(e){showCustomAlert('สร้างลิงก์แชร์ไม่ได้','ต้องแก้ Firestore Rules ของ shared_student_views ก่อน: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
-        async function loadPublicShareFromURL(){const params=new URLSearchParams(location.search);const token=params.get('share');if(!token)return false;document.getElementById('global-loader').style.display='flex';document.getElementById('landing-view')?.classList.add('hidden');document.getElementById('auth-view')?.classList.add('hidden');document.getElementById('main-app')?.classList.add('hidden');const view=document.getElementById('public-share-view');const content=document.getElementById('public-share-content');view.classList.remove('hidden');try{const ref=getShareDocRef(token);const snap=await getDoc(ref);if(!snap.exists())throw new Error('not-found');const data=snap.data();const now=Date.now();let firstViewedAt=data.firstViewedAt||now;let expiresAt=data.expiresAt||(firstViewedAt+Number(data.expireMinutes||60)*60000);if(!data.firstViewedAt)await setDoc(ref,{firstViewedAt,expiresAt},{merge:true});if(now>expiresAt){content.innerHTML='<div class="text-center py-14"><i class="fas fa-clock text-5xl text-rose-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">ลิงก์หมดอายุแล้ว</h2><p class="text-slate-500 mt-2">กรุณาขอลิงก์ใหม่จากครูผู้สอน</p></div>';document.getElementById('global-loader').style.display='none';return true;}const remainMin=Math.max(0,Math.ceil((expiresAt-now)/60000));content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือประมาณ ${remainMin} นาที</div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center md:col-span-2"><div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม</div></div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;}catch(e){content.innerHTML='<div class="text-center py-14"><i class="fas fa-triangle-exclamation text-5xl text-amber-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">เปิดข้อมูลไม่ได้</h2><p class="text-slate-500 mt-2">ลิงก์ไม่ถูกต้อง หรือระบบไม่อนุญาตให้อ่านข้อมูลสาธารณะ</p></div>';}document.getElementById('global-loader').style.display='none';return true;}
+        function shShareEsc(v){
+            if (typeof escapeHTML === 'function') return escapeHTML(v);
+            return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+        function shShareAttr(v){ return shShareEsc(v).replace(/`/g, '&#96;'); }
+        function isShareWithdrawnStudent(student){
+            if (typeof window.isWithdrawnStudent === 'function') {
+                try { return window.isWithdrawnStudent(student); } catch(e) {}
+            }
+            if (typeof window.isStudentWithdrawn === 'function') {
+                try { return window.isStudentWithdrawn(student); } catch(e) {}
+            }
+            return !!(student && (student.withdrawn === true || student.isWithdrawn === true || student.status === 'withdrawn' || student.status === 'ลาออก'));
+        }
+        function getCurrentShareCourseId(){
+            let localCurrentActive = '';
+            try { localCurrentActive = typeof currentActiveCourseId !== 'undefined' ? currentActiveCourseId : ''; } catch(e) {}
+            const detail = document.querySelector('#view-course-detail:not(.hidden)');
+            const modal = document.getElementById('share-student-modal');
+            return String(modal?.dataset?.courseId || window.currentActiveCourseId || localCurrentActive || detail?.dataset?.courseId || '').trim();
+        }
+        function getShareStudentName(student){ return student?.name || student?.fullName || '-'; }
+        function getShareStudentCode(student){ return student?.code || student?.studentCode || ''; }
+        function getShareableCourseStudents(courseId, query = ''){
+            let students = [];
+            if (typeof window.getCourseStudents === 'function') {
+                try { students = window.getCourseStudents(courseId, { ignoreActionFilter: true }) || []; } catch(e) { students = []; }
+            }
+            const q = String(query || '').trim().toLowerCase();
+            return (students || []).filter(st => st && !isShareWithdrawnStudent(st)).filter(st => {
+                if (!q) return true;
+                const text = [st.name, st.fullName, st.code, st.studentCode].map(v => String(v || '').toLowerCase()).join(' ');
+                return text.includes(q);
+            });
+        }
+        function bindShareStudentSearch(){
+            const input = document.getElementById('share-student-search-input');
+            if (!input) return false;
+            input.placeholder = 'ค้นหาด้วยชื่อ หรือรหัสนักเรียน';
+            input.oninput = function(){ renderShareStudentList(); };
+            return true;
+        }
+        function renderShareStudentList(){
+            const box = document.getElementById('share-student-list');
+            const input = document.getElementById('share-student-search-input');
+            if (!box) return false;
+            const courseId = getCurrentShareCourseId();
+            if (!courseId) {
+                box.innerHTML = '<div class="text-center text-slate-400 p-8">ไม่พบรายวิชาปัจจุบัน</div>';
+                return false;
+            }
+            const q = String(input?.value || '').trim();
+            const students = getShareableCourseStudents(courseId, q);
+            if (!students.length) {
+                box.innerHTML = '<div class="text-center text-slate-400 p-8">ไม่พบนักเรียนที่สามารถแชร์ได้</div>';
+                return false;
+            }
+            box.innerHTML = students.map(s => {
+                const sid = shShareAttr(s.id || s.studentId || '');
+                const name = shShareEsc(getShareStudentName(s));
+                const code = shShareEsc(getShareStudentCode(s));
+                return `<div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between shadow-sm">
+                    <div>
+                        <div class="font-bold text-slate-800">${name}</div>
+                        <div class="text-xs text-slate-400 font-mono">${code || '-'}</div>
+                    </div>
+                    <button type="button" onclick="openCreateStudentShareLinkPopup('${sid}'); return false;" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm"><i class="fas fa-link"></i> แชร์</button>
+                </div>`;
+            }).join('');
+            return true;
+        }
+        window.renderShareStudentList = renderShareStudentList;
+        window.bindShareStudentSearch = bindShareStudentSearch;
+        window.openShareStudentModal = function(courseId){
+            const cid = String(courseId || window.currentActiveCourseId || (typeof currentActiveCourseId !== 'undefined' ? currentActiveCourseId : '') || document.querySelector('#view-course-detail:not(.hidden)')?.dataset?.courseId || '').trim();
+            if (!cid) {
+                if (typeof showCustomAlert === 'function') showCustomAlert('เปิดไม่ได้','ไม่พบรายวิชาปัจจุบัน กรุณาเข้าหน้ารายวิชาก่อนแชร์ให้นักเรียน',true);
+                return false;
+            }
+            try { currentActiveCourseId = cid; } catch(e) {}
+            window.currentActiveCourseId = cid;
+            const modal = document.getElementById('share-student-modal');
+            if (modal) modal.dataset.courseId = cid;
+            const input = document.getElementById('share-student-search-input');
+            if (input) { input.value = ''; input.placeholder = 'ค้นหาด้วยชื่อ หรือรหัสนักเรียน'; }
+            bindShareStudentSearch();
+            renderShareStudentList();
+            if (typeof window.openModal === 'function') window.openModal('share-student-modal');
+            else if (modal) modal.classList.remove('hidden');
+            setTimeout(renderShareStudentList, 0);
+            return false;
+        };
+        window.closeShareStudentModal = function(){
+            if (typeof window.closeModal === 'function') window.closeModal('share-student-modal');
+            else document.getElementById('share-student-modal')?.classList.add('hidden');
+            return false;
+        };
+        window.closeStudentShareModal = window.closeShareStudentModal;
+        function buildStudentSharePayload(studentId,expireMinutes,note){
+            const sid = String(studentId || '').trim();
+            const cid = getCurrentShareCourseId();
+            const student=(state.students||[]).find(s=>String(s.id)===sid || String(s.studentId||'')===sid || String(s.code||'')===sid || String(s.studentCode||'')===sid);
+            const course=(state.courses||[]).find(c=>String(c.id)===String(cid));
+            if(!student||!course)return null;
+            if(isShareWithdrawnStudent(student)) return null;
+            const plans=(state.coursePlans[cid]||[]).sort((a,b)=>a.week-b.week);
+            const courseScores=(state.scores||[]).filter(x=>String(x.courseId)===String(cid));
+            const attendanceHistory=(state.attendance&&state.attendance[cid])||{};
+            const attDates=Object.keys(attendanceHistory).sort();
+            let present=0,late=0,absent=0;
+            attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[student.id];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});
+            let totalScore=0,totalMax=0;
+            const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>Number(ts.week)===Number(p.week)&&String(ts.title)===String(p.title));const raw=task&&task.records?task.records[student.id]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax=window.addScoreToTotal(totalMax,p.maxScore,2);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''&&window.scoreNumberOrNull(raw)!==null){totalScore=window.addScoreToTotal(totalScore,raw,2);display=`${window.formatScoreDisplay(raw,2)}/${window.formatScoreDisplay(p.maxScore,2)}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});
+            return{student,course,note,expireMinutes:Number(expireMinutes||1),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore:window.normalizeScoreNumber(totalScore,2),totalMax:window.normalizeScoreNumber(totalMax,2)},scoreRows};
+        }
+        window.openCreateStudentShareLinkPopup = function(studentId){
+            const cid = getCurrentShareCourseId();
+            const sid = String(studentId || '').trim();
+            const student = (state.students||[]).find(s=>String(s.id)===sid || String(s.studentId||'')===sid || String(s.code||'')===sid || String(s.studentCode||'')===sid);
+            if (!student || isShareWithdrawnStudent(student)) {
+                if (typeof showCustomAlert === 'function') showCustomAlert('แชร์ไม่ได้','ไม่พบนักเรียนที่สามารถแชร์ได้ หรือเป็นนักเรียนที่ลาออกแล้ว',true);
+                return false;
+            }
+            window.__schoolhubShareStudentId = String(student.id || student.studentId || sid);
+            window.__schoolhubShareStudentUrl = '';
+            const detail = document.getElementById('student-share-create-detail');
+            if (detail) {
+                const course = (state.courses||[]).find(c=>String(c.id)===String(cid)) || {};
+                detail.innerHTML = `<div class="text-xs font-black text-indigo-500 uppercase mb-1">รายละเอียดคนที่จะแชร์</div><div class="text-lg font-black text-slate-800">${shShareEsc(getShareStudentName(student))}</div><div class="text-sm text-slate-500 font-mono mt-1">${shShareEsc(getShareStudentCode(student)) || '-'}</div><div class="text-sm text-primary font-bold mt-2">${shShareEsc(course.code || '')} ${shShareEsc(course.name || '')}</div>`;
+            }
+            const minute = document.getElementById('student-share-expire-minutes');
+            const note = document.getElementById('student-share-note');
+            if (minute) minute.value = '1';
+            if (note) note.value = '';
+            document.getElementById('student-share-create-form')?.classList.remove('hidden');
+            document.getElementById('student-share-created-panel')?.classList.add('hidden');
+            const copyBtn = document.getElementById('student-share-copy-btn');
+            if (copyBtn) {
+                copyBtn.disabled = false;
+                copyBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+                copyBtn.innerHTML = '<i class="fas fa-copy mr-1"></i> คัดลอกลิงก์';
+            }
+            const popup = document.getElementById('student-share-create-popup');
+            if (popup) popup.classList.remove('student-share-popup-closing');
+            if (typeof window.openModal === 'function') window.openModal('student-share-create-popup');
+            else if (popup) popup.classList.remove('hidden');
+            if (popup) popup.style.zIndex = '950000';
+            return false;
+        };
+        window.closeCreateStudentShareLinkPopup = function(){
+            if (typeof window.closeModal === 'function') window.closeModal('student-share-create-popup');
+            else document.getElementById('student-share-create-popup')?.classList.add('hidden');
+            return false;
+        };
+        window.confirmCreateStudentShareLink = async function(){
+            const studentId = window.__schoolhubShareStudentId;
+            const expireMinutes = Math.max(1, Number(document.getElementById('student-share-expire-minutes')?.value || 1));
+            const note = String(document.getElementById('student-share-note')?.value || '').trim();
+            const payload=buildStudentSharePayload(studentId,expireMinutes,note);
+            if(!payload){ if(typeof showCustomAlert==='function') showCustomAlert('สร้างลิงก์ไม่ได้','ไม่พบข้อมูลนักเรียน หรือเป็นนักเรียนที่ลาออกแล้ว',true); return false; }
+            const token=`sh_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+            toggleLoader(true);
+            try{
+                await setDoc(getShareDocRef(token),payload);
+                const url=`${location.origin}${location.pathname}?share=${encodeURIComponent(token)}`;
+                window.__schoolhubShareStudentUrl = url;
+                const urlInput = document.getElementById('student-share-created-url');
+                if (urlInput) urlInput.value = url;
+                const detail = document.getElementById('student-share-created-detail');
+                if (detail) detail.textContent = `ลิงก์ของ ${getShareStudentName(payload.student)} หมดอายุหลังเปิดดูครั้งแรก ${expireMinutes} นาที`;
+                document.getElementById('student-share-create-form')?.classList.add('hidden');
+                document.getElementById('student-share-created-panel')?.classList.remove('hidden');
+                const copyBtn = document.getElementById('student-share-copy-btn');
+                if (copyBtn) {
+                    copyBtn.disabled = false;
+                    copyBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+                    copyBtn.innerHTML = '<i class="fas fa-copy mr-1"></i> คัดลอกลิงก์';
+                }
+            }catch(e){
+                if(typeof showCustomAlert==='function') showCustomAlert('สร้างลิงก์แชร์ไม่ได้','ต้องแก้ Firestore Rules ของ shared_student_views ก่อน: '+getFirebaseErrorText(e),true);
+            }
+            toggleLoader(false);
+            return false;
+        };
+        window.copyStudentShareLink = async function(){
+            const url = window.__schoolhubShareStudentUrl || document.getElementById('student-share-created-url')?.value || '';
+            if(!url) return false;
+            const btn = document.getElementById('student-share-copy-btn');
+            try{
+                await navigator.clipboard.writeText(url);
+
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-check mr-1"></i> คัดลอกแล้ว';
+                    btn.disabled = true;
+                    btn.classList.add('opacity-80', 'cursor-not-allowed');
+                }
+
+                setTimeout(() => {
+                    const popup = document.getElementById('student-share-create-popup');
+
+                    if (popup) {
+                        popup.classList.add('student-share-popup-closing');
+                    }
+
+                    setTimeout(() => {
+                        if (typeof window.closeCreateStudentShareLinkPopup === 'function') {
+                            window.closeCreateStudentShareLinkPopup();
+                        } else if (popup) {
+                            popup.classList.add('hidden');
+                        }
+
+                        if (popup) {
+                            popup.classList.remove('student-share-popup-closing');
+                        }
+
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                            btn.innerHTML = '<i class="fas fa-copy mr-1"></i> คัดลอกลิงก์';
+                        }
+                    }, 250);
+                }, 2000);
+            }catch(e){
+                const input = document.getElementById('student-share-created-url');
+                if(input){ input.focus(); input.select(); }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                    btn.innerHTML = '<i class="fas fa-copy mr-1"></i> คัดลอกลิงก์';
+                }
+                if(typeof showCustomAlert==='function') showCustomAlert('คัดลอกไม่ได้','กรุณาคัดลอกลิงก์จากช่องข้อความด้วยตนเอง',true);
+            }
+            return false;
+        };
+        window.createStudentShareLink = function(studentId){ return window.openCreateStudentShareLinkPopup(studentId); };
+        window.__schoolhubStudentShareCountdownTimer = window.__schoolhubStudentShareCountdownTimer || null;
+
+        function clearStudentShareCountdownTimer() {
+            if (window.__schoolhubStudentShareCountdownTimer) {
+                clearInterval(window.__schoolhubStudentShareCountdownTimer);
+                window.__schoolhubStudentShareCountdownTimer = null;
+            }
+        }
+
+        function renderStudentShareExpired(content) {
+            clearStudentShareCountdownTimer();
+
+            if (!content) return;
+
+            content.innerHTML = `
+                <div class="text-center py-14">
+                  <i class="fas fa-clock text-5xl text-rose-300 mb-4"></i>
+                  <h2 class="text-2xl font-black text-slate-800">ลิงก์หมดอายุแล้ว</h2>
+                  <p class="text-slate-500 mt-2">กรุณาขอลิงก์ใหม่จากครูผู้สอน</p>
+                </div>
+            `;
+        }
+
+        function formatStudentShareRemainingTime(ms) {
+            const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            const pad = n => String(n).padStart(2, '0');
+
+            if (hours > 0) {
+                return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+            }
+
+            return `${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        async function loadPublicShareFromURL(){
+            const params=new URLSearchParams(location.search);
+            const token=params.get('share');
+            if(!token)return false;
+
+            clearStudentShareCountdownTimer();
+
+            document.getElementById('global-loader').style.display='flex';
+            document.getElementById('landing-view')?.classList.add('hidden');
+            document.getElementById('auth-view')?.classList.add('hidden');
+            document.getElementById('main-app')?.classList.add('hidden');
+
+            const view=document.getElementById('public-share-view');
+            const content=document.getElementById('public-share-content');
+            view.classList.remove('hidden');
+
+            try{
+                const ref=getShareDocRef(token);
+                const snap=await getDoc(ref);
+                if(!snap.exists())throw new Error('not-found');
+
+                const data=snap.data();
+                const now=Date.now();
+                const expireMinutes = Math.max(1, Number(data.expireMinutes || 1));
+                let firstViewedAt = Number(data.firstViewedAt || now);
+                let expiresAt = Number(data.expiresAt || (firstViewedAt + expireMinutes * 60000));
+
+                if(!data.firstViewedAt){
+                    await setDoc(ref,{firstViewedAt,expiresAt},{merge:true});
+                }
+
+                if(now >= expiresAt){
+                    renderStudentShareExpired(content);
+                    document.getElementById('global-loader').style.display='none';
+                    return true;
+                }
+
+                content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div id="student-share-countdown-box" class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือเวลา <span id="student-share-countdown-text">--:--</span></div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center md:col-span-2"><div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม</div></div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;
+
+                clearStudentShareCountdownTimer();
+
+                const countdownText = document.getElementById('student-share-countdown-text');
+                const countdownBox = document.getElementById('student-share-countdown-box');
+
+                function updateStudentShareCountdown() {
+                    const remainingMs = Number(expiresAt || 0) - Date.now();
+
+                    if (remainingMs <= 0) {
+                        renderStudentShareExpired(content);
+
+                        try {
+                            setDoc(ref, { expiredAt: Date.now() }, { merge: true }).catch(() => {});
+                        } catch (e) {}
+
+                        return;
+                    }
+
+                    if (countdownText) {
+                        countdownText.textContent = formatStudentShareRemainingTime(remainingMs);
+                    }
+
+                    if (countdownBox) {
+                        countdownBox.title = `ลิงก์จะหมดอายุเวลา ${new Date(Number(expiresAt)).toLocaleString('th-TH')}`;
+                    }
+                }
+
+                updateStudentShareCountdown();
+
+                window.__schoolhubStudentShareCountdownTimer = setInterval(updateStudentShareCountdown, 1000);
+            }catch(e){
+                clearStudentShareCountdownTimer();
+                content.innerHTML='<div class="text-center py-14"><i class="fas fa-triangle-exclamation text-5xl text-amber-300 mb-4"></i><h2 class="text-2xl font-black text-slate-800">เปิดข้อมูลไม่ได้</h2><p class="text-slate-500 mt-2">ลิงก์ไม่ถูกต้อง หรือระบบไม่อนุญาตให้อ่านข้อมูลสาธารณะ</p></div>';
+            }
+
+            document.getElementById('global-loader').style.display='none';
+            return true;
+        }
 
         window.initStaticDropdowns = () => {
             const planWeek = document.getElementById('plan-week');
@@ -6333,7 +6733,7 @@ async function submitPlanRequest(planId){
             const existingStudentIds = new Set((state.students || []).map(s => String(s.id)));
             (ownerState.students || []).forEach(st => {
                 const room = String(st.room || st.grade || st.classroom || '').trim();
-                if(courseRooms.includes(room) || extraIds.includes(st.id)){
+                if(courseRooms.map(String).includes(String(room)) || extraIds.map(String).includes(String(st.id))){
                     if(!existingStudentIds.has(String(st.id))){
                         const ss = schoolhubCloneClean(st); ss.__sharedOwnerKey = ownerKey; state.students.push(ss); existingStudentIds.add(String(st.id));
                     }
@@ -7392,13 +7792,31 @@ async function submitPlanRequest(planId){
         };
 
         window.enterCourse = (id) => {
-            const course = state.courses.find(c => c.id === id);
-            if(!course) return;
-            currentActiveCourseId = id;
+            const course = state.courses.find(c => String(c.id) === String(id));
+            if(!course) {
+                console.error('[SHARE STUDENT] enterCourse course not found', {
+                    inputId: id,
+                    courses: state.courses
+                });
+                return;
+            }
+
+            const cid = String(course.id);
+            currentActiveCourseId = cid;
+            window.currentActiveCourseId = cid;
+
+            const detailView = document.getElementById('view-course-detail');
+            if (detailView) {
+                detailView.dataset.courseId = cid;
+            }
 
             populateHiddenCourseDropdowns();
-            document.getElementById('att-course-select').value = id;
-            document.getElementById('score-course-select').value = id;
+            document.getElementById('att-course-select').value = cid;
+            document.getElementById('score-course-select').value = cid;
+            document.querySelectorAll('button[data-action="share-student"]').forEach(btn => {
+                btn.dataset.courseId = cid;
+                btn.setAttribute('data-course-id', cid);
+            });
 
             document.getElementById('course-context-menu').classList.remove('hidden');
             document.getElementById('sidebar-course-name').textContent = `วิชา: ${course.code}`;
@@ -7418,6 +7836,8 @@ async function submitPlanRequest(planId){
             window.switchView('course-detail');
             window.switchCourseTab('overview');
             setTimeout(schoolhubApplyReadonlyUI, 60);
+            setTimeout(() => { if (typeof window.unlockShareStudentButton === 'function') window.unlockShareStudentButton(); }, 0);
+            setTimeout(() => { if (typeof window.unlockShareStudentButton === 'function') window.unlockShareStudentButton(); }, 100);
         };
 
         window.switchCourseTab = (tabId) => {
@@ -7451,26 +7871,28 @@ async function submitPlanRequest(planId){
         window.getStudentClassName = (student) => (student?.room || student?.classroom || student?.grade || '-').toString().trim() || '-';
 
         window.getCourseSelectedRooms = (courseId = currentActiveCourseId) => {
-            const course = state.courses.find(c => c.id === courseId);
+            const course = state.courses.find(c => String(c.id) === String(courseId));
             if (!course) return [];
             return Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
         };
 
         window.getCourseStudents = (courseId = currentActiveCourseId, options = {}) => {
-            const course = state.courses.find(c => c.id === courseId);
+            const course = state.courses.find(c => String(c.id) === String(courseId));
             if (!course) return [];
             const rooms = window.getCourseSelectedRooms(courseId);
             const extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
             // ถ้ารายวิชาไม่ได้เลือกห้องและไม่ได้เพิ่มรายบุคคล จะไม่ขึ้นรายชื่อเลย
             if (rooms.length === 0 && extraIds.length === 0) return [];
 
-            const actionFilter = options.ignoreActionFilter ? '' : (window.activeCourseRoomFilter?.[courseId] || '');
+            const actionFilter = options.ignoreActionFilter ? '' : (window.activeCourseRoomFilter?.[String(courseId)] || '');
             let list = (state.students || []).filter(st => {
                 const room = window.getStudentClassName(st);
-                const inRoom = rooms.includes(room);
-                const isExtra = extraIds.includes(st.id);
+                const roomKeys = rooms.map(String);
+                const extraKeys = extraIds.map(String);
+                const inRoom = roomKeys.includes(String(room));
+                const isExtra = extraKeys.includes(String(st.id)) || extraKeys.includes(String(st.studentId || '')) || extraKeys.includes(String(st.code || '')) || extraKeys.includes(String(st.studentCode || ''));
                 if (!inRoom && !isExtra) return false;
-                if (rooms.length > 1 && actionFilter) return room === actionFilter;
+                if (rooms.length > 1 && actionFilter) return String(room) === String(actionFilter);
                 return true;
             });
             return list.sort((a,b)=> String(window.getStudentClassName(a)).localeCompare(String(window.getStudentClassName(b)), 'th') || String(a.code||'').localeCompare(String(b.code||''), 'th', {numeric:true}) || String(a.name||'').localeCompare(String(b.name||''), 'th'));
@@ -7487,11 +7909,11 @@ async function submitPlanRequest(planId){
                 box.className = 'mb-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4';
                 area.parentNode.insertBefore(box, area);
             }
-            if (rooms.length <= 1) { box.classList.add('hidden'); window.activeCourseRoomFilter = window.activeCourseRoomFilter || {}; delete window.activeCourseRoomFilter[courseId]; return; }
+            if (rooms.length <= 1) { box.classList.add('hidden'); window.activeCourseRoomFilter = window.activeCourseRoomFilter || {}; delete window.activeCourseRoomFilter[String(courseId)]; return; }
             window.activeCourseRoomFilter = window.activeCourseRoomFilter || {};
-            if (!window.activeCourseRoomFilter[courseId] || !rooms.includes(window.activeCourseRoomFilter[courseId])) window.activeCourseRoomFilter[courseId] = rooms[0];
+            if (!window.activeCourseRoomFilter[String(courseId)] || !rooms.map(String).includes(String(window.activeCourseRoomFilter[String(courseId)]))) window.activeCourseRoomFilter[String(courseId)] = rooms[0];
             box.classList.remove('hidden');
-            const filterHTML = `<label class="block text-sm font-black text-slate-800 mb-2"><i class="fas fa-door-open text-primary mr-1"></i> เลือกห้อง/ชั้นสำหรับรายการนี้</label><select class="w-full bg-white border border-indigo-100 rounded-xl p-3 font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" onchange="window.activeCourseRoomFilter=window.activeCourseRoomFilter||{}; window.activeCourseRoomFilter['${courseId}']=this.value; if('${target}'==='attendance-area') renderAttendanceList(); else renderScoreList();">${rooms.map(r=>`<option value="${escapeHTML(r)}" ${window.activeCourseRoomFilter[courseId]===r?'selected':''}>${escapeHTML(r)}</option>`).join('')}</select><p class="text-xs text-slate-500 mt-2">รายวิชานี้เลือกไว้หลายห้อง จึงต้องเลือกห้องก่อนเช็คชื่อหรือบันทึกคะแนน</p>`;
+            const filterHTML = `<label class="block text-sm font-black text-slate-800 mb-2"><i class="fas fa-door-open text-primary mr-1"></i> เลือกห้อง/ชั้นสำหรับรายการนี้</label><select class="w-full bg-white border border-indigo-100 rounded-xl p-3 font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" onchange="window.activeCourseRoomFilter=window.activeCourseRoomFilter||{}; window.activeCourseRoomFilter[String('${courseId}')]=this.value; if('${target}'==='attendance-area') renderAttendanceList(); else renderScoreList();">${rooms.map(r=>`<option value="${escapeHTML(r)}" ${String(window.activeCourseRoomFilter[String(courseId)])===String(r)?'selected':''}>${escapeHTML(r)}</option>`).join('')}</select><p class="text-xs text-slate-500 mt-2">รายวิชานี้เลือกไว้หลายห้อง จึงต้องเลือกห้องก่อนเช็คชื่อหรือบันทึกคะแนน</p>`;
             if (box.dataset.schoolhubFilterHtml !== filterHTML) { box.innerHTML = filterHTML; box.dataset.schoolhubFilterHtml = filterHTML; }
         };
 
@@ -18581,7 +19003,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
 
   /* modal อื่น ๆ อยู่สูง แต่ยังต่ำกว่า custom alert/confirm */
   #user-profile-modal,#admin-first-setup-modal,#admin-plan-request-popup,#slip-result-popup,#public-announcement-popup,
-  #plan-payment-modal,#course-modal,#student-edit-modal,#grade-criteria-modal,#multi-student-modal,#share-student-modal,
+  #plan-payment-modal,#course-modal,#student-edit-modal,#grade-criteria-modal,#multi-student-modal,#share-student-modal,#student-share-create-popup,
   #admin-plan-popup-backdrop,#central-admin-change-modal,#plan-modal{
     z-index:2147482000!important;
   }
@@ -23247,6 +23669,12 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     if(d.planExpiresAt && Number(d.planExpiresAt) <= now){
       const p = currentPlanObject() || {};
       if(!(p.freeForever || p.billingCycle === 'forever')) return false;
+    }
+    if(rawKey === 'studentShare' || field === 'allowStudentShare'){
+      const p = currentPlanObject?.() || {};
+      if(p.allowStudentShare === false || d.allowStudentShare === false) return false;
+      // แผนเก่าที่ไม่มี field allowStudentShare ให้ถือว่าใช้งานได้
+      return true;
     }
     return currentRights()[field] !== false;
   }
@@ -29348,6 +29776,8 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   }
 })();
 </script>
+
+
 
 </body>
 </html>
