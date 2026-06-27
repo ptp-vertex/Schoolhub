@@ -26696,6 +26696,104 @@ body.schoolhub-settings-modal-open{
   }
 }
 </style>
+
+
+<style id="schoolhub-settings-mobile-content-visible-hard-fix">
+/* Hard scoped Settings mobile content fix: mobile and desktop use the same #settings-modal DOM. */
+@media (max-width: 768px) {
+  #settings-modal:not(.hidden) {
+    display: flex !important;
+    flex-direction: column !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    z-index: 999999 !important;
+  }
+
+  #settings-modal.settings-modal.hidden,
+  #settings-modal.hidden {
+    display: none !important;
+  }
+
+  #settings-modal .settings-dialog {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+
+  #settings-modal .settings-sidebar {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    background: #fff !important;
+  }
+
+  #settings-modal .settings-tabs-list,
+  #settings-modal .settings-sidebar nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  #settings-modal .settings-tabs-list::-webkit-scrollbar,
+  #settings-modal .settings-sidebar nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  #settings-modal .settings-tab,
+  #settings-modal [data-settings-tab] {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  #settings-modal .settings-content {
+    display: block !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px 14px calc(28px + env(safe-area-inset-bottom)) !important;
+    background: #fff !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  #settings-modal .schoolhub-settings-panel:not(.hidden) {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  #settings-modal .schoolhub-settings-panel .grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
 <script type="module" id="schoolhub-settings-single-modal-final-script">
 /* =========================================================
    SchoolHub Settings Single Modal Final Patch
@@ -26956,27 +27054,47 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   function ensureSettingsContent(){
     const modal = $('settings-modal');
     if (!modal) return null;
-    let content = modal.querySelector('.settings-content, .settings-main, .settings-right, .settings-body');
+
+    const dialog = modal.querySelector('.settings-dialog') || modal;
+    let content = null;
+    try {
+      content = dialog.querySelector(':scope > .settings-content');
+    } catch(e) {
+      content = Array.from(dialog.children || []).find(el => el.classList && el.classList.contains('settings-content')) || null;
+    }
+
     if (!content) {
-      const dialog = modal.querySelector('.settings-dialog') || modal;
       content = document.createElement('div');
       content.className = 'settings-content';
+      content.setAttribute('data-schoolhub-settings-content', '1');
       content.setAttribute('data-schoolhub-always-allowed', '1');
       dialog.appendChild(content);
-      console.warn('Settings content container was missing; recreated .settings-content');
+      console.warn('Settings content container was missing; recreated .settings-content inside #settings-modal .settings-dialog');
     }
+
+    content.hidden = false;
+    content.classList.remove('hidden');
+    content.setAttribute('data-schoolhub-settings-content', '1');
+    content.setAttribute('data-schoolhub-always-allowed', '1');
     content.style.display = 'block';
     content.style.visibility = 'visible';
     content.style.opacity = '1';
     content.style.pointerEvents = 'auto';
     content.style.overflowY = 'auto';
+    content.style.overflowX = 'hidden';
+    content.style.minHeight = '0';
+
     return content;
   }
 
   function ensureSettingsPanel(tab){
-    tab = normalizeTab(tab);
+    tab = normalizeTab(tab || 'general');
+    const content = ensureSettingsContent();
+    if (!content) return null;
+
     const id = settingsPanelId(tab);
     let panel = $(id);
+
     if (!panel && tab === 'general') {
       const legacyGeneralId = ['settings', 'panel', 'general'].join('-');
       const legacyPanel = document.getElementById(legacyGeneralId);
@@ -26985,17 +27103,21 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
         panel = legacyPanel;
       }
     }
+
     if (!panel) {
-      const content = ensureSettingsContent();
-      if (!content) return null;
       panel = document.createElement('section');
       panel.id = id;
       panel.className = 'schoolhub-settings-panel hidden space-y-5';
-      content.appendChild(panel);
       console.warn(`Settings panel ${id} was missing; recreated before render`);
     }
+
+    if (panel.parentElement !== content) {
+      content.appendChild(panel);
+    }
+
     panel.classList.add('schoolhub-settings-panel');
     panel.setAttribute('data-schoolhub-settings-panel', tab);
+    panel.setAttribute('data-schoolhub-always-allowed', '1');
     if (tab === 'general') panel.setAttribute('data-settings-panel-id', 'schoolhub-settings-panel-general');
     return panel;
   }
@@ -27005,21 +27127,32 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   }
 
   function forceSettingsContentVisible(){
+    const modal = $('settings-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+
     const content = ensureSettingsContent();
-    if (content) {
-      content.style.display = 'block';
-      content.style.visibility = 'visible';
-      content.style.opacity = '1';
-      content.style.pointerEvents = 'auto';
-      content.style.overflowY = 'auto';
-      content.style.minHeight = '0';
+    if (!content) return;
+
+    content.hidden = false;
+    content.classList.remove('hidden');
+    content.style.display = 'block';
+    content.style.visibility = 'visible';
+    content.style.opacity = '1';
+    content.style.pointerEvents = 'auto';
+    content.style.overflowY = 'auto';
+    content.style.overflowX = 'hidden';
+    content.style.minHeight = '0';
+
+    const tab = normalizeTab(window.__schoolhubSettingsActiveTab || 'general');
+    const activePanel = ensureSettingsPanel(tab);
+    if (activePanel) {
+      activePanel.hidden = false;
+      activePanel.classList.remove('hidden');
+      activePanel.style.display = 'block';
+      activePanel.style.visibility = 'visible';
+      activePanel.style.opacity = '1';
+      activePanel.style.pointerEvents = 'auto';
     }
-    document.querySelectorAll('#settings-modal .schoolhub-settings-panel:not(.hidden)').forEach(panel => {
-      panel.style.display = 'block';
-      panel.style.visibility = 'visible';
-      panel.style.opacity = '1';
-      panel.style.pointerEvents = 'auto';
-    });
   }
 
   function createGeneralPanelHTML(){
@@ -27575,45 +27708,22 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     if ((tab === 'contact-messages' || tab === 'admin-system') && !isAdminSession()) tab = 'contact-admin';
 
     if (tab === 'general') {
-      const panel = document.getElementById('schoolhub-settings-panel-general') || ensureSettingsPanel('general');
+      const panel = ensureSettingsPanel('general');
       if (!panel) return null;
       panel.className = 'schoolhub-settings-panel space-y-5';
       panel.setAttribute('data-schoolhub-settings-panel', 'general');
-      panel.innerHTML = `
-        <div class="rounded-3xl border border-indigo-100 bg-indigo-50 p-5">
-          <h3 class="text-xl font-black">โปรไฟล์ผู้ใช้งาน</h3>
-          <p class="text-slate-500 mt-1">แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้</p>
-        </div>
+      panel.setAttribute('data-schoolhub-always-allowed', '1');
 
-        <div class="bg-white rounded-3xl border border-slate-100 p-5 space-y-4">
-          <label class="block font-bold">ชื่อที่แสดง</label>
-          <input id="settings-profile-display-name-input" class="w-full border rounded-2xl px-4 py-3" data-schoolhub-always-allowed="1">
+      if (typeof createGeneralPanelHTML === 'function') {
+        panel.innerHTML = createGeneralPanelHTML();
+      } else {
+        panel.innerHTML = '<div class="rounded-3xl border border-indigo-100 bg-indigo-50 p-5"><h3 class="text-xl font-black">โปรไฟล์ผู้ใช้งาน</h3><p class="text-slate-500 mt-1">แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้</p></div><div id="schoolhub-settings-profile-host" class="schoolhub-settings-inline-profile" data-schoolhub-always-allowed="1"></div><div class="bg-white rounded-3xl border border-slate-100 p-5"><h3 class="font-black">ข้อมูลบัญชี</h3><div id="schoolhub-settings-account-summary" class="text-slate-600 mt-3"></div></div>';
+      }
 
-          <label class="block font-bold">อีเมล</label>
-          <input id="settings-profile-email-input" class="w-full border rounded-2xl px-4 py-3 bg-slate-100" readonly data-schoolhub-always-allowed="1">
-
-          <button type="button" onclick="saveSettingsProfileChanges()" data-schoolhub-always-allowed="1" class="w-full bg-indigo-600 text-white rounded-2xl py-3 font-black">
-            บันทึกโปรไฟล์
-          </button>
-
-          <button type="button" onclick="openResetPasswordPage(event)" data-schoolhub-always-allowed="1" class="w-full border border-amber-300 text-amber-700 rounded-2xl py-3 font-black">
-            ขอรีเซ็ตรหัสผ่าน
-          </button>
-        </div>
-
-        <div class="bg-white rounded-3xl border border-slate-100 p-5">
-          <h3 class="font-black">ข้อมูลบัญชี</h3>
-          <div id="schoolhub-settings-account-summary" class="text-slate-600 mt-3"></div>
-        </div>
-
-        <div class="bg-white rounded-3xl border border-slate-100 p-5">
-          <h3 class="font-black">ภาษา</h3>
-          <p class="text-slate-500 mt-2">ตั้งค่าภาษาได้จากเมนูภาษา</p>
-        </div>
-      `;
-      fillSettingsProfileData();
-      forceSettingsContentVisible();
-      unlockSettingsControls();
+      if (typeof bindGeneralPanelEvents === 'function') bindGeneralPanelEvents();
+      if (typeof fillSettingsProfileData === 'function') fillSettingsProfileData();
+      if (typeof unlockSettingsControls === 'function') unlockSettingsControls();
+      if (typeof forceSettingsContentVisible === 'function') forceSettingsContentVisible();
       return panel;
     }
 
@@ -27625,8 +27735,13 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
       'contact-messages': renderAdminMessagesPanel
     };
     const renderer = renderers[tab];
-    if (renderer) return renderer();
-    return ensureSettingsPanel(tab);
+    const panel = renderer ? renderer() : ensureSettingsPanel(tab);
+    if (panel) {
+      panel.classList.add('schoolhub-settings-panel');
+      panel.setAttribute('data-schoolhub-settings-panel', tab);
+      panel.setAttribute('data-schoolhub-always-allowed', '1');
+    }
+    return panel;
   }
 
   function ensureSettingsPanels(){
@@ -27637,36 +27752,52 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     tab = normalizeTab(tab || 'general');
     if ((tab === 'contact-messages' || tab === 'admin-system') && !isAdminSession()) tab = 'contact-admin';
     window.__schoolhubSettingsActiveTab = tab;
-    ensureSettingsPanels();
 
-    document.querySelectorAll('#settings-modal .settings-tab[data-settings-tab]').forEach(btn => {
-      const active = normalizeTab(btn.dataset.settingsTab) === tab;
+    const content = ensureSettingsContent();
+    if (!content) return tab;
+
+    if (typeof ensureCoreSettingsPanels === 'function') ensureCoreSettingsPanels();
+
+    document.querySelectorAll('#settings-modal [data-settings-tab]').forEach(btn => {
+      const btnTab = normalizeTab(btn.dataset.settingsTab || 'general');
+      const active = btnTab === tab;
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
 
-    renderSettingsPanel(tab);
+    if (typeof renderSettingsPanel === 'function') renderSettingsPanel(tab);
 
-    document.querySelectorAll('#settings-modal .schoolhub-settings-panel').forEach(p => {
-      p.classList.add('hidden');
-      p.style.display = '';
-      p.style.visibility = '';
-      p.style.opacity = '';
-      p.style.pointerEvents = '';
+    let panels = [];
+    try {
+      panels = Array.from(content.querySelectorAll(':scope > .schoolhub-settings-panel'));
+    } catch(e) {
+      panels = Array.from(content.children || []).filter(el => el.classList && el.classList.contains('schoolhub-settings-panel'));
+    }
+    panels.forEach(panel => {
+      panel.classList.add('hidden');
+      panel.hidden = true;
+      panel.style.display = 'none';
+      panel.style.visibility = 'hidden';
+      panel.style.opacity = '0';
+      panel.style.pointerEvents = 'none';
     });
 
-    const panel = document.getElementById('schoolhub-settings-panel-' + tab) || document.getElementById('schoolhub-settings-panel-general');
-    if (panel) {
-      panel.classList.remove('hidden');
-      panel.style.display = 'block';
-      panel.style.visibility = 'visible';
-      panel.style.opacity = '1';
-      panel.style.pointerEvents = 'auto';
+    const activePanel = ensureSettingsPanel(tab);
+    if (activePanel) {
+      activePanel.classList.remove('hidden');
+      activePanel.hidden = false;
+      activePanel.style.display = 'block';
+      activePanel.style.visibility = 'visible';
+      activePanel.style.opacity = '1';
+      activePanel.style.pointerEvents = 'auto';
     }
 
-    forceSettingsContentVisible();
-    unlockSettingsControls();
-    applyLanguage();
+    if (typeof forceSettingsContentVisible === 'function') forceSettingsContentVisible();
+    if (typeof unlockSettingsControls === 'function') unlockSettingsControls();
+    if (typeof applyLanguage === 'function') applyLanguage();
+    if (tab === 'contact-messages' && typeof loadAdminContactMessages === 'function') loadAdminContactMessages();
+    if (tab === 'contact-admin' && typeof schoolhubPrefillContactEmail === 'function') schoolhubPrefillContactEmail();
+    if (tab === 'contact-admin' && typeof prefillContactEmail === 'function') prefillContactEmail();
     if (tab === 'contact-messages' || tab === 'admin-system') refreshAdminMessageBadges();
     return tab;
   }
@@ -27719,10 +27850,16 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     const modal = $('settings-modal');
     if (!modal) return;
     try { document.body.appendChild(modal); } catch(e) {}
+
     modal.classList.remove('hidden');
+    modal.hidden = false;
     modal.setAttribute('aria-hidden','false');
+    modal.setAttribute('data-schoolhub-always-allowed', '1');
     if (!document.body.classList.contains('overflow-hidden')) document.body.dataset.schoolhubSettingsAddedOverflowHidden = '1';
     document.body.classList.add('schoolhub-settings-modal-open', 'overflow-hidden');
+
+    tab = normalizeTab(tab || window.__schoolhubSettingsActiveTab || 'general');
+    window.__schoolhubSettingsActiveTab = tab;
 
     try {
       const admin = isAdminSession();
@@ -27738,17 +27875,18 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
       if (admin) startAdminContactRealtime(false); else updateAdminMessageBadges(0);
     } catch(e) { console.warn('Settings chrome refresh skipped:', e); }
 
-    ensureSettingsPanels();
-    renderSettingsPanel(tab || 'general');
-    switchSettingsTab(tab || 'general');
+    ensureSettingsContent();
+    if (typeof ensureCoreSettingsPanels === 'function') ensureCoreSettingsPanels();
+    if (typeof renderSchoolHubSettings === 'function') renderSchoolHubSettings(tab);
+    switchSettingsTab(tab);
     unlockSettingsControls();
     forceSettingsContentVisible();
 
-    setTimeout(function(){
-      switchSettingsTab(window.__schoolhubSettingsActiveTab || tab || 'general');
+    requestAnimationFrame(function(){
+      switchSettingsTab(window.__schoolhubSettingsActiveTab || 'general');
       unlockSettingsControls();
       forceSettingsContentVisible();
-    }, 0);
+    });
     setTimeout(function(){ document.querySelector('#settings-modal .settings-close')?.focus?.(); }, 0);
   };
   window.openSchoolHubSettings = function(tab='general'){
@@ -27758,6 +27896,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     const modal = $('settings-modal');
     if (!modal) return;
     modal.classList.add('hidden');
+    modal.hidden = true;
     modal.setAttribute('aria-hidden','true');
     document.body.classList.remove('schoolhub-settings-modal-open');
     if (document.body.dataset.schoolhubSettingsAddedOverflowHidden === '1') {
