@@ -25512,6 +25512,114 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 })();
 </script>
 
+
+
+<style id="schoolhub-profile-flow-settings-mobile-top-layer-fix">
+/* Profile flow + Settings mobile top-layer fix: scoped to Settings/Profile only */
+#settings-modal-backdrop{
+  z-index:999990!important;
+}
+#settings-modal.settings-modal{
+  position:fixed!important;
+  inset:0!important;
+  z-index:999991!important;
+  isolation:isolate!important;
+  pointer-events:auto!important;
+}
+#settings-modal .settings-dialog{
+  position:relative!important;
+  z-index:999991!important;
+}
+body.schoolhub-settings-modal-open{
+  overflow:hidden!important;
+}
+#settings-modal .settings-content{
+  flex:1 1 auto!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  min-height:0!important;
+}
+@media (max-width:768px){
+  #settings-modal.settings-modal{
+    position:fixed!important;
+    inset:0!important;
+    width:100vw!important;
+    height:100dvh!important;
+    max-width:none!important;
+    max-height:none!important;
+    margin:0!important;
+    border-radius:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:stretch!important;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0!important;
+    background:#fff!important;
+  }
+  #settings-modal.settings-modal.hidden{display:none!important;}
+  #settings-modal .settings-dialog{
+    width:100vw!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    border-radius:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
+  }
+  #settings-modal .settings-sidebar{
+    flex:0 0 auto!important;
+    width:100%!important;
+    max-height:none!important;
+    overflow:hidden!important;
+    border-right:0!important;
+    border-bottom:1px solid #e5e7eb!important;
+    padding:10px 12px 8px!important;
+  }
+  #settings-modal .settings-sidebar-header{
+    flex-direction:row!important;
+    align-items:center!important;
+    gap:10px!important;
+    padding:0 0 8px!important;
+    margin-bottom:8px!important;
+  }
+  #settings-modal .settings-tabs-list{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    gap:8px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:0 2px 4px!important;
+    scrollbar-width:none!important;
+  }
+  #settings-modal .settings-tabs-list::-webkit-scrollbar{display:none!important;}
+  #settings-modal .settings-tab{
+    flex:0 0 auto!important;
+    width:auto!important;
+    white-space:nowrap!important;
+    text-align:center!important;
+    padding:10px 13px!important;
+    border-radius:999px!important;
+  }
+  #settings-modal .settings-tab .admin-message-badge{
+    margin-left:6px!important;
+  }
+  #settings-modal .settings-content{
+    flex:1 1 auto!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:14px 14px calc(24px + env(safe-area-inset-bottom))!important;
+  }
+}
+</style>
+
 <script type="module" id="schoolhub-settings-single-modal-final-script">
 /* =========================================================
    SchoolHub Settings Single Modal Final Patch
@@ -25541,6 +25649,8 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   const db = getFirestore(app);
   const __schoolhubSettingsOriginalOpenUserPlanSelector = window.openUserPlanSelector;
   const __schoolhubSettingsOriginalRenderUserPlans = window.renderUserPlans;
+  const __schoolhubProfilePopupOpenUserProfileSettings = window.openUserProfileSettings;
+  const __schoolhubProfilePopupSaveUserProfileChanges = window.saveUserProfileChanges;
 
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
@@ -25556,11 +25666,11 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   const I18N_BASE = {
     th: {
       settings:'ตั้งค่า', general:'ทั่วไป', plans:'แผนการใช้งาน', language:'ภาษา', contactAdmin:'ติดต่อผู้ดูแลระบบ', userMessages:'ข้อความจากผู้ใช้', systemSettings:'ตั้งค่าระบบ', saveLanguage:'บันทึกภาษา', currentPlan:'แผนปัจจุบัน', backHome:'กลับหน้าหลัก',
-      settingsDescription:'ศูนย์รวมโปรไฟล์ แผนการใช้งาน ภาษา และช่องทางติดต่อผู้ดูแลระบบ', generalDescription:'รวมข้อมูลโปรไฟล์ บัญชี และตัวเลือกพื้นฐานไว้ในหน้าเดียว แก้ไขได้จากด้านขวาของหน้าต่างนี้โดยไม่เปิดหน้าต่างซ้อน', userProfile:'โปรไฟล์ผู้ใช้งาน', profileDescription:'แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้', accountInfo:'ข้อมูลบัญชี', loadingAccount:'กำลังโหลดข้อมูลบัญชี...', displayTheme:'ธีม / รูปแบบการแสดงผล', displayThemeDescription:'ใช้ธีมและรูปแบบการแสดงผลเดิมของระบบ เพื่อไม่กระทบหน้าคะแนน เกรด และ Export', languageCardDescription:'เลือกภาษาได้จากเมนูภาษาในแถบตั้งค่า', notifications:'การแจ้งเตือน', notificationsDescription:'ใช้การแจ้งเตือนเดิมของระบบและแสดงผลในหน้าต่างเดียวกัน', plansDescription:'ดูเฉพาะแผนปัจจุบันและประวัติการใช้งาน ส่วนการเลือกหรือเปลี่ยนแผนให้เปิดจากเมนูหลักเดิม', chooseLanguageDescription:'เลือกภาษาที่ต้องการใช้ในระบบ', selectLanguageLabel:'เลือกภาษา', languagePersistHint:'ระบบจะจำภาษาที่เลือกไว้ และใช้อีกครั้งเมื่อเปิดเว็บใหม่', contactAdminDescription:'หากพบปัญหาการใช้งาน สามารถติดต่อผู้ดูแลระบบได้ ระบบจะบันทึกข้อความไว้ให้แอดมินตรวจสอบ', planHistory:'ประวัติการใช้งาน / ประวัติแผน', planHistoryDescription:'แสดงเฉพาะประวัติคำขอแผนและการชำระเงิน ไม่แสดงรายการเลือกแผนเต็มใน popup', refresh:'รีเฟรช', loadingHistory:'กำลังโหลดประวัติ...', admin:'แอดมิน', regularUser:'ผู้ใช้งานทั่วไป', name:'ชื่อ', email:'อีเมล', status:'สถานะ', settingsMode:'โหมดการตั้งค่า', editInSinglePopup:'แก้ไขใน popup เดียว', nextBillingStart:'เริ่มเดือนถัดไป', courseLimit:'เพิ่มรายวิชาได้', courseUnit:'วิชา', unlimited:'ไม่จำกัด', saveSuccess:'สำเร็จ', saveLanguageDone:'บันทึกภาษาเรียบร้อยแล้ว', saveLocalSuccess:'บันทึกในเครื่องแล้ว', firebaseLanguageSaveFailed:'แต่ยังบันทึกภาษาขึ้น Firebase ไม่ได้', dashboard:'แดชบอร์ด', subscriptionPlan:'แผนการใช้งาน', contactTitle:'หัวข้อ', contactMessage:'รายละเอียดปัญหา', contactEmail:'อีเมลติดต่อกลับ'
+      settingsDescription:'ศูนย์รวมโปรไฟล์ แผนการใช้งาน ภาษา และช่องทางติดต่อผู้ดูแลระบบ', generalDescription:'รวมข้อมูลโปรไฟล์ บัญชี และตัวเลือกพื้นฐานไว้ในหน้าเดียว แก้ไขได้จากด้านขวาของหน้าต่างนี้โดยไม่เปิดหน้าต่างซ้อน', userProfile:'โปรไฟล์ผู้ใช้งาน', profileDescription:'แก้ไขข้อมูลแสดงผลของบัญชีได้ตรงนี้', accountInfo:'ข้อมูลบัญชี', loadingAccount:'กำลังโหลดข้อมูลบัญชี...', displayTheme:'ธีม / รูปแบบการแสดงผล', displayThemeDescription:'ใช้ธีมและรูปแบบการแสดงผลเดิมของระบบ เพื่อไม่กระทบหน้าคะแนน เกรด และ Export', languageCardDescription:'เลือกภาษาได้จากเมนูภาษาในแถบตั้งค่า', notifications:'การแจ้งเตือน', notificationsDescription:'ใช้การแจ้งเตือนเดิมของระบบและแสดงผลในหน้าต่างเดียวกัน', plansDescription:'ดูเฉพาะแผนปัจจุบันและประวัติการใช้งาน ส่วนการเลือกหรือเปลี่ยนแผนให้เปิดจากเมนูหลักเดิม', chooseLanguageDescription:'เลือกภาษาที่ต้องการใช้ในระบบ', selectLanguageLabel:'เลือกภาษา', languagePersistHint:'ระบบจะจำภาษาที่เลือกไว้ และใช้อีกครั้งเมื่อเปิดเว็บใหม่', contactAdminDescription:'หากพบปัญหาการใช้งาน สามารถติดต่อผู้ดูแลระบบได้ ระบบจะบันทึกข้อความไว้ให้แอดมินตรวจสอบ', planHistory:'ประวัติการใช้งาน / ประวัติแผน', planHistoryDescription:'แสดงเฉพาะประวัติคำขอแผนและการชำระเงิน ไม่แสดงรายการเลือกแผนเต็มใน popup', refresh:'รีเฟรช', loadingHistory:'กำลังโหลดประวัติ...', admin:'แอดมิน', regularUser:'ผู้ใช้งานทั่วไป', name:'ชื่อ', email:'อีเมล', status:'สถานะ', settingsMode:'โหมดการตั้งค่า', editInSinglePopup:'แก้ไขใน popup เดียว', nextBillingStart:'เริ่มเดือนถัดไป', courseLimit:'เพิ่มรายวิชาได้', courseUnit:'วิชา', unlimited:'ไม่จำกัด', saveSuccess:'สำเร็จ', saveLanguageDone:'บันทึกภาษาเรียบร้อยแล้ว', saveLocalSuccess:'บันทึกในเครื่องแล้ว', firebaseLanguageSaveFailed:'แต่ยังบันทึกภาษาขึ้น Firebase ไม่ได้', dashboard:'แดชบอร์ด', subscriptionPlan:'แผนการใช้งาน', contactTitle:'หัวข้อ', contactMessage:'รายละเอียดปัญหา', contactEmail:'อีเมลติดต่อกลับ', saveProfile:'บันทึกโปรไฟล์'
     },
     en: {
       settings:'Settings', general:'General', plans:'Subscription Plan', language:'Language', contactAdmin:'Contact Admin', userMessages:'User messages', systemSettings:'System settings', saveLanguage:'Save language', currentPlan:'Current plan', backHome:'Back to home',
-      settingsDescription:'Profile, plan, language, and contact settings in one place', generalDescription:'Manage profile, account, and basic options here without opening another popup.', userProfile:'User profile', profileDescription:'Edit your display information here.', accountInfo:'Account information', loadingAccount:'Loading account information...', displayTheme:'Theme / Display', displayThemeDescription:'Keeps the existing display style so scores, grades, and exports are not affected.', languageCardDescription:'Choose the language from the Language menu in settings.', notifications:'Notifications', notificationsDescription:'Uses the existing notification system in the same window.', plansDescription:'Shows only the current plan and usage history. Choose or change plans from the original main menu.', chooseLanguageDescription:'Choose the language you want to use in the system', selectLanguageLabel:'Select language', languagePersistHint:'The system remembers your language and applies it when you reopen the website.', contactAdminDescription:'Contact the administrator if you have a problem. The system records your message for admin review.', planHistory:'Usage / plan history', planHistoryDescription:'Shows only plan requests and payment history, not the full plan selector inside the popup.', refresh:'Refresh', loadingHistory:'Loading history...', admin:'Admin', regularUser:'Regular user', name:'Name', email:'Email', status:'Status', settingsMode:'Settings mode', editInSinglePopup:'Edit in one popup', nextBillingStart:'Next billing start', courseLimit:'Courses allowed', courseUnit:'courses', unlimited:'Unlimited', saveSuccess:'Success', saveLanguageDone:'Language saved successfully', saveLocalSuccess:'Saved locally', firebaseLanguageSaveFailed:'but Firebase language sync failed', dashboard:'Dashboard', subscriptionPlan:'Subscription Plan', contactTitle:'Title', contactMessage:'Problem details', contactEmail:'Contact email'
+      settingsDescription:'Profile, plan, language, and contact settings in one place', generalDescription:'Manage profile, account, and basic options here without opening another popup.', userProfile:'User profile', profileDescription:'Edit your display information here.', accountInfo:'Account information', loadingAccount:'Loading account information...', displayTheme:'Theme / Display', displayThemeDescription:'Keeps the existing display style so scores, grades, and exports are not affected.', languageCardDescription:'Choose the language from the Language menu in settings.', notifications:'Notifications', notificationsDescription:'Uses the existing notification system in the same window.', plansDescription:'Shows only the current plan and usage history. Choose or change plans from the original main menu.', chooseLanguageDescription:'Choose the language you want to use in the system', selectLanguageLabel:'Select language', languagePersistHint:'The system remembers your language and applies it when you reopen the website.', contactAdminDescription:'Contact the administrator if you have a problem. The system records your message for admin review.', planHistory:'Usage / plan history', planHistoryDescription:'Shows only plan requests and payment history, not the full plan selector inside the popup.', refresh:'Refresh', loadingHistory:'Loading history...', admin:'Admin', regularUser:'Regular user', name:'Name', email:'Email', status:'Status', settingsMode:'Settings mode', editInSinglePopup:'Edit in one popup', nextBillingStart:'Next billing start', courseLimit:'Courses allowed', courseUnit:'courses', unlimited:'Unlimited', saveSuccess:'Success', saveLanguageDone:'Language saved successfully', saveLocalSuccess:'Saved locally', firebaseLanguageSaveFailed:'but Firebase language sync failed', dashboard:'Dashboard', subscriptionPlan:'Subscription Plan', contactTitle:'Title', contactMessage:'Problem details', contactEmail:'Contact email', saveProfile:'Save profile'
     }
   };
   const EXTRA_I18N = {
@@ -25748,28 +25858,47 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     });
   }
 
+  function renderProfilePanel(){
+    const host = $('schoolhub-settings-profile-host');
+    if (!host) return;
+    if (host.dataset.schoolhubProfilePanelRendered === '1' && host.querySelector('#settings-profile-display-name-input')) return;
+    host.innerHTML = `
+      <div class="space-y-4 settings-profile-form" data-schoolhub-always-allowed="1">
+        <div id="settings-profile-admin-username-wrap" class="hidden">
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อผู้ใช้ Admin</label>
+          <input id="settings-profile-admin-username-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Admin" data-schoolhub-always-allowed="1">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อที่แสดง</label>
+          <input id="settings-profile-display-name-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="ชื่อ - นามสกุล" data-schoolhub-always-allowed="1">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1.5">อีเมล</label>
+          <input id="settings-profile-email-input" type="text" class="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-slate-500" readonly data-schoolhub-always-allowed="1">
+        </div>
+        <div id="settings-admin-profile-password-wrap" class="hidden bg-rose-50 border border-rose-100 rounded-2xl p-4">
+          <label class="block text-sm font-bold text-rose-700 mb-1.5">รหัสผ่าน Admin ใหม่</label>
+          <input id="settings-admin-profile-password-input" type="password" class="w-full bg-white border border-rose-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน" data-schoolhub-always-allowed="1">
+          <p class="text-xs text-rose-500 mt-2">บัญชี Admin สามารถแก้ชื่อผู้ใช้ อีเมล และรหัสผ่านได้จาก Settings โดยตรง</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 pt-2">
+          <button type="button" onclick="saveSettingsProfileChanges()" data-schoolhub-always-allowed="1" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> <span data-i18n="saveProfile">บันทึกโปรไฟล์</span></button>
+          <button type="button" data-settings-reset-password class="forgot-password-link w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition" onclick="return openResetPasswordPage(event)" data-schoolhub-always-allowed="1"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
+        </div>
+      </div>
+    `;
+    host.dataset.schoolhubProfilePanelRendered = '1';
+  }
+
   function ensureAdminProfileFields(){
-    const emailInput = $('profile-email-input');
-    if (emailInput && !$('profile-admin-username-input')) {
-      const wrap = document.createElement('div');
-      wrap.id = 'profile-admin-username-wrap';
-      wrap.className = 'hidden';
-      wrap.innerHTML = `
-        <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อผู้ใช้ Admin</label>
-        <input id="profile-admin-username-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Admin">
-      `;
-      emailInput.closest('div')?.insertAdjacentElement('beforebegin', wrap);
-    }
-    const saveBtn = document.querySelector('#schoolhub-settings-profile-host button[onclick*="saveUserProfileChanges"]');
-      if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> <span data-i18n="saveProfile">' + (window.t ? window.t('saveProfile') : 'บันทึกโปรไฟล์') + '</span>';
+    renderProfilePanel();
+    const saveBtn = document.querySelector('#schoolhub-settings-profile-host button[onclick*="saveSettingsProfileChanges"] span[data-i18n="saveProfile"]');
+    if (saveBtn) saveBtn.textContent = 'บันทึกโปรไฟล์';
   }
 
   function moveProfileIntoSettings(){
-    const host = $('schoolhub-settings-profile-host');
-    const modalBody = document.querySelector('#user-profile-modal .p-6.space-y-4');
-    if (!host || !modalBody || host.contains(modalBody)) return;
-    host.appendChild(modalBody);
-    $('user-profile-modal')?.classList.add('hidden');
+    // Do not move the original #user-profile-modal DOM. Settings uses its own inline form.
+    renderProfilePanel();
     ensureAdminProfileFields();
   }
 
@@ -25807,13 +25936,13 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     ensureAdminProfileFields();
     const admin = isAdminSession();
     const authUser = auth.currentUser;
-    const displayInput = $('profile-display-name-input');
-    const emailInput = $('profile-email-input');
-    const usernameWrap = $('profile-admin-username-wrap');
-    const usernameInput = $('profile-admin-username-input');
-    const passWrap = $('admin-profile-password-wrap');
-    const passInput = $('admin-profile-password-input');
-    const resetBtn = document.querySelector('#schoolhub-settings-profile-host [data-reset-password]');
+    const displayInput = $('settings-profile-display-name-input');
+    const emailInput = $('settings-profile-email-input');
+    const usernameWrap = $('settings-profile-admin-username-wrap');
+    const usernameInput = $('settings-profile-admin-username-input');
+    const passWrap = $('settings-admin-profile-password-wrap');
+    const passInput = $('settings-admin-profile-password-input');
+    const resetBtn = document.querySelector('#schoolhub-settings-profile-host [data-settings-reset-password]');
 
     if (admin) {
       const d = await readAdminCred();
@@ -25859,16 +25988,16 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   async function saveInlineProfile(){
     moveProfileIntoSettings();
     ensureAdminProfileFields();
-    const displayName = norm($('profile-display-name-input')?.value);
+    const displayName = norm($('settings-profile-display-name-input')?.value);
     if (!displayName) return alertBox('กรอกข้อมูลไม่ครบ', 'กรุณากรอกชื่อที่แสดง', true);
     const admin = isAdminSession();
     loader(true);
     try{
       if (admin) {
         const old = await readAdminCred();
-        const username = norm($('profile-admin-username-input')?.value || old.username || 'Admin') || 'Admin';
-        const email = norm($('profile-email-input')?.value || old.email || '');
-        const newPass = norm($('admin-profile-password-input')?.value);
+        const username = norm($('settings-profile-admin-username-input')?.value || old.username || 'Admin') || 'Admin';
+        const email = norm($('settings-profile-email-input')?.value || old.email || '');
+        const newPass = norm($('settings-admin-profile-password-input')?.value);
         const password = newPass || old.password || localStorage.getItem('schoolhub_admin_password') || 'Admin123';
         if (password.length < 6) throw new Error('รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร');
         if (email && !isEmail(email)) throw new Error('กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้');
@@ -25889,7 +26018,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
         localStorage.setItem('schoolhub_admin_email', email || username);
         if (newPass) localStorage.setItem('schoolhub_admin_password', newPass);
         setHeader(displayName, email || username);
-        if ($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+        if ($('settings-admin-profile-password-input')) $('settings-admin-profile-password-input').value = '';
         renderAccountSummary();
         alertBox('บันทึกสำเร็จ', 'บันทึกโปรไฟล์ Admin ลง Firebase แล้ว');
       } else {
@@ -25900,7 +26029,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
           if (typeof window.addUserToDirectory === 'function') await window.addUserToDirectory(user, displayName, 'user');
           else await setDoc(doc(db, 'public_users_directory', String(user.email || user.uid).toLowerCase()), { uid:user.uid, email:user.email || '', name:displayName, displayName, role:'user', updatedAt:serverTimestamp() }, { merge:true });
         } catch(e) { console.warn('directory profile sync skipped:', e); }
-        setHeader(displayName, user.email || norm($('profile-email-input')?.value));
+        setHeader(displayName, user.email || norm($('settings-profile-email-input')?.value));
         renderAccountSummary();
         alertBox('บันทึกสำเร็จ', 'แก้ไขข้อมูลแสดงผลของบัญชีเรียบร้อยแล้ว');
       }
@@ -25914,8 +26043,8 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     if (!box) return;
     box.removeAttribute('data-i18n');
     const admin = isAdminSession();
-    const name = norm($('profile-display-name-input')?.value || $('user-display-name')?.textContent || (admin ? 'Administrator' : 'ผู้ใช้งาน'));
-    const email = norm($('profile-email-input')?.value || $('user-display-email')?.textContent || (admin ? localStorage.getItem('schoolhub_admin_email') : auth.currentUser?.email) || '');
+    const name = norm($('settings-profile-display-name-input')?.value || $('user-display-name')?.textContent || (admin ? 'Administrator' : 'ผู้ใช้งาน'));
+    const email = norm($('settings-profile-email-input')?.value || $('user-display-email')?.textContent || (admin ? localStorage.getItem('schoolhub_admin_email') : auth.currentUser?.email) || '');
     const role = admin ? t('admin') : t('regularUser');
     box.innerHTML = `
       <div><b>${esc(t('name'))}:</b> ${esc(name || '-')}</div>
@@ -26123,12 +26252,15 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
   window.openSettingsModal = function(tab='general'){
     const modal = $('settings-modal');
     if (!modal) return;
+    try { document.body.appendChild(modal); } catch(e) {}
     window.__schoolhubSettingsActiveTab = normalizeTab(tab);
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden','false');
-    document.body.classList.add('schoolhub-settings-modal-open');
+    if (!document.body.classList.contains('overflow-hidden')) document.body.dataset.schoolhubSettingsAddedOverflowHidden = '1';
+    document.body.classList.add('schoolhub-settings-modal-open', 'overflow-hidden');
     renderSettings();
     setTimeout(unlockSettingsControls, 0);
+    setTimeout(function(){ document.querySelector('#settings-modal .settings-close')?.focus?.(); }, 0);
   };
   window.openSchoolHubSettings = function(tab='general'){
     return window.openSettingsModal(tab);
@@ -26139,14 +26271,38 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden','true');
     document.body.classList.remove('schoolhub-settings-modal-open');
+    if (document.body.dataset.schoolhubSettingsAddedOverflowHidden === '1') {
+      document.body.classList.remove('overflow-hidden');
+      delete document.body.dataset.schoolhubSettingsAddedOverflowHidden;
+    }
   };
 
-  window.openUserProfileSettings = function(){
-    window.openSettingsModal('general');
+  window.renderProfilePanel = function(){
+    renderProfilePanel();
     fillProfilePanel();
     return false;
   };
-  window.saveUserProfileChanges = saveInlineProfile;
+  window.openUserProfileSettingsFromSettings = function(){
+    setActiveTab('general');
+    renderProfilePanel();
+    fillProfilePanel();
+    return false;
+  };
+  window.openUserProfileSettings = function(){
+    if (typeof __schoolhubProfilePopupOpenUserProfileSettings === 'function') {
+      return __schoolhubProfilePopupOpenUserProfileSettings.apply(this, arguments);
+    }
+    if (typeof window.openModal === 'function') return window.openModal('user-profile-modal');
+    $('user-profile-modal')?.classList.remove('hidden');
+    return false;
+  };
+  window.saveUserProfileChanges = function(){
+    if (typeof __schoolhubProfilePopupSaveUserProfileChanges === 'function') {
+      return __schoolhubProfilePopupSaveUserProfileChanges.apply(this, arguments);
+    }
+    return saveInlineProfile.apply(this, arguments);
+  };
+  window.saveSettingsProfileChanges = saveInlineProfile;
   window.renderUserPlans = function(){
     const result = typeof __schoolhubSettingsOriginalRenderUserPlans === 'function'
       ? __schoolhubSettingsOriginalRenderUserPlans.apply(this, arguments)
@@ -26179,13 +26335,9 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
   const __schoolhubSettingsOldOpenModal = window.openModal;
   window.openModal = function(id){
-    if (id === 'user-profile-modal') {
-      window.openSettingsModal('general');
-      return false;
-    }
     return typeof __schoolhubSettingsOldOpenModal === 'function'
       ? __schoolhubSettingsOldOpenModal.apply(this, arguments)
-      : undefined;
+      : (id ? $(''+id)?.classList.remove('hidden') : undefined);
   };
 
   const ADMIN_CONTACT_OPEN_STATUSES = new Set(['new','pending','รอดำเนินการ','กำลังตรวจสอบ','ตรวจสอบอยู่']);
@@ -26661,17 +26813,17 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     const action = onclickBtn.getAttribute('onclick') || '';
     if (/openUserProfileSettings|openProfileModal/.test(action)) {
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-      window.openUserProfileSettings();
+      window.openUserProfileSettingsFromSettings?.();
       return false;
     }
     if (/openUserPlanSelector|user-plans/.test(action)) {
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-      window.openUserPlanSelector();
+      setActiveTab('plans');
       return false;
     }
     if (/openAdminContactModal/.test(action)) {
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-      window.openAdminContactModal();
+      setActiveTab('contact-admin');
       return false;
     }
   }, true);
