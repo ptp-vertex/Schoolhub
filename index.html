@@ -1,3 +1,9 @@
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3114,6 +3120,9 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                 <button id="nav-students" onclick="openStudentsManager()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="students-master">
                     <i class="fas fa-users w-5 text-center"></i> ฐานข้อมูลนักเรียน
                 </button>
+                <button id="nav-import-excel" onclick="openImportExcel()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 transition-all hidden" data-target="import-excel">
+                    <i class="fas fa-file-import w-5 text-center"></i> นำเข้าข้อมูล Excel
+                </button>
                 <button id="nav-user-plans" onclick="openUserPlanSelector()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="user-plans">
                     <i class="fas fa-layer-group w-5 text-center"></i> เลือก / เปลี่ยนแผน
                 </button>
@@ -3152,6 +3161,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                         <i class="fas fa-bullhorn w-5 text-center"></i> ประกาศ
                     </button>
                     <button id="nav-admin-plans" onclick="switchView('admin-plans')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2" data-target="admin-plans"><i class="fas fa-layer-group w-5 text-center"></i> แผนการใช้งาน</button>
+                    <button id="nav-admin-import-control" onclick="switchView('admin-import-control')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-teal-600 hover:bg-teal-50 mt-2" data-target="admin-import-control"><i class="fas fa-file-import w-5 text-center"></i> ควบคุม Import</button>
                     <button id="nav-admin-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general')" data-schoolhub-always-allowed="1" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-700 hover:bg-slate-50 mt-2" data-target="settings"><i class="fas fa-sliders-h w-5 text-center"></i> ตั้งค่า</button>
                 </div>
             </nav>
@@ -3181,6 +3191,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                     </button>
                     <button id="mobile-nav-dashboard" onclick="goToHome(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left bg-indigo-50 text-primary font-medium"><i class="fas fa-border-all"></i> ห้องเรียนของฉัน</button>
                     <button id="mobile-nav-students" onclick="openStudentsManager(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-users"></i> ฐานข้อมูลนักเรียน</button>
+                    <button id="mobile-nav-import-excel" onclick="openImportExcel(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-700 hover:bg-emerald-50 font-medium hidden"><i class="fas fa-file-import"></i> นำเข้าข้อมูล Excel</button>
                     <button id="mobile-nav-user-plans" onclick="openUserPlanSelector(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-layer-group"></i> เลือก / เปลี่ยนแผน</button>
                     <button id="mobile-nav-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general'); toggleMobileMenu()" data-schoolhub-always-allowed="1" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-sliders-h"></i> ตั้งค่า</button>
                     <div id="mobile-admin-menu-group" class="hidden space-y-2 mt-4">
@@ -3189,6 +3200,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                         <button onclick="switchView('admin-dashboard'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-chart-line"></i> แดชบอร์ดรวม</button>
                         <button onclick="switchView('admin-announcements'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-bullhorn"></i> ประกาศ</button>
                         <button onclick="switchView('admin-plans'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-600 bg-emerald-50 font-medium"><i class="fas fa-layer-group"></i> แผนการใช้งาน</button>
+                        <button onclick="switchView('admin-import-control'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-teal-600 bg-teal-50 font-medium"><i class="fas fa-file-import"></i> ควบคุม Import</button>
                         <button id="mobile-nav-admin-settings" type="button" data-open-settings="1" onclick="openSchoolHubSettings('general'); toggleMobileMenu()" data-schoolhub-always-allowed="1" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 bg-slate-50 font-medium"><i class="fas fa-sliders-h"></i> ตั้งค่า</button>
                     </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
@@ -3775,6 +3787,111 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                     <!-- Edit / Add Plan Panel (slide in below) -->
                     
                     <!-- admin-plan-edit-panel removed: popup is the only plan form -->
+                </div>
+
+                <!-- View: Import Excel (user) -->
+                <div id="view-import-excel" class="view-section hidden fade-in">
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+                        <div class="p-6 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 class="text-xl font-black text-slate-800"><i class="fas fa-file-import text-emerald-600 mr-2"></i>นำเข้าข้อมูล Excel</h3>
+                                <p class="text-sm text-slate-500 mt-1">อัพโหลดไฟล์เช็คชื่อและภาพรวมจากระบบ ข้อมูลจะถูกเพิ่มเข้าระบบโดยอัตโนมัติ</p>
+                            </div>
+                            <div id="import-countdown-banner" class="hidden bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 text-amber-800 text-sm font-bold text-center"></div>
+                        </div>
+                        <div class="p-6">
+                            <!-- Drop zone -->
+                            <div id="import-dropzone" class="border-2 border-dashed border-emerald-300 rounded-2xl p-10 text-center hover:bg-emerald-50 transition cursor-pointer bg-slate-50/40" onclick="document.getElementById('import-file-input').click()" ondragover="event.preventDefault(); this.classList.add('bg-emerald-50')" ondragleave="this.classList.remove('bg-emerald-50')" ondrop="handleImportDrop(event)">
+                                <i class="fas fa-cloud-upload-alt text-5xl text-emerald-400 mb-3 block"></i>
+                                <p class="font-black text-slate-700 text-lg mb-1">ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือก</p>
+                                <p class="text-slate-400 text-sm">รองรับ .xlsx — เช็คชื่อ และภาพรวมวิชา</p>
+                                <input type="file" id="import-file-input" accept=".xlsx" multiple class="hidden" onchange="handleImportFiles(this.files)">
+                            </div>
+                            <!-- File queue -->
+                            <div id="import-file-list" class="mt-5 space-y-2 hidden"></div>
+                            <!-- Action buttons -->
+                            <div class="mt-5 flex gap-3 flex-wrap">
+                                <button onclick="startImportExcel()" id="import-start-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-black hidden"><i class="fas fa-play mr-2"></i>เริ่มนำเข้าข้อมูล</button>
+                                <button onclick="clearImportQueue()" id="import-clear-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3 rounded-xl font-bold hidden"><i class="fas fa-trash mr-2"></i>ล้างรายการ</button>
+                            </div>
+                            <!-- Results -->
+                            <div id="import-result-box" class="mt-6 hidden"></div>
+                        </div>
+                    </div>
+                    <!-- Import Log -->
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                            <h4 class="font-black text-slate-700"><i class="fas fa-history mr-2 text-slate-400"></i>ประวัติการนำเข้า</h4>
+                            <button onclick="clearImportLog()" class="text-xs text-slate-400 hover:text-rose-500 font-bold"><i class="fas fa-trash mr-1"></i>ล้างประวัติ</button>
+                        </div>
+                        <div id="import-log-list" class="p-5 space-y-2 max-h-72 overflow-y-auto">
+                            <p class="text-slate-400 text-sm text-center py-4">ยังไม่มีประวัติ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Admin Import Control -->
+                <div id="view-admin-import-control" class="view-section hidden fade-in space-y-6">
+                    <!-- Toggle panel -->
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 bg-teal-50/60">
+                            <h3 class="text-xl font-black text-slate-800"><i class="fas fa-toggle-on text-teal-600 mr-2"></i>เปิด/ปิดเมนูนำเข้าข้อมูล</h3>
+                            <p class="text-sm text-slate-500 mt-1">ควบคุมว่าผู้ใช้งานทั่วไปจะเห็นและใช้งานเมนูนำเข้า Excel ได้หรือไม่</p>
+                        </div>
+                        <div class="p-6 space-y-5">
+                            <!-- Global toggle -->
+                            <div class="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+                                <div>
+                                    <p class="font-black text-slate-800">เปิดใช้งานสำหรับทุกคน</p>
+                                    <p class="text-sm text-slate-500">เมื่อปิด ปุ่มจะหายจาก sidebar ของผู้ใช้</p>
+                                </div>
+                                <button id="import-global-toggle-btn" onclick="adminToggleImportGlobal()" class="relative w-14 h-8 rounded-full transition-all duration-300 bg-slate-200 focus:outline-none">
+                                    <span id="import-global-toggle-dot" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-all duration-300"></span>
+                                </button>
+                            </div>
+                            <!-- Schedule section -->
+                            <div class="border border-slate-200 rounded-2xl p-4 space-y-4">
+                                <p class="font-black text-slate-700"><i class="fas fa-clock mr-2 text-teal-500"></i>ตั้งเวลาเปิด/ปิดอัตโนมัติ</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 mb-1 block">เปิดอัตโนมัติเวลา</label>
+                                        <input type="datetime-local" id="import-schedule-open" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 mb-1 block">ปิดอัตโนมัติเวลา</label>
+                                        <input type="datetime-local" id="import-schedule-close" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400">
+                                    </div>
+                                </div>
+                                <!-- Countdown display -->
+                                <div id="admin-import-countdown" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm font-bold text-center"></div>
+                                <div class="flex gap-2 flex-wrap">
+                                    <button onclick="adminSaveImportSchedule()" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm"><i class="fas fa-save mr-1"></i>บันทึกตารางเวลา</button>
+                                    <button onclick="adminClearImportSchedule()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-bold text-sm"><i class="fas fa-times mr-1"></i>ล้างตาราง</button>
+                                </div>
+                            </div>
+                            <!-- Per-user access -->
+                            <div class="border border-slate-200 rounded-2xl p-4 space-y-3">
+                                <p class="font-black text-slate-700"><i class="fas fa-user-check mr-2 text-indigo-500"></i>เปิด/ปิดรายบุคคล</p>
+                                <p class="text-xs text-slate-400">ถ้าตั้งค่ารายบุคคล จะ override การตั้งค่าทั่วไป</p>
+                                <div class="flex gap-2">
+                                    <input type="text" id="import-user-email-input" placeholder="อีเมลผู้ใช้" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <button onclick="adminGrantImportUser(true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-2 rounded-xl font-bold text-sm">เปิด</button>
+                                    <button onclick="adminGrantImportUser(false)" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2 rounded-xl font-bold text-sm">ปิด</button>
+                                </div>
+                                <div id="import-user-grants-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Usage log -->
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                            <h4 class="font-black text-slate-700"><i class="fas fa-eye mr-2 text-slate-400"></i>ประวัติการใช้งาน (ทุกคน)</h4>
+                            <button onclick="adminRefreshImportUsageLog()" class="text-xs text-teal-600 hover:text-teal-800 font-bold border border-teal-200 bg-teal-50 px-3 py-1.5 rounded-lg"><i class="fas fa-sync-alt mr-1"></i>รีเฟรช</button>
+                        </div>
+                        <div id="admin-import-usage-log" class="p-5 space-y-2 max-h-96 overflow-y-auto">
+                            <p class="text-slate-400 text-sm text-center py-4">กด รีเฟรช เพื่อโหลดข้อมูล</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- View: Settings Center (kept as placeholder only; Settings now opens in modal) -->
@@ -7894,6 +8011,8 @@ async function submitPlanRequest(planId){
             if(viewId === 'admin-dashboard' && isAdmin) { document.getElementById('page-title').textContent = 'แดชบอร์ดรวม'; document.getElementById('page-subtitle').textContent = 'ภาพรวมข้อมูลทั้งหมดจาก global_stats/summary'; if(typeof loadAdminGlobalDashboard === 'function') loadAdminGlobalDashboard(); }
             if(viewId === 'admin-announcements' && isAdmin) { document.getElementById('page-title').textContent = 'ประกาศ'; document.getElementById('page-subtitle').textContent = 'จัดการประกาศหน้าแรก แถบบน และป็อปอัพ'; loadPublicAnnouncements(); renderAdminAnnouncements(); }
             if(viewId === 'admin-plans' && isAdmin) { document.getElementById('page-title').textContent = 'แผนการใช้งาน'; document.getElementById('page-subtitle').textContent = 'ตั้งค่าระดับ ราคา และสิทธิ์การใช้งาน'; loadPublicPlans(); renderAdminPlans(); }
+            if(viewId === 'admin-import-control' && isAdmin) { document.getElementById('page-title').textContent = 'ควบคุม Import'; document.getElementById('page-subtitle').textContent = 'จัดการการเข้าถึงเมนูนำเข้า Excel'; adminLoadImportControl(); }
+            if(viewId === 'import-excel') { document.getElementById('page-title').textContent = 'นำเข้าข้อมูล Excel'; document.getElementById('page-subtitle').textContent = 'อัพโหลดไฟล์เช็คชื่อ / ภาพรวม เพื่อเพิ่มข้อมูลอัตโนมัติ'; }
             /* settings opens as modal; no standalone settings page */
         };
 
@@ -30078,3 +30197,547 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
 </body>
 </html>
+
+<!-- =====================================================================
+     IMPORT EXCEL SYSTEM — เพิ่มโดย Claude
+     path: admin_settings/import_excel_control  (Firestore)
+     log:  admin_import_usage_log/{timestamp}   (Firestore)
+     ===================================================================== -->
+<script>
+(function(){
+'use strict';
+
+/* ── รอ Firebase พร้อม ── */
+function waitDB(cb){ if(window.db && window.getDoc && window.setDoc && window.collection && window.getDocs) cb(); else setTimeout(()=>waitDB(cb),300); }
+
+/* ── Firestore refs ── */
+const IMPORT_CTRL_PATH = ['admin_settings','import_excel_control'];
+const IMPORT_LOG_COL   = 'admin_import_usage_log';
+
+function getImportCtrlRef(){ return window.doc(window.db, IMPORT_CTRL_PATH[0], IMPORT_CTRL_PATH[1]); }
+function getImportLogRef(id){ return window.doc(window.db, IMPORT_LOG_COL, id); }
+function getImportLogCol(){ return window.collection(window.db, IMPORT_LOG_COL); }
+
+/* ── ตรวจสิทธิ์ว่าผู้ใช้ปัจจุบันเปิดใช้งานได้ไหม ── */
+async function checkImportAccess(){
+    try{
+        const snap = await window.getDoc(getImportCtrlRef());
+        if(!snap.exists()) return false;
+        const d = snap.data()||{};
+        const uk = (window.getUserKey||((u)=>u?.email||''))(window.currentUser||null);
+
+        /* per-user override */
+        if(d.userGrants && uk && typeof d.userGrants[uk] === 'boolean') return d.userGrants[uk];
+
+        /* schedule check */
+        const now = Date.now();
+        const openAt  = d.scheduleOpen  ? new Date(d.scheduleOpen).getTime()  : null;
+        const closeAt = d.scheduleClose ? new Date(d.scheduleClose).getTime() : null;
+        if(openAt && now < openAt)  return false;
+        if(closeAt && now > closeAt) return false;
+
+        return !!d.globalEnabled;
+    }catch(e){ return false; }
+}
+
+/* ── แสดง/ซ่อนปุ่ม sidebar ── */
+async function refreshImportNavBtn(){
+    const allowed = window.isAdmin || await checkImportAccess();
+    ['nav-import-excel','mobile-nav-import-excel'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.classList.toggle('hidden', !allowed);
+    });
+    /* countdown banner */
+    updateImportCountdownBanner();
+}
+window.refreshImportNavBtn = refreshImportNavBtn;
+
+/* นับถอยหลัง ── */
+let _importCountdownTimer = null;
+async function updateImportCountdownBanner(){
+    if(_importCountdownTimer) clearInterval(_importCountdownTimer);
+    try{
+        const snap = await window.getDoc(getImportCtrlRef());
+        if(!snap.exists()) return;
+        const d = snap.data()||{};
+        const banner   = document.getElementById('import-countdown-banner');
+        const adminBnr = document.getElementById('admin-import-countdown');
+        const now = Date.now();
+        const openAt  = d.scheduleOpen  ? new Date(d.scheduleOpen).getTime()  : null;
+        const closeAt = d.scheduleClose ? new Date(d.scheduleClose).getTime() : null;
+
+        function fmtMs(ms){
+            if(ms<=0) return '00:00:00';
+            const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),dy=Math.floor(h/24);
+            if(dy>0) return dy+'วัน '+String(h%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+            return String(h%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+        }
+
+        function tick(){
+            const n=Date.now();
+            let msg='',adminMsg='';
+            if(openAt && n < openAt){
+                msg = '⏳ จะเปิดในอีก '+fmtMs(openAt-n);
+                adminMsg = '🟡 จะเปิดอัตโนมัติในอีก '+fmtMs(openAt-n);
+            } else if(closeAt && n < closeAt){
+                msg = '⏰ จะปิดในอีก '+fmtMs(closeAt-n);
+                adminMsg = '🟢 เปิดอยู่ — จะปิดอัตโนมัติในอีก '+fmtMs(closeAt-n);
+            } else if(closeAt && n > closeAt){
+                msg=''; adminMsg='🔴 ปิดแล้ว (เลยกำหนดเวลา)';
+                refreshImportNavBtn();
+            }
+            if(banner){ if(msg){banner.textContent=msg;banner.classList.remove('hidden');}else banner.classList.add('hidden'); }
+            if(adminBnr){ if(adminMsg){adminBnr.textContent=adminMsg;adminBnr.classList.remove('hidden');}else adminBnr.classList.add('hidden'); }
+        }
+        tick();
+        _importCountdownTimer = setInterval(tick, 1000);
+    }catch(e){}
+}
+
+/* ── openImportExcel ── */
+window.openImportExcel = function(){
+    window.currentActiveCourseId = null;
+    try{ document.getElementById('course-context-menu')?.classList.add('hidden'); }catch(e){}
+    document.getElementById('page-title').textContent = 'นำเข้าข้อมูล Excel';
+    document.getElementById('page-subtitle').textContent = 'อัพโหลดไฟล์เช็คชื่อ / ภาพรวม เพื่อเพิ่มข้อมูลอัตโนมัติ';
+    document.getElementById('header-actions').innerHTML = '';
+    if(typeof window.switchView === 'function') window.switchView('import-excel');
+    renderImportLog();
+    updateImportCountdownBanner();
+};
+
+/* ── Queue ── */
+let importQueue = [];
+
+window.handleImportDrop = function(e){
+    e.preventDefault();
+    document.getElementById('import-dropzone').classList.remove('bg-emerald-50');
+    handleImportFiles(e.dataTransfer.files);
+};
+
+window.handleImportFiles = function(files){
+    Array.from(files).forEach(f=>{
+        if(!f.name.endsWith('.xlsx')) return;
+        if(importQueue.find(q=>q.name===f.name)) return;
+        importQueue.push({file:f, name:f.name, status:'pending'});
+    });
+    renderImportQueue();
+};
+
+function renderImportQueue(){
+    const box = document.getElementById('import-file-list');
+    const startBtn = document.getElementById('import-start-btn');
+    const clearBtn = document.getElementById('import-clear-btn');
+    if(!importQueue.length){ box.classList.add('hidden'); startBtn.classList.add('hidden'); clearBtn.classList.add('hidden'); return; }
+    box.classList.remove('hidden'); startBtn.classList.remove('hidden'); clearBtn.classList.remove('hidden');
+    box.innerHTML = importQueue.map((q,i)=>`
+        <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100">
+            <div class="flex items-center gap-3 min-w-0">
+                <i class="fas fa-file-excel text-emerald-500 text-lg flex-shrink-0"></i>
+                <span class="text-sm font-medium text-slate-700 truncate">${q.name}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full ${q.status==='done'?'bg-emerald-100 text-emerald-700':q.status==='error'?'bg-rose-100 text-rose-700':q.status==='loading'?'bg-amber-100 text-amber-700':'bg-slate-200 text-slate-500'}">${{pending:'รอ',loading:'กำลังนำเข้า…',done:'สำเร็จ',error:'ผิดพลาด'}[q.status]}</span>
+                ${q.status==='pending'?`<button onclick="removeImportItem(${i})" class="text-slate-400 hover:text-rose-500 text-xs"><i class="fas fa-times"></i></button>`:''}
+            </div>
+        </div>
+        ${q.msg?`<p class="text-xs ${q.status==='error'?'text-rose-500':'text-emerald-600'} pl-4 font-medium">${q.msg}</p>`:''}
+    `).join('');
+}
+
+window.removeImportItem = function(i){ importQueue.splice(i,1); renderImportQueue(); };
+window.clearImportQueue = function(){ importQueue=[]; renderImportQueue(); document.getElementById('import-result-box').classList.add('hidden'); };
+
+/* ── Parse Excel ── */
+async function loadSheetJS(){
+    if(window.XLSX) return window.XLSX;
+    return new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload=()=>res(window.XLSX); s.onerror=rej; document.head.appendChild(s);
+    });
+}
+
+function parseAttendanceExcel(wb){
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = window.XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    // row0=วิชา row1=ห้อง row2=ช่วงวันที่ row4=header row5+=data
+    const courseName = String(rows[0]?.[0]||'').replace('รายงานเช็คชื่อ: ','').trim();
+    const roomName   = String(rows[1]?.[0]||'').replace('ห้อง: ','').trim();
+    const headerRow  = rows[4]||[];
+    const dateCols   = headerRow.slice(4); // คอลัมน์วันที่เริ่มที่ index 4
+    const dataRows   = rows.slice(5).filter(r=>r&&r[1]);
+    return { type:'attendance', courseName, roomName, dateCols, dataRows, headerRow };
+}
+
+function parseOverviewExcel(wb){
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = window.XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    const courseName = String(rows[0]?.[0]||'').replace('สรุปภาพรวมวิชา: ','').trim();
+    const roomName   = String(rows[1]?.[0]||'').replace('ห้อง: ','').trim();
+    const headerRow  = rows[3]||[];
+    const dataRows   = rows.slice(4).filter(r=>r&&r[1]);
+    return { type:'overview', courseName, roomName, headerRow, dataRows };
+}
+
+/* ── Merge into state ── */
+function importAttendanceIntoState(parsed){
+    if(!window.state) return {added:0,updated:0,skipped:0};
+    const {courseName, roomName, dateCols, dataRows} = parsed;
+
+    /* หา/สร้าง course */
+    let course = (window.state.courses||[]).find(c=>c.name===courseName);
+    if(!course){
+        course = { id:'course_import_'+Date.now()+'_'+Math.random().toString(36).slice(2), name:courseName, studentGrades:[roomName] };
+        if(!window.state.courses) window.state.courses=[];
+        window.state.courses.push(course);
+    }
+    const cid = String(course.id);
+    if(!window.state.attendance) window.state.attendance={};
+    if(!window.state.attendance[cid]) window.state.attendance[cid]={};
+
+    let added=0, updated=0;
+    dataRows.forEach(row=>{
+        const code = String(row[1]||'').trim();
+        const name = String(row[2]||'').trim();
+        const room = String(row[3]||'').trim();
+        if(!code) return;
+        /* เพิ่ม student ถ้ายังไม่มี */
+        if(!window.state.students) window.state.students=[];
+        if(!window.state.students.find(s=>s.code===code)){
+            window.state.students.push({id:'stu_'+Date.now()+'_'+Math.random().toString(36).slice(2), code, name, className:room});
+            added++;
+        }
+        /* บันทึกการเช็คชื่อ */
+        dateCols.forEach((dateStr,di)=>{
+            if(!dateStr) return;
+            const dKey = String(dateStr).trim();
+            const val  = String(row[4+di]||'').trim();
+            if(!val) return;
+            if(!window.state.attendance[cid][dKey]) window.state.attendance[cid][dKey]={};
+            window.state.attendance[cid][dKey][code] = val;
+            updated++;
+        });
+    });
+    return {added, updated, skipped:0};
+}
+
+function importOverviewIntoState(parsed){
+    if(!window.state) return {added:0,updated:0,skipped:0};
+    const {courseName, roomName, headerRow, dataRows} = parsed;
+
+    let course = (window.state.courses||[]).find(c=>c.name===courseName);
+    if(!course){
+        course = { id:'course_import_'+Date.now()+'_'+Math.random().toString(36).slice(2), name:courseName, studentGrades:[roomName] };
+        if(!window.state.courses) window.state.courses=[];
+        window.state.courses.push(course);
+    }
+    const cid = String(course.id);
+    /* สร้าง plan สำหรับแต่ละสัปดาห์ */
+    if(!window.state.coursePlans) window.state.coursePlans={};
+    if(!window.state.coursePlans[cid]) window.state.coursePlans[cid]=[];
+    const scoreColHeaders = headerRow.slice(7, headerRow.length-2); // ข้ามลำดับ รหัส ชื่อ ห้อง มา สาย ขาด และ รวม เกรด
+    scoreColHeaders.forEach(h=>{
+        if(!h) return;
+        const hStr = String(h).trim();
+        if(!hStr || hStr==='รวมคะแนน(เต็ม 100)' || hStr==='เกรด') return;
+        const exists = window.state.coursePlans[cid].find(p=>p.name===hStr);
+        if(!exists){
+            const mFull = hStr.match(/เต็ม\s*([\d.]+)/);
+            window.state.coursePlans[cid].push({
+                id:'plan_import_'+Date.now()+'_'+Math.random().toString(36).slice(2),
+                name: hStr,
+                maxScore: mFull ? parseFloat(mFull[1]) : 10
+            });
+        }
+    });
+
+    if(!window.state.scores) window.state.scores=[];
+    let added=0, updated=0;
+    dataRows.forEach(row=>{
+        const code = String(row[1]||'').trim();
+        const name = String(row[2]||'').trim();
+        const room = String(row[3]||'').trim();
+        if(!code) return;
+        if(!window.state.students) window.state.students=[];
+        if(!window.state.students.find(s=>s.code===code)){
+            window.state.students.push({id:'stu_'+Date.now()+'_'+Math.random().toString(36).slice(2), code, name, className:room});
+            added++;
+        }
+        /* คะแนน */
+        const planArr = window.state.coursePlans[cid]||[];
+        scoreColHeaders.forEach((h,di)=>{
+            if(!h) return;
+            const hStr = String(h).trim();
+            if(!hStr) return;
+            const plan = planArr.find(p=>p.name===hStr);
+            if(!plan) return;
+            const rawVal = row[7+di];
+            if(rawVal===null||rawVal===undefined||rawVal==='') return;
+            const valStr = String(rawVal).trim();
+            if(valStr==='-'||valStr.includes('ขาดส่ง')) return;
+            const numVal = parseFloat(valStr);
+            if(isNaN(numVal)) return;
+            const existScore = window.state.scores.find(s=>s.courseId===cid&&s.planId===plan.id&&s.studentCode===code);
+            if(existScore){ existScore.score=numVal; updated++; }
+            else{ window.state.scores.push({id:'sc_'+Date.now()+'_'+Math.random().toString(36).slice(2), courseId:cid, planId:plan.id, studentCode:code, score:numVal}); updated++; }
+        });
+    });
+    return {added, updated, skipped:0};
+}
+
+/* ── ล็อกการใช้งาน ── */
+async function logImportUsage(files, results){
+    try{
+        const uk = (window.getUserKey||(u=>u?.email||''))(window.currentUser);
+        const id = uk.replace(/[^a-z0-9]/gi,'_')+'_'+Date.now();
+        await window.setDoc(getImportLogRef(id),{
+            userKey:uk,
+            email: window.currentUser?.email||uk,
+            timestamp: Date.now(),
+            files: files.map(f=>f.name),
+            results
+        });
+    }catch(e){ console.warn('import log failed',e); }
+}
+
+/* ── เริ่ม Import ── */
+window.startImportExcel = async function(){
+    if(!importQueue.length) return;
+    const XLSX = await loadSheetJS();
+    const resultBox = document.getElementById('import-result-box');
+    resultBox.classList.add('hidden');
+    const summary = [];
+
+    for(let i=0;i<importQueue.length;i++){
+        const item = importQueue[i];
+        if(item.status!=='pending') continue;
+        item.status='loading'; renderImportQueue();
+        try{
+            const buf = await item.file.arrayBuffer();
+            const wb  = XLSX.read(buf,{type:'array'});
+            const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+            const firstCell = String(sheetData[0]?.[0]||'').trim();
+            let res;
+            if(firstCell.startsWith('รายงานเช็คชื่อ')){
+                res = importAttendanceIntoState(parseAttendanceExcel(wb));
+                item.msg = `เช็คชื่อ: นักเรียนใหม่ ${res.added} คน, บันทึกเช็คชื่อ ${res.updated} รายการ`;
+            } else if(firstCell.startsWith('สรุปภาพรวมวิชา')){
+                res = importOverviewIntoState(parseOverviewExcel(wb));
+                item.msg = `ภาพรวม: นักเรียนใหม่ ${res.added} คน, คะแนน ${res.updated} รายการ`;
+            } else {
+                throw new Error('ไม่รู้จักรูปแบบไฟล์');
+            }
+            item.status='done';
+            summary.push({file:item.name,...res, ok:true});
+        }catch(e){
+            item.status='error'; item.msg='Error: '+(e.message||e);
+            summary.push({file:item.name, ok:false, msg:item.msg});
+        }
+        renderImportQueue();
+    }
+
+    /* save state */
+    try{
+        if(typeof window.saveStateToDB==='function') await window.saveStateToDB();
+        if(typeof window.updateGlobalViews==='function') window.updateGlobalViews();
+        if(typeof window.renderStudentsMaster==='function') window.renderStudentsMaster();
+    }catch(e){ console.warn('save after import failed',e); }
+
+    /* log */
+    await logImportUsage(importQueue.filter(q=>q.status==='done').map(q=>q.file), summary);
+
+    /* save to localStorage log */
+    const logKey = 'schoolhub_import_log_'+((window.getUserKey||(u=>u?.email||''))(window.currentUser));
+    try{
+        const existing = JSON.parse(localStorage.getItem(logKey)||'[]');
+        existing.unshift({ ts:Date.now(), files: summary.map(s=>s.file), summary });
+        localStorage.setItem(logKey, JSON.stringify(existing.slice(0,50)));
+    }catch(e){}
+
+    /* result box */
+    const ok = summary.filter(s=>s.ok).length;
+    const fail = summary.filter(s=>!s.ok).length;
+    resultBox.innerHTML = `
+        <div class="rounded-2xl p-4 border ${ok>0?'bg-emerald-50 border-emerald-200':'bg-rose-50 border-rose-200'}">
+            <p class="font-black text-lg ${ok>0?'text-emerald-700':'text-rose-700'} mb-2"><i class="fas ${ok>0?'fa-check-circle':'fa-times-circle'} mr-2"></i>นำเข้าเสร็จสิ้น</p>
+            <ul class="space-y-1">${summary.map(s=>`<li class="text-sm ${s.ok?'text-emerald-700':'text-rose-600'}"><i class="fas ${s.ok?'fa-check':'fa-times'} mr-1"></i>${s.file}: ${s.ok?s.msg:s.msg}</li>`).join('')}</ul>
+        </div>`;
+    resultBox.classList.remove('hidden');
+    renderImportLog();
+};
+
+/* ── Import Log (local) ── */
+function renderImportLog(){
+    const box = document.getElementById('import-log-list');
+    if(!box) return;
+    const logKey = 'schoolhub_import_log_'+((window.getUserKey||(u=>u?.email||''))(window.currentUser));
+    let logs=[];
+    try{ logs=JSON.parse(localStorage.getItem(logKey)||'[]'); }catch(e){}
+    if(!logs.length){ box.innerHTML='<p class="text-slate-400 text-sm text-center py-4">ยังไม่มีประวัติ</p>'; return; }
+    box.innerHTML = logs.map(l=>{
+        const d=new Date(l.ts);
+        const dStr=d.toLocaleDateString('th-TH')+' '+d.toLocaleTimeString('th-TH');
+        return `<div class="bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100">
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-medium">${dStr}</span>
+                <span class="text-xs font-bold text-slate-500">${l.files?.length||0} ไฟล์</span>
+            </div>
+            <ul class="mt-1 space-y-0.5">${(l.summary||[]).map(s=>`<li class="text-xs ${s.ok?'text-emerald-600':'text-rose-500'}"><i class="fas ${s.ok?'fa-check':'fa-times'} mr-1"></i>${s.file}</li>`).join('')}</ul>
+        </div>`;
+    }).join('');
+}
+window.clearImportLog = function(){
+    const logKey='schoolhub_import_log_'+((window.getUserKey||(u=>u?.email||''))(window.currentUser));
+    localStorage.removeItem(logKey); renderImportLog();
+};
+
+/* ══════════════════════════════════════════
+   ADMIN IMPORT CONTROL
+   ══════════════════════════════════════════ */
+let _importCtrlData = {};
+
+window.adminLoadImportControl = async function(){
+    try{
+        const snap = await window.getDoc(getImportCtrlRef());
+        _importCtrlData = snap.exists() ? (snap.data()||{}) : {};
+    }catch(e){ _importCtrlData={}; }
+    renderAdminImportControl();
+    adminRefreshImportUsageLog();
+    updateImportCountdownBanner();
+};
+
+function renderAdminImportControl(){
+    const d = _importCtrlData;
+    /* toggle button */
+    const btn = document.getElementById('import-global-toggle-btn');
+    const dot = document.getElementById('import-global-toggle-dot');
+    if(btn && dot){
+        const on = !!d.globalEnabled;
+        btn.style.background = on ? '#0d9488' : '#cbd5e1';
+        dot.style.transform  = on ? 'translateX(24px)' : 'translateX(0)';
+    }
+    /* schedule inputs */
+    const inOpen  = document.getElementById('import-schedule-open');
+    const inClose = document.getElementById('import-schedule-close');
+    if(inOpen)  inOpen.value  = d.scheduleOpen  || '';
+    if(inClose) inClose.value = d.scheduleClose || '';
+    /* per-user grants */
+    renderImportUserGrants();
+}
+
+window.adminToggleImportGlobal = async function(){
+    _importCtrlData.globalEnabled = !_importCtrlData.globalEnabled;
+    renderAdminImportControl();
+    await saveImportCtrl();
+    refreshImportNavBtn();
+};
+
+async function saveImportCtrl(){
+    try{ await window.setDoc(getImportCtrlRef(), Object.assign({}, _importCtrlData, {updatedAt:Date.now()}), {merge:true}); }
+    catch(e){ window.showCustomAlert&&window.showCustomAlert('บันทึกไม่ได้',e.message||String(e),true); }
+}
+
+window.adminSaveImportSchedule = async function(){
+    const openVal  = document.getElementById('import-schedule-open')?.value||'';
+    const closeVal = document.getElementById('import-schedule-close')?.value||'';
+    if(openVal && closeVal && new Date(openVal)>=new Date(closeVal)){
+        window.showCustomAlert&&window.showCustomAlert('ข้อมูลผิดพลาด','เวลาเปิดต้องน้อยกว่าเวลาปิด',true); return;
+    }
+    _importCtrlData.scheduleOpen  = openVal  || null;
+    _importCtrlData.scheduleClose = closeVal || null;
+    await saveImportCtrl();
+    updateImportCountdownBanner();
+    window.showCustomAlert&&window.showCustomAlert('บันทึกแล้ว','ตารางเวลาถูกบันทึกเรียบร้อย');
+};
+
+window.adminClearImportSchedule = async function(){
+    _importCtrlData.scheduleOpen = null; _importCtrlData.scheduleClose = null;
+    document.getElementById('import-schedule-open').value='';
+    document.getElementById('import-schedule-close').value='';
+    if(_importCountdownTimer) clearInterval(_importCountdownTimer);
+    const aB=document.getElementById('admin-import-countdown'); if(aB) aB.classList.add('hidden');
+    const uB=document.getElementById('import-countdown-banner'); if(uB) uB.classList.add('hidden');
+    await saveImportCtrl();
+    window.showCustomAlert&&window.showCustomAlert('ล้างแล้ว','ล้างตารางเวลาเรียบร้อย');
+};
+
+window.adminGrantImportUser = async function(grant){
+    const email = (document.getElementById('import-user-email-input')?.value||'').trim().toLowerCase();
+    if(!email) return;
+    if(!_importCtrlData.userGrants) _importCtrlData.userGrants={};
+    _importCtrlData.userGrants[email] = grant;
+    document.getElementById('import-user-email-input').value='';
+    renderImportUserGrants();
+    await saveImportCtrl();
+};
+
+function renderImportUserGrants(){
+    const box = document.getElementById('import-user-grants-list'); if(!box) return;
+    const grants = _importCtrlData.userGrants||{};
+    const keys = Object.keys(grants);
+    if(!keys.length){ box.innerHTML='<p class="text-xs text-slate-400 text-center py-2">ยังไม่มีการตั้งค่ารายบุคคล</p>'; return; }
+    box.innerHTML = keys.map(email=>`
+        <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+            <span class="text-xs font-medium text-slate-700 truncate">${email}</span>
+            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full ${grants[email]?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}">${grants[email]?'เปิด':'ปิด'}</span>
+                <button onclick="adminRemoveImportUserGrant('${email}')" class="text-slate-400 hover:text-rose-500 text-xs"><i class="fas fa-times"></i></button>
+            </div>
+        </div>`).join('');
+}
+
+window.adminRemoveImportUserGrant = async function(email){
+    if(_importCtrlData.userGrants) delete _importCtrlData.userGrants[email];
+    renderImportUserGrants();
+    await saveImportCtrl();
+};
+
+/* ── Usage Log (admin) ── */
+window.adminRefreshImportUsageLog = async function(){
+    const box = document.getElementById('admin-import-usage-log'); if(!box) return;
+    box.innerHTML = '<p class="text-slate-400 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-1"></i>กำลังโหลด…</p>';
+    try{
+        const snap = await window.getDocs(getImportLogCol());
+        const logs = [];
+        snap.forEach(d=>logs.push(d.data()));
+        logs.sort((a,b)=>b.timestamp-a.timestamp);
+        if(!logs.length){ box.innerHTML='<p class="text-slate-400 text-sm text-center py-4">ยังไม่มีข้อมูล</p>'; return; }
+        box.innerHTML = logs.map(l=>{
+            const d=new Date(l.timestamp);
+            const dStr=d.toLocaleDateString('th-TH')+' '+d.toLocaleTimeString('th-TH');
+            const ok=(l.results||[]).filter(r=>r.ok).length;
+            const fail=(l.results||[]).filter(r=>!r.ok).length;
+            return `<div class="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm font-black text-slate-700">${l.email||l.userKey||'ไม่ระบุ'}</span>
+                    <span class="text-xs text-slate-400">${dStr}</span>
+                </div>
+                <div class="text-xs text-slate-500">${(l.files||[]).join(', ')}</div>
+                <div class="mt-1 flex gap-2">
+                    ${ok?`<span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">${ok} สำเร็จ</span>`:''}
+                    ${fail?`<span class="text-xs bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full">${fail} ผิดพลาด</span>`:''}
+                </div>
+            </div>`;
+        }).join('');
+    }catch(e){ box.innerHTML='<p class="text-rose-400 text-sm text-center py-4">โหลดไม่ได้: '+e.message+'</p>'; }
+};
+
+/* ── Init: รอ auth แล้วตรวจสิทธิ์ ── */
+waitDB(()=>{
+    /* hook เข้า auth state change */
+    const _origOnAuth = window.__schoolhubOnAuthReady;
+    function tryInitImport(){
+        refreshImportNavBtn();
+        /* admin: แสดงปุ่มควบคุมเสมอ — ไม่ต้องตรวจ access */
+    }
+    /* เรียกทันทีเผื่อ auth พร้อมแล้ว */
+    setTimeout(tryInitImport, 1500);
+    /* hook onAuthStateChanged ถ้ามี */
+    if(window.auth && window.auth.onAuthStateChanged){
+        window.auth.onAuthStateChanged(()=>{ setTimeout(tryInitImport,800); });
+    }
+});
+
+})();
+</script>
