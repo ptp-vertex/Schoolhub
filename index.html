@@ -1093,6 +1093,96 @@
           opacity: 0;
           transition: transform 0.25s ease, opacity 0.25s ease;
         }
+        /* Mobile portrait compact layout: หน้าสร้างลิงก์แชร์ให้นักเรียนต้องไม่สูงเกินจอมือถือแนวตั้ง */
+        @media (max-width: 640px) and (orientation: portrait) {
+          #student-share-create-popup {
+            align-items: flex-start !important;
+            justify-content: center !important;
+            padding: 0.5rem !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          #student-share-create-popup > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: calc(100dvh - 1rem) !important;
+            overflow-y: auto !important;
+            border-radius: 1.25rem !important;
+          }
+          #student-share-create-popup > div > .border-b {
+            padding: 0.85rem 1rem !important;
+            gap: 0.6rem !important;
+          }
+          #student-share-create-title {
+            font-size: 1rem !important;
+            line-height: 1.25rem !important;
+          }
+          #student-share-create-title + p {
+            font-size: 0.75rem !important;
+            line-height: 1rem !important;
+            margin-top: 0.15rem !important;
+          }
+          #student-share-create-popup button[aria-label="ปิดหน้าต่างสร้างลิงก์"] {
+            width: 2rem !important;
+            height: 2rem !important;
+            min-width: 2rem !important;
+          }
+          #student-share-create-popup > div > .p-6.space-y-5 {
+            padding: 0.85rem !important;
+          }
+          #student-share-create-form.space-y-5 > :not([hidden]) ~ :not([hidden]),
+          #student-share-created-panel.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 0.65rem !important;
+          }
+          #student-share-create-detail {
+            padding: 0.75rem !important;
+            border-radius: 1rem !important;
+            font-size: 0.84rem !important;
+            line-height: 1.25rem !important;
+          }
+          #student-share-create-popup label {
+            margin-bottom: 0.25rem !important;
+            font-size: 0.8rem !important;
+            line-height: 1.1rem !important;
+          }
+          #student-share-expire-minutes,
+          #student-share-created-url {
+            padding: 0.65rem 0.75rem !important;
+            border-radius: 1rem !important;
+          }
+          #student-share-note {
+            height: 4rem !important;
+            min-height: 4rem !important;
+            padding: 0.65rem 0.75rem !important;
+            border-radius: 1rem !important;
+          }
+          #student-share-create-popup .text-xs {
+            margin-top: 0.15rem !important;
+            line-height: 1rem !important;
+          }
+          #student-share-create-popup button:not([aria-label="ปิดหน้าต่างสร้างลิงก์"]) {
+            padding-top: 0.72rem !important;
+            padding-bottom: 0.72rem !important;
+            border-radius: 1rem !important;
+          }
+          #student-share-created-panel .w-16.h-16 {
+            width: 2.75rem !important;
+            height: 2.75rem !important;
+            font-size: 1.45rem !important;
+          }
+          #student-share-created-panel h4 {
+            font-size: 1.35rem !important;
+            line-height: 1.7rem !important;
+          }
+          #student-share-created-detail {
+            margin-top: 0.25rem !important;
+            font-size: 0.8rem !important;
+            line-height: 1.1rem !important;
+          }
+          #student-share-copy-btn {
+            margin-top: 0.65rem !important;
+          }
+        }
         /* Patch: ให้หน้าหลักเลื่อนแนวตั้งได้เมื่อข้อมูลเกิน และกันตาราง/การ์ดล้น */
         body #main-app { min-height: 100vh !important; height: 100vh !important; overflow: hidden !important; }
         body #main-app main { min-height: 0 !important; overflow: hidden !important; }
