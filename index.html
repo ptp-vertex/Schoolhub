@@ -6807,7 +6807,10 @@ async function submitPlanRequest(planId){
         async function schoolhubWriteOwnerState(ownerKey, ownerState){
             if(!ownerKey || !ownerState) return;
             try { ownerState = hydrateGradeCriteriaIntoSavePayload(ownerState); } catch(e) { console.warn('[GRADE SAVE] hydrate shared owner payload failed:', e); }
-            await withTimeout(setDoc(doc(db, getPrivatePath(ownerKey), 'state'), ownerState), 8000, 'writeSharedOwnerState');
+            assertSafeState(ownerState);
+            const ownerStateRef = doc(db, getPrivatePath(ownerKey), 'state');
+            await schoolhubBackupStateBeforeSave(ownerStateRef, ownerState, ownerKey);
+            await withTimeout(setDoc(ownerStateRef, ownerState), 8000, 'writeSharedOwnerState');
         }
         function schoolhubMergeAcceptedSharedCourse(ownerKey, ownerName, ownerState, course, share){
             const cid = String(course.id);
@@ -7081,6 +7084,38 @@ async function submitPlanRequest(planId){
         window.schoolhubApplyReadonlyUI = schoolhubApplyReadonlyUI;
         window.schoolhubEnsureCourseTeacherButton = schoolhubEnsureCourseTeacherButton;
 
+        // ===== ระบบป้องกันข้อมูลถูกเขียนทับด้วย state ว่าง =====
+        function assertSafeState(state) {
+            if (!state || typeof state !== 'object') {
+                console.error('SAVE BLOCKED\nReason: Empty state detected\nNo data was written to Firestore.', state);
+                throw new Error('Blocked: invalid state');
+            }
+            const required = ['courses', 'students', 'attendance', 'scores'];
+            let hasData = false;
+            for (const key of required) {
+                const value = state[key];
+                if (Array.isArray(value) && value.length) { hasData = true; break; }
+                if (value && typeof value === 'object' && Object.keys(value).length) { hasData = true; break; }
+            }
+            if (!hasData) {
+                console.error('SAVE BLOCKED\nReason: Empty state detected\nNo data was written to Firestore.', state);
+                alert('ระบบป้องกันข้อมูลทำงาน\nพบว่าข้อมูลที่กำลังจะบันทึกว่าง จึงยกเลิกการบันทึก');
+                throw new Error('Blocked empty state');
+            }
+            return state;
+        }
+
+        async function schoolhubBackupStateBeforeSave(stateRef, payload, userKey) {
+            try {
+                const backupRef = doc(db, 'users', userKey, 'school_data', 'backups', String(Date.now()));
+                await withTimeout(setDoc(backupRef, Object.assign({}, payload, { _backedUpAt: Date.now() })), 8000, 'backupState');
+            } catch(backupErr) {
+                console.error('SAVE BLOCKED\nReason: Backup failed\nNo data was written to Firestore.', backupErr);
+                throw new Error('Backup ล้มเหลว จึงยกเลิกการบันทึก state: ' + (backupErr && backupErr.message || backupErr));
+            }
+        }
+        // ===== สิ้นสุดระบบป้องกัน =====
+
         async function saveStateToDB() {
             if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return false; }
             if (!currentUser || currentUser.uid === 'admin-bypass') return true;
@@ -7099,7 +7134,10 @@ async function submitPlanRequest(planId){
                     });
                 }
 
-                const stateRef = doc(db, getPrivatePath(getUserKey(currentUser)), 'state');
+                const ownerUserKey = getUserKey(currentUser);
+                const stateRef = doc(db, getPrivatePath(ownerUserKey), 'state');
+                assertSafeState(savePayload);
+                await schoolhubBackupStateBeforeSave(stateRef, savePayload, ownerUserKey);
                 await withTimeout(setDoc(stateRef, savePayload), 8000, 'saveState');
                 if (isGradeCriteriaSave) console.log('[GRADE SAVE] Firebase setDoc resolved for own state', { courseId: gradeDebugCid });
 
