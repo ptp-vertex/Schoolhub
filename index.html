@@ -5,6 +5,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -7076,12 +7077,16 @@ async function submitPlanRequest(planId){
                 scores: (state.scores || []).filter(sc => !sc.__sharedOwnerKey).map(sc => { const x=schoolhubCloneClean(sc); delete x.__sharedOwnerKey; return x; }),
                 attendance: {},
                 coursePlans: {},
-                courseGrades: {}
+                courseGrades: {},
+                bonusScores: {},
+                starGroups: {}
             };
             const ownCourseIds = new Set(clean.courses.map(c => String(c.id)));
             Object.keys(state.attendance || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.attendance[cid] = schoolhubCloneClean(state.attendance[cid]); });
             Object.keys(state.coursePlans || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.coursePlans[cid] = schoolhubCloneClean(state.coursePlans[cid]); });
             Object.keys(state.courseGrades || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.courseGrades[cid] = schoolhubCloneClean(state.courseGrades[cid]); });
+            Object.keys(state.bonusScores || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.bonusScores[cid] = schoolhubCloneClean(state.bonusScores[cid]); });
+            Object.keys(state.starGroups || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.starGroups[cid] = schoolhubCloneClean(state.starGroups[cid]); });
             return clean;
         }
         function schoolhubRemoveSharedMergedData(){
@@ -7498,6 +7503,8 @@ async function submitPlanRequest(planId){
                     state.courses = data.courses || []; state.students = data.students || [];
                     state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
                     state.courseGrades = data.courseGrades || {};
+                    state.bonusScores = data.bonusScores || {};
+                    state.starGroups = data.starGroups || {};
                     hydrateGradeCriteriaAfterLoad();
                     window.state = state;
                 } else {
@@ -8710,6 +8717,8 @@ async function submitPlanRequest(planId){
                 if (!isChecklist) totalMax = window.addScoreToTotal(totalMax, p.maxScore, 2);
             });
             thead += `<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">${window.formatScoreDisplay(totalMax, 2)}</span></th>`;
+            thead += `<th class="text-center bg-emerald-600 text-white font-bold sh-bonus-col" title="คะแนนโบนัสรายสัปดาห์ (ดับเบิลคลิกเพื่อดูรายละเอียด)">โบนัส<br><span class="text-[9px] text-emerald-100">ดับเบิลคลิก</span></th>`;
+            thead += `<th class="text-center bg-amber-400 text-white font-bold sh-star-col" title="ดาวกลุ่มสะสม (ดับเบิลคลิกเพื่อดูรายละเอียด)">⭐ ดาว<br><span class="text-[9px] text-amber-100">ดับเบิลคลิก</span></th>`;
             thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>`;
             table.innerHTML = thead;
 
@@ -8750,7 +8759,44 @@ async function submitPlanRequest(planId){
                         tbody += `<td class="text-center font-mono summary-score-col">${displayHtml}</td>`;
                     }
                 });
+                // Bonus scores for this student
+                const __bonusByCid = (state.bonusScores && state.bonusScores[cid]) || {};
+                let __totalBonus = 0;
+                const __bonusDetail = [];
+                Object.keys(__bonusByCid).forEach(wk => {
+                  const wVal = __bonusByCid[wk] && __bonusByCid[wk][s.id];
+                  if (wVal !== undefined && wVal !== '' && !isNaN(Number(wVal)) && Number(wVal) !== 0) {
+                    __totalBonus += Number(wVal);
+                    __bonusDetail.push({ week: wk.replace('w',''), val: Number(wVal) });
+                  }
+                });
+                const __bonusDetailJson = encodeURIComponent(JSON.stringify(__bonusDetail));
+                const __bonusCellColor = __totalBonus > 0 ? 'color:#065f46;font-weight:800' : 'color:#94a3b8';
+                const __bonusCellBg = __totalBonus > 0 ? 'background:#d1fae5' : '';
+
+                // Stars for this student (from group membership)
+                const __starCourseData = (state.starGroups && state.starGroups[cid]) || {};
+                const __starGroups = __starCourseData.groups || [];
+                const __weekStars = __starCourseData.weekStars || {};
+                let __totalStars = 0;
+                const __starDetail = [];
+                const __studentGroups = __starGroups.filter(g => (g.members||[]).includes(s.id));
+                Object.keys(__weekStars).forEach(wk => {
+                  const weekData = __weekStars[wk] || {};
+                  let weekStarSum = 0;
+                  __studentGroups.forEach(g => { weekStarSum += weekData[g.id] || 0; });
+                  if (weekStarSum > 0) {
+                    __totalStars += weekStarSum;
+                    __starDetail.push({ week: wk.replace('w',''), stars: weekStarSum });
+                  }
+                });
+                const __starDetailJson = encodeURIComponent(JSON.stringify(__starDetail));
+                const __starCellColor = __totalStars > 0 ? 'color:#92400e;font-weight:800' : 'color:#94a3b8';
+                const __starCellBg = __totalStars > 0 ? 'background:#fef3c7' : '';
+
                 tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${window.formatScoreDisplay(totalScore, 2)}</td>`;
+                tbody += `<td class="text-center sh-bonus-col" style="${__bonusCellBg};cursor:pointer" title="โบนัสรวม: ${__totalBonus} คะแนน — ดับเบิลคลิกเพื่อดูรายละเอียด" ondblclick="shOvShowBonusDetail('${s.id}','${s.name||s.id}','${__bonusDetailJson}')"><span style="${__bonusCellColor}">${__totalBonus > 0 ? '+'+__totalBonus : '-'}</span></td>`;
+                tbody += `<td class="text-center sh-star-col" style="${__starCellBg};cursor:pointer" title="ดาวรวม: ${__totalStars} — ดับเบิลคลิกเพื่อดูรายละเอียด" ondblclick="shOvShowStarDetail('${s.id}','${s.name||s.id}','${__starDetailJson}')"><span style="${__starCellColor}">${__totalStars > 0 ? __totalStars+'⭐' : '-'}</span></td>`;
 
                 // Calculate and display grade (single source of truth)
                 let gradeDisplay = '-';
@@ -8820,7 +8866,7 @@ async function submitPlanRequest(planId){
                             </div>
                         </td></tr>`);
                     } else {
-                        rows.push(`<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right" style="position:relative;z-index:10;pointer-events:auto"><button onclick="editPlan('${id}', '${p.id}')" data-right="edit" data-action-name="แก้ไขแผนคะแนน" data-permission-allowed="${__shCanEditPlanData ? '1' : '0'}" aria-disabled="${__shCanEditPlanData ? 'false' : 'true'}" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1 ${__shCanEditPlanData ? '' : 'sh-permission-disabled opacity-50 cursor-not-allowed'}"><i class="fas fa-edit"></i></button><button onclick="deletePlan('${id}', '${p.id}')" data-right="delete" data-action-name="ลบแผนคะแนน" data-permission-allowed="${__shCanDeletePlanData ? '1' : '0'}" aria-disabled="${__shCanDeletePlanData ? 'false' : 'true'}" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100 ${__shCanDeletePlanData ? '' : 'sh-permission-disabled opacity-50 cursor-not-allowed'}"><i class="fas fa-trash"></i></button></td></tr>`);
+                        rows.push(`<tr class="border-b"><td class="p-3 font-bold text-slate-600">สัปดาห์ ${p.week}</td><td class="p-3 font-medium">${p.title}</td><td class="p-3 text-center text-primary font-bold">${p.maxScore}</td><td class="p-3 text-right" style="position:relative;z-index:12;pointer-events:auto"><button onmousedown="event.stopPropagation();editPlan('${id}','${p.id}')" data-right="edit" data-action-name="แก้ไขแผนคะแนน" data-permission-allowed="${__shCanEditPlanData ? '1' : '0'}" aria-disabled="${__shCanEditPlanData ? 'false' : 'true'}" class="text-blue-500 bg-blue-50 w-8 h-8 rounded hover:bg-blue-100 mr-1 ${__shCanEditPlanData ? '' : 'sh-permission-disabled opacity-50 cursor-not-allowed'}" style="cursor:pointer;position:relative;z-index:13;pointer-events:auto"><i class="fas fa-edit"></i></button><button onmousedown="event.stopPropagation();deletePlan('${id}','${p.id}')" data-right="delete" data-action-name="ลบแผนคะแนน" data-permission-allowed="${__shCanDeletePlanData ? '1' : '0'}" aria-disabled="${__shCanDeletePlanData ? 'false' : 'true'}" class="text-rose-500 bg-rose-50 w-8 h-8 rounded hover:bg-rose-100 ${__shCanDeletePlanData ? '' : 'sh-permission-disabled opacity-50 cursor-not-allowed'}" style="cursor:pointer;position:relative;z-index:13;pointer-events:auto"><i class="fas fa-trash"></i></button></td></tr>`);
                     }
                 });
                 tbody.innerHTML = rows.join('');
@@ -23417,7 +23463,7 @@ import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11
     var type = c.gradeType || 'number';
     var set=function(id,v){ var el=byId(id); if(el) el.value=v; };
     var chk=function(id,v){ var el=byId(id); if(el) el.checked=!!v; };
-    if(byId('grade-type-select')) byId('grade-type-select').value = type;
+    if(byId('grade-type-select') && !window.__schoolhubGradeTypeDirty) byId('grade-type-select').value = type;
     set('grade-late-to-absent', c.lateToAbsent ?? 3);
     set('grade-ms-absent-limit', c.msAbsentLimit ?? 5);
     set('grade-ms-absent-percent', c.msAbsentPercent ?? 20);
@@ -25427,7 +25473,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     tempGradeSpecialRules = sanitizeSpecialRulesForSave(criteria.specialRules || []);
     window.tempGradeRules = clone(tempGradeRules || []);
     window.tempGradeSpecialRules = clone(tempGradeSpecialRules || []);
-    var sel = byId('grade-type-select'); if(sel) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
+    var sel = byId('grade-type-select'); if(sel && !window.__schoolhubGradeTypeDirty) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
     var def = byId('schoolhub-default-grade'); if(def) def.value = criteria.defaultGrade || (tempGradeRules[tempGradeRules.length - 1] ? tempGradeRules[tempGradeRules.length - 1].label : '');
     renderGradeRulesList();
     renderGradeSpecialRulesList();
@@ -29255,7 +29301,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     window.tempGradeRules = clone(rules);
     window.tempGradeSpecialRules = clone(specialRules);
 
-    if (sel) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
+    if (sel && !window.__schoolhubGradeTypeDirty) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
     if (def) def.value = criteria.defaultGrade || '';
 
     if (gradeBox) {
@@ -29411,9 +29457,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     }
 
     forceRenderGradeCriteriaModal(cid);
-    setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 0);
-    setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 100);
-    setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 300);
 
     return false;
   };
@@ -29435,8 +29478,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
           if (modal) modal.dataset.courseId = String(cid);
 
           forceRenderGradeCriteriaModal(cid);
-          setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 0);
-          setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 100);
         }
       }
 
@@ -29463,7 +29504,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
         if (cid) {
           forceRenderGradeCriteriaModal(cid);
-          setTimeout(function(){ forceRenderGradeCriteriaModal(cid); }, 100);
         }
       }
     });
@@ -29809,7 +29849,7 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     window.tempGradeRules = clone(rules);
     window.tempGradeSpecialRules = clone(specialRules);
 
-    if (sel) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
+    if (sel && !window.__schoolhubGradeTypeDirty) sel.value = criteria.gradeFormat || criteria.gradeType || 'number';
     if (def) def.value = criteria.defaultGrade || '';
 
     if (gradeBox) {
@@ -30006,10 +30046,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
       modal.classList.remove('hidden');
     }
 
-    forceRenderGradeCriteriaModalStrict(cid);
-    setTimeout(function(){ forceRenderGradeCriteriaModalStrict(cid); }, 0);
-    setTimeout(function(){ forceRenderGradeCriteriaModalStrict(cid); }, 100);
-
     return false;
   };
 
@@ -30092,9 +30128,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
         forceRenderGradeCriteriaModalStrict(cid);
         var result = oldOpenModal.apply(this, arguments);
-        forceRenderGradeCriteriaModalStrict(cid);
-        setTimeout(function(){ forceRenderGradeCriteriaModalStrict(cid); }, 0);
-        setTimeout(function(){ forceRenderGradeCriteriaModalStrict(cid); }, 100);
         return result;
       }
 
@@ -30158,7 +30191,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
 
         if (cid) {
           forceRenderGradeCriteriaModalStrict(cid);
-          setTimeout(function(){ forceRenderGradeCriteriaModalStrict(cid); }, 100);
         }
       }
     });
@@ -31201,6 +31233,561 @@ else document.addEventListener('DOMContentLoaded',()=>setTimeout(initNewFields,1
 
 })(window);
 </script>
+
+<!-- ===================================================================
+     SchoolHub v2 patch — Bonus/Star save+overview, Plan buttons fix
+     =================================================================== -->
+<style>
+/* ── Bonus / Star overview columns ─────────────────────────────────── */
+#course-summary-table .sh-bonus-col {
+  width:44px!important; min-width:44px!important; max-width:44px!important;
+  background:#d1fae5!important; font-size:10px!important; padding:2px!important;
+}
+#course-summary-table .sh-star-col {
+  width:44px!important; min-width:44px!important; max-width:44px!important;
+  background:#fef3c7!important; font-size:10px!important; padding:2px!important;
+}
+/* ── Plan-list desktop buttons always on top ────────────────────────── */
+#plan-list tr td:last-child { position:relative!important; z-index:12!important; pointer-events:auto!important; }
+#plan-list tr td:last-child button { pointer-events:auto!important; z-index:13!important; cursor:pointer!important; position:relative!important; }
+
+/* ── Generic overlay/modal shared styles ────────────────────────────── */
+.sh-overlay {
+  position:fixed; inset:0; background:rgba(15,23,42,.5);
+  backdrop-filter:blur(4px); z-index:1000010;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.sh-overlay.hidden { display:none!important; }
+.sh-modal-box {
+  background:#fff; border-radius:24px; width:100%; max-width:500px;
+  overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,.25);
+  max-height:90vh; display:flex; flex-direction:column;
+}
+.sh-modal-header {
+  padding:18px 22px 14px; border-bottom:1px solid #f1f5f9;
+  background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+}
+.sh-modal-header h3 { font-size:17px; font-weight:800; color:#1e293b; margin:0; }
+.sh-modal-close {
+  width:32px; height:32px; border-radius:50%; border:1px solid #e2e8f0;
+  background:#fff; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; color:#64748b; font-size:14px; flex-shrink:0;
+}
+.sh-modal-close:hover { background:#fee2e2; color:#ef4444; }
+.sh-modal-body { padding:18px 22px; overflow-y:auto; flex:1; }
+.sh-modal-footer { padding:14px 22px; border-top:1px solid #f1f5f9; display:flex; gap:10px; flex-shrink:0; }
+.sh-modal-footer button { flex:1; padding:11px; border-radius:12px; font-weight:700; cursor:pointer; border:none; font-size:14px; }
+.sh-btn-cancel { background:#f1f5f9; color:#475569; }
+.sh-btn-cancel:hover { background:#e2e8f0; }
+.sh-btn-green { background:#059669; color:#fff; }
+.sh-btn-green:hover { background:#047857; }
+.sh-btn-amber { background:#d97706; color:#fff; }
+.sh-btn-amber:hover { background:#b45309; }
+.sh-btn-purple { background:#7c3aed; color:#fff; }
+.sh-btn-purple:hover { background:#6d28d9; }
+
+/* ── Week/bonus/star inputs ─────────────────────────────────────────── */
+.sh-week-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.sh-week-row label { font-weight:700; color:#475569; font-size:14px; }
+.sh-week-row input, .sh-week-row select {
+  padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; background:#f8fafc;
+}
+.sh-bonus-table { width:100%; border-collapse:collapse; font-size:14px; }
+.sh-bonus-table th { background:#f1f5f9; padding:8px 10px; font-weight:700; color:#475569; text-align:left; }
+.sh-bonus-table td { padding:8px 10px; border-bottom:1px solid #f8fafc; }
+.sh-bonus-table tbody tr:hover td { background:#f8fafc; }
+.sh-bonus-input {
+  width:72px; padding:5px 8px; border:1px solid #e2e8f0; border-radius:8px;
+  font-size:14px; text-align:center; background:#fff;
+}
+.sh-bonus-input:focus { outline:none; border-color:#059669; }
+
+/* ── Star group UI ─────────────────────────────────────────────────── */
+.sh-group-card { background:#fffbeb; border:1.5px solid #fde68a; border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+.sh-group-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.sh-group-name { font-weight:800; color:#92400e; font-size:15px; }
+.sh-stars-row { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+.sh-star-btn {
+  width:30px; height:30px; border-radius:7px; cursor:pointer; font-size:15px;
+  border:1px solid #fde68a; background:#fff; display:flex; align-items:center;
+  justify-content:center; transition:background .12s, transform .1s;
+}
+.sh-star-btn:hover { background:#fef9c3; transform:scale(1.15); }
+.sh-star-btn.filled { background:#fef08a; }
+.sh-group-star-count { font-size:12px; font-weight:800; color:#92400e; background:#fef3c7; border-radius:8px; padding:2px 8px; }
+.sh-rank-pts { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.sh-rank-pts label { font-size:13px; font-weight:700; color:#475569; }
+.sh-rank-pts input { width:52px; padding:5px 6px; border:1px solid #e2e8f0; border-radius:8px; text-align:center; font-size:14px; background:#f8fafc; }
+.sh-add-group { display:flex; gap:8px; margin-top:10px; }
+.sh-add-group input { flex:1; padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; background:#f8fafc; }
+.sh-add-group input:focus { outline:none; border-color:#d97706; }
+.sh-add-group button { padding:8px 14px; border-radius:10px; background:#d97706; color:#fff; font-weight:700; border:none; cursor:pointer; font-size:14px; }
+.sh-add-group button:hover { background:#b45309; }
+.sh-del-group { background:#fee2e2; border:none; color:#ef4444; border-radius:8px; padding:3px 9px; cursor:pointer; font-size:12px; font-weight:700; }
+.sh-del-group:hover { background:#fecaca; }
+.sh-apply-stars-btn { width:100%; padding:9px; border-radius:10px; background:#d97706; color:#fff; font-weight:700; border:none; cursor:pointer; font-size:13px; margin-top:8px; }
+.sh-apply-stars-btn:hover { background:#b45309; }
+
+/* ── Members list in group ─────────────────────────────────────────── */
+.sh-member-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.sh-member-chip {
+  font-size:11px; padding:2px 8px; background:#fef9c3; border:1px solid #fde68a;
+  border-radius:999px; color:#92400e; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;
+}
+.sh-member-chip:hover { background:#fef08a; }
+.sh-member-chip .rm { color:#ef4444; font-size:10px; }
+.sh-add-member-row { display:flex; gap:6px; margin-top:8px; }
+.sh-add-member-row select { flex:1; padding:6px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; background:#f8fafc; }
+.sh-add-member-row button { padding:6px 12px; background:#d97706; color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; }
+
+/* ── Breakdown popup ───────────────────────────────────────────────── */
+.sh-breakdown-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:14px; }
+.sh-breakdown-row:last-child { border-bottom:none; }
+.sh-breakdown-label { color:#475569; font-weight:600; }
+.sh-breakdown-val { font-weight:800; color:#1e293b; }
+</style>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     MODAL: Detail Popup (bonus/star breakdown on double-click)
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="sh-detail-modal" class="sh-overlay hidden">
+  <div class="sh-modal-box" style="max-width:360px">
+    <div class="sh-modal-header">
+      <h3 id="sh-detail-title">รายละเอียด</h3>
+      <button class="sh-modal-close" onclick="document.getElementById('sh-detail-modal').classList.add('hidden')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sh-modal-body" id="sh-detail-body"></div>
+    <div class="sh-modal-footer">
+      <button class="sh-btn-cancel" onclick="document.getElementById('sh-detail-modal').classList.add('hidden')">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     MODAL: Bonus Score (per student per week)
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="sh-bonus-modal" class="sh-overlay hidden">
+  <div class="sh-modal-box" style="max-width:520px">
+    <div class="sh-modal-header">
+      <h3><i class="fas fa-plus-circle" style="color:#059669;margin-right:8px"></i>คะแนนโบนัสรายสัปดาห์</h3>
+      <button class="sh-modal-close" onclick="shBonusClose()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sh-modal-body">
+      <div class="sh-week-row">
+        <label><i class="fas fa-calendar-week" style="color:#4f46e5;margin-right:4px"></i>สัปดาห์ที่</label>
+        <input type="number" id="sh-bonus-week" min="1" max="52" value="1" style="width:72px" onchange="shBonusRender()">
+        <span style="font-size:12px;color:#94a3b8">คะแนนโบนัสไม่ถูกรวมอัตโนมัติ — ต้องกด "นำเข้าคะแนนรวม" ที่หน้าภาพรวม</span>
+      </div>
+      <table class="sh-bonus-table">
+        <thead><tr><th width="36">#</th><th>ชื่อนักเรียน</th><th width="100" style="text-align:center">โบนัส (คะแนน)</th></tr></thead>
+        <tbody id="sh-bonus-tbody"></tbody>
+      </table>
+    </div>
+    <div class="sh-modal-footer">
+      <button class="sh-btn-cancel" onclick="shBonusClose()">ปิด</button>
+      <button class="sh-btn-green" onclick="shBonusSave()"><i class="fas fa-save mr-1"></i>บันทึกโบนัส</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     MODAL: Star Group
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="sh-star-modal" class="sh-overlay hidden">
+  <div class="sh-modal-box" style="max-width:560px">
+    <div class="sh-modal-header">
+      <h3><i class="fas fa-star" style="color:#d97706;margin-right:8px"></i>ระบบดาวกลุ่ม</h3>
+      <button class="sh-modal-close" onclick="shStarClose()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sh-modal-body">
+      <div class="sh-week-row">
+        <label><i class="fas fa-calendar-week" style="color:#4f46e5;margin-right:4px"></i>สัปดาห์ที่</label>
+        <input type="number" id="sh-star-week" min="1" max="52" value="1" style="width:72px" onchange="shStarRender()">
+      </div>
+      <!-- Rank bonus config -->
+      <div style="background:#fef3c7;border:1.5px solid #fde68a;border-radius:14px;padding:14px;margin-bottom:14px">
+        <div style="font-weight:800;color:#92400e;font-size:13px;margin-bottom:10px">
+          <i class="fas fa-trophy mr-2"></i>คะแนนโบนัสตามอันดับดาว
+        </div>
+        <div class="sh-rank-pts">
+          <span style="font-size:18px">🥇</span><label>อันดับ 1</label>
+          <input type="number" id="sh-r1" value="3" min="0" max="100">
+          <span style="font-size:18px;margin-left:6px">🥈</span><label>อันดับ 2</label>
+          <input type="number" id="sh-r2" value="2" min="0" max="100">
+          <span style="font-size:18px;margin-left:6px">🥉</span><label>อันดับ 3</label>
+          <input type="number" id="sh-r3" value="1" min="0" max="100">
+        </div>
+        <button class="sh-apply-stars-btn" onclick="shStarApplyBonus()">
+          <i class="fas fa-magic mr-1"></i>แปลงดาวเป็นคะแนนโบนัส (สัปดาห์นี้)
+        </button>
+      </div>
+      <div id="sh-star-list"></div>
+      <div class="sh-add-group">
+        <input type="text" id="sh-new-grp" placeholder="ชื่อกลุ่มใหม่ เช่น กลุ่ม 1">
+        <button onclick="shStarAddGroup()"><i class="fas fa-plus mr-1"></i>เพิ่มกลุ่ม</button>
+      </div>
+    </div>
+    <div class="sh-modal-footer">
+      <button class="sh-btn-cancel" onclick="shStarClose()">ปิด</button>
+      <button class="sh-btn-amber" onclick="shStarSave()"><i class="fas fa-save mr-1"></i>บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════
+     MODAL: Leave Reason
+     ═════════════════════════════════════════════════════════════════ -->
+<div id="sh-leave-modal" class="sh-overlay hidden">
+  <div class="sh-modal-box" style="max-width:380px">
+    <div class="sh-modal-header">
+      <h3><i class="fas fa-user-clock" style="color:#7c3aed;margin-right:8px"></i>เหตุผลการลา</h3>
+      <button class="sh-modal-close" onclick="shLeaveClose()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sh-modal-body">
+      <input type="hidden" id="sh-lv-cid">
+      <input type="hidden" id="sh-lv-date">
+      <input type="hidden" id="sh-lv-sid">
+      <div style="margin-bottom:12px">
+        <div id="sh-lv-name" style="font-weight:800;color:#1e293b;font-size:15px;margin-bottom:3px"></div>
+        <div id="sh-lv-dateshow" style="color:#64748b;font-size:13px"></div>
+      </div>
+      <label style="font-weight:700;color:#475569;font-size:14px;display:block;margin-bottom:6px">เหตุผลการลา <span style="font-weight:400;color:#94a3b8">(ไม่บังคับ)</span></label>
+      <textarea id="sh-lv-text" rows="3"
+        style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;resize:vertical;background:#f8fafc;box-sizing:border-box"
+        placeholder="เช่น ลาป่วย, ลากิจ, ติดธุระ..."></textarea>
+      <div id="sh-lv-existing" style="margin-top:10px;padding:10px 12px;background:#ede9fe;border-radius:10px;font-size:13px;color:#5b21b6;display:none">
+        <i class="fas fa-info-circle mr-1"></i><b>บันทึกไว้:</b> <span id="sh-lv-existing-text"></span>
+      </div>
+    </div>
+    <div class="sh-modal-footer">
+      <button class="sh-btn-cancel" onclick="shLeaveClose()">ปิด</button>
+      <button class="sh-btn-purple" onclick="shLeaveSave()"><i class="fas fa-save mr-1"></i>บันทึกเหตุผล</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   SchoolHub v2 patch — all new feature logic
+   ================================================================ */
+(function(W){
+'use strict';
+
+// ── helpers ──────────────────────────────────────────────────────
+function st(){ return W.state || {}; }
+function eid(id){ return document.getElementById(id); }
+function getCid(){ return W.currentActiveCourseId || null; }
+function getStudents(cid){ return typeof W.getCourseStudents==='function' ? W.getCourseStudents(cid) : []; }
+async function dbSave(){ if(typeof W.saveStateToDB==='function') return W.saveStateToDB(); return Promise.resolve(); }
+function shAlert(title, msg){ if(typeof W.showCustomAlert==='function') W.showCustomAlert(title,msg); else alert(title+': '+msg); }
+function shConfirm(title, msg, cb){ if(typeof W.showCustomConfirm==='function') W.showCustomConfirm(title,msg,cb); else { if(confirm(title+'\n'+msg)) cb(); } }
+function ensureField(obj,key,def){ if(obj[key]==null) obj[key]=def; }
+
+// Init state fields
+function initFields(){
+  var s=st();
+  if(!s.bonusScores) s.bonusScores={};
+  if(!s.starGroups) s.starGroups={};
+  W.state=s;
+}
+if(document.readyState!=='loading') setTimeout(initFields,1500);
+else document.addEventListener('DOMContentLoaded',()=>setTimeout(initFields,1500));
+
+// ── OVERVIEW: Bonus detail popup (double-click) ───────────────────
+W.shOvShowBonusDetail = function(sid, name, jsonEnc){
+  const detail = JSON.parse(decodeURIComponent(jsonEnc));
+  eid('sh-detail-title').innerHTML = '<i class="fas fa-plus-circle" style="color:#059669;margin-right:6px"></i>โบนัสของ ' + name;
+  if(!detail.length){
+    eid('sh-detail-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีคะแนนโบนัส</div>';
+  } else {
+    let total=0;
+    const rows = detail.map(function(d){
+      total+=d.val;
+      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span class="sh-breakdown-val" style="color:#059669">+'+d.val+' คะแนน</span></div>';
+    }).join('');
+    eid('sh-detail-body').innerHTML = rows +
+      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #d1fae5"><span class="sh-breakdown-label" style="font-weight:800">รวมโบนัสทั้งหมด</span><span class="sh-breakdown-val" style="color:#059669;font-size:16px">+'+total+' คะแนน</span></div>';
+  }
+  eid('sh-detail-modal').classList.remove('hidden');
+};
+
+W.shOvShowStarDetail = function(sid, name, jsonEnc){
+  const detail = JSON.parse(decodeURIComponent(jsonEnc));
+  eid('sh-detail-title').innerHTML = '⭐ ดาวของ ' + name;
+  if(!detail.length){
+    eid('sh-detail-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีดาวสะสม</div>';
+  } else {
+    let total=0;
+    const rows = detail.map(function(d){
+      total+=d.stars;
+      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span class="sh-breakdown-val" style="color:#d97706">'+d.stars+' ⭐</span></div>';
+    }).join('');
+    eid('sh-detail-body').innerHTML = rows +
+      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #fef3c7"><span class="sh-breakdown-label" style="font-weight:800">รวมดาวทั้งหมด</span><span class="sh-breakdown-val" style="color:#d97706;font-size:16px">'+total+' ⭐</span></div>';
+  }
+  eid('sh-detail-modal').classList.remove('hidden');
+};
+
+// ── Bonus Score Modal ────────────────────────────────────────────
+W.openBonusScoreModal = function(){
+  const cid=getCid();
+  if(!cid){ shAlert('กรุณาเลือกรายวิชา','กรุณาเปิดรายวิชาก่อนใช้งาน'); return; }
+  initFields();
+  ensureField(st().bonusScores,cid,{});
+  eid('sh-bonus-week').value=1;
+  shBonusRender();
+  eid('sh-bonus-modal').classList.remove('hidden');
+};
+W.shBonusClose = function(){ eid('sh-bonus-modal').classList.add('hidden'); };
+W.shBonusRender = function(){
+  const cid=getCid(); if(!cid) return;
+  const week=parseInt(eid('sh-bonus-week').value)||1;
+  const weekKey='w'+week;
+  initFields();
+  ensureField(st().bonusScores,cid,{});
+  const weekData=(st().bonusScores[cid][weekKey])||{};
+  const students=getStudents(cid);
+  const tbody=eid('sh-bonus-tbody'); if(!tbody) return;
+  if(!students.length){ tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px">ไม่มีนักเรียนในรายวิชานี้</td></tr>'; return; }
+  tbody.innerHTML=students.map(function(s,i){
+    const v=weekData[s.id]!==undefined?weekData[s.id]:'';
+    return '<tr><td style="text-align:center;color:#64748b;font-weight:700">'+(i+1)+'</td>'
+      +'<td style="font-weight:600;color:#1e293b">'+(s.name||s.id)+'</td>'
+      +'<td style="text-align:center"><input type="number" min="0" max="999" step="0.5" class="sh-bonus-input" data-sid="'+s.id+'" value="'+v+'" placeholder="0"></td></tr>';
+  }).join('');
+};
+W.shBonusSave = async function(){
+  const cid=getCid(); if(!cid) return;
+  const week=parseInt(eid('sh-bonus-week').value)||1;
+  const weekKey='w'+week;
+  initFields();
+  ensureField(st().bonusScores,cid,{});
+  const data={};
+  document.querySelectorAll('#sh-bonus-tbody .sh-bonus-input').forEach(function(inp){
+    const sid=inp.dataset.sid; const v=inp.value.trim();
+    data[sid]=(v!==''&&!isNaN(Number(v)))?Number(v):'';
+  });
+  st().bonusScores[cid][weekKey]=data;
+  const ok=await dbSave();
+  if(ok!==false){
+    W.shBonusClose();
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('บันทึกสำเร็จ','บันทึกคะแนนโบนัสสัปดาห์ที่ '+week+' เรียบร้อย');
+  }
+};
+
+// ── Star Groups ──────────────────────────────────────────────────
+function starCD(cid){
+  initFields();
+  if(!st().starGroups[cid]) st().starGroups[cid]={groups:[],weekStars:{},rankScores:{}};
+  return st().starGroups[cid];
+}
+W.openStarGroupModal = function(){
+  const cid=getCid();
+  if(!cid){ shAlert('กรุณาเลือกรายวิชา','กรุณาเปิดรายวิชาก่อนใช้งาน'); return; }
+  starCD(cid);
+  eid('sh-star-week').value=1;
+  shStarRender();
+  eid('sh-star-modal').classList.remove('hidden');
+};
+W.shStarClose=function(){ eid('sh-star-modal').classList.add('hidden'); };
+W.shStarRender=function(){
+  const cid=getCid(); if(!cid) return;
+  const week=parseInt(eid('sh-star-week').value)||1;
+  const weekKey='w'+week;
+  const cd=starCD(cid);
+  const groups=cd.groups||[];
+  const weekStars=(cd.weekStars&&cd.weekStars[weekKey])||{};
+  const container=eid('sh-star-list'); if(!container) return;
+  if(!groups.length){
+    container.innerHTML='<div style="text-align:center;color:#94a3b8;padding:20px;font-size:14px"><i class="fas fa-users" style="font-size:28px;display:block;margin-bottom:8px"></i>ยังไม่มีกลุ่ม — เพิ่มกลุ่มด้านล่าง</div>';
+    return;
+  }
+  const MAX=10;
+  const allStudents=getStudents(cid);
+  const ranked=[...groups].map(function(g){ return Object.assign({},g,{stars:weekStars[g.id]||0}); }).sort(function(a,b){ return b.stars-a.stars; });
+  container.innerHTML=ranked.map(function(g,idx){
+    const rankEmoji=idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':('#'+(idx+1));
+    const starsHtml=Array.from({length:MAX},function(_,i){
+      return '<button type="button" class="sh-star-btn '+(i<g.stars?'filled':'')+'" onmousedown="shStarSet(''+g.id+'','+(i+1)+')" title="'+(i+1)+' ดาว">⭐</button>';
+    }).join('');
+    // Members
+    const memberNames=(g.members||[]).map(function(mid){
+      const s=allStudents.find(function(x){ return x.id===mid; });
+      return s ? '<span class="sh-member-chip">'+escSafe(s.name||s.id)+'<span class="rm" onmousedown="shStarRemoveMember(''+g.id+'',''+mid+'')">✕</span></span>' : '';
+    }).join('');
+    const addMemberOpts=allStudents.filter(function(s){ return !(g.members||[]).includes(s.id); }).map(function(s){
+      return '<option value="'+s.id+'">'+escSafe(s.name||s.id)+'</option>';
+    }).join('');
+    return '<div class="sh-group-card" id="sg-'+g.id+'">'
+      +'<div class="sh-group-top"><span class="sh-group-name">'+rankEmoji+' '+g.name+'</span>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<span class="sh-group-star-count">⭐ '+g.stars+' ดาว</span>'
+      +'<button class="sh-del-group" onmousedown="shStarDelGroup(''+g.id+'')">ลบ</button></div></div>'
+      +'<div class="sh-stars-row">'+starsHtml+'</div>'
+      +'<div class="sh-member-chips" style="margin-top:8px">'+memberNames+'</div>'
+      +'<div class="sh-add-member-row"><select id="sh-mem-sel-'+g.id+'"><option value="">-- เพิ่มสมาชิก --</option>'+addMemberOpts+'</select>'
+      +'<button onmousedown="shStarAddMember(''+g.id+'')">เพิ่ม</button></div>'
+      +'</div>';
+  }).join('');
+};
+function escSafe(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+W.shStarSet=function(gid,count){
+  const cid=getCid(); if(!cid) return;
+  const week=parseInt(eid('sh-star-week').value)||1;
+  const weekKey='w'+week;
+  const cd=starCD(cid);
+  ensureField(cd,'weekStars',{}); ensureField(cd.weekStars,weekKey,{});
+  const cur=cd.weekStars[weekKey][gid]||0;
+  cd.weekStars[weekKey][gid]=(cur===count)?0:count;
+  shStarRender();
+};
+W.shStarAddGroup=function(){
+  const inp=eid('sh-new-grp'); const name=(inp?inp.value.trim():'');
+  if(!name) return;
+  const cid=getCid(); if(!cid) return;
+  const cd=starCD(cid);
+  cd.groups.push({id:'sg'+Date.now(),name,members:[]});
+  if(inp) inp.value='';
+  shStarRender();
+};
+W.shStarDelGroup=function(gid){
+  const cid=getCid(); if(!cid) return;
+  shConfirm('ยืนยันการลบ','ต้องการลบกลุ่มนี้ใช่หรือไม่?',function(){
+    const cd=starCD(cid);
+    cd.groups=cd.groups.filter(function(g){ return g.id!==gid; });
+    shStarRender();
+  });
+};
+W.shStarAddMember=function(gid){
+  const cid=getCid(); if(!cid) return;
+  const sel=eid('sh-mem-sel-'+gid); if(!sel||!sel.value) return;
+  const mid=sel.value;
+  const cd=starCD(cid);
+  const grp=cd.groups.find(function(g){ return g.id===gid; }); if(!grp) return;
+  if(!grp.members) grp.members=[];
+  if(!grp.members.includes(mid)) grp.members.push(mid);
+  shStarRender();
+};
+W.shStarRemoveMember=function(gid,mid){
+  const cid=getCid(); if(!cid) return;
+  const cd=starCD(cid);
+  const grp=cd.groups.find(function(g){ return g.id===gid; }); if(!grp) return;
+  grp.members=(grp.members||[]).filter(function(x){ return x!==mid; });
+  shStarRender();
+};
+W.shStarApplyBonus=function(){
+  const cid=getCid(); if(!cid) return;
+  const week=parseInt(eid('sh-star-week').value)||1;
+  const weekKey='w'+week;
+  const r1=Number(eid('sh-r1').value)||0;
+  const r2=Number(eid('sh-r2').value)||0;
+  const r3=Number(eid('sh-r3').value)||0;
+  const cd=starCD(cid);
+  const groups=cd.groups||[];
+  if(!groups.length){ shAlert('ไม่มีกลุ่ม','กรุณาเพิ่มกลุ่มก่อน'); return; }
+  const weekStars=(cd.weekStars&&cd.weekStars[weekKey])||{};
+  const ranked=[...groups].map(function(g){ return Object.assign({},g,{stars:weekStars[g.id]||0}); }).sort(function(a,b){ return b.stars-a.stars; });
+  initFields();
+  ensureField(st().bonusScores,cid,{});
+  if(!st().bonusScores[cid][weekKey]) st().bonusScores[cid][weekKey]={};
+  ensureField(cd,'rankScores',{});
+  cd.rankScores[weekKey]={r1,r2,r3};
+  const courseStudents=getStudents(cid);
+  const sidSet=new Set(courseStudents.map(function(s){ return s.id; }));
+  let applied=0;
+  ranked.forEach(function(g,idx){
+    const pts=idx===0?r1:idx===1?r2:idx===2?r3:0;
+    if(!pts) return;
+    (g.members||[]).forEach(function(mid){
+      if(!sidSet.has(mid)) return;
+      const cur=st().bonusScores[cid][weekKey][mid];
+      st().bonusScores[cid][weekKey][mid]=(cur!==undefined&&cur!==''?Number(cur):0)+pts;
+      applied++;
+    });
+  });
+  dbSave();
+  shAlert('แปลงดาวเป็นโบนัสสำเร็จ',
+    'สัปดาห์ที่ '+week+'\n🥇 อันดับ 1: +'+r1+' คะแนน\n🥈 อันดับ 2: +'+r2+' คะแนน\n🥉 อันดับ 3: +'+r3+' คะแนน'
+    +(applied>0?'\n\n✅ อัปเดตคะแนนโบนัสให้ '+applied+' คน':'\n\n⚠️ ยังไม่มีสมาชิกในกลุ่ม — เพิ่มสมาชิกในกลุ่มก่อน'));
+};
+W.shStarSave=async function(){
+  const ok=await dbSave();
+  if(ok!==false){
+    W.shStarClose();
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('บันทึกสำเร็จ','บันทึกข้อมูลดาวกลุ่มเรียบร้อย');
+  }
+};
+
+// ── Leave Reason ─────────────────────────────────────────────────
+W.openLeaveReasonView = function(cid,date,sid){
+  const s=(st().students||[]).find(function(x){ return x.id===sid; });
+  eid('sh-lv-cid').value=cid; eid('sh-lv-date').value=date; eid('sh-lv-sid').value=sid;
+  eid('sh-lv-name').textContent=s?(s.name||sid):sid;
+  eid('sh-lv-dateshow').textContent='วันที่: '+date;
+  const existing=(st().attendance&&st().attendance[cid]&&st().attendance[cid][date]
+    &&st().attendance[cid][date].leaveReasons&&st().attendance[cid][date].leaveReasons[sid])||'';
+  eid('sh-lv-text').value=existing;
+  const exBox=eid('sh-lv-existing');
+  if(existing){ exBox.style.display='block'; eid('sh-lv-existing-text').textContent=existing; }
+  else exBox.style.display='none';
+  eid('sh-leave-modal').classList.remove('hidden');
+};
+W.shLeaveClose=function(){ eid('sh-leave-modal').classList.add('hidden'); };
+W.shLeaveSave=async function(){
+  const cid=eid('sh-lv-cid').value, date=eid('sh-lv-date').value, sid=eid('sh-lv-sid').value;
+  const reason=eid('sh-lv-text').value.trim();
+  if(!cid||!date||!sid) return;
+  const s=st();
+  ensureField(s,'attendance',{});
+  ensureField(s.attendance,cid,{});
+  ensureField(s.attendance[cid],date,{records:{},leaveReasons:{},updatedAt:Date.now()});
+  ensureField(s.attendance[cid][date],'leaveReasons',{});
+  s.attendance[cid][date].leaveReasons[sid]=reason;
+  const ok=await dbSave();
+  if(ok!==false){ W.shLeaveClose(); shAlert('บันทึกสำเร็จ','บันทึกเหตุผลการลาเรียบร้อย'); }
+};
+
+// ── Sidebar nav buttons (add to course context menu) ─────────────
+// Inject bonus/star buttons after grade criteria button using MutationObserver
+// (the menu might render dynamically)
+function injectSidebarButtons(){
+  const menu=document.getElementById('course-context-menu');
+  if(!menu||menu.dataset.shBtnsInjected) return;
+  menu.dataset.shBtnsInjected='1';
+  const gradeBtn=menu.querySelector('button[onclick*="openGradeCriteriaModal"]');
+  if(!gradeBtn) return;
+  const bonusBtn=document.createElement('button');
+  bonusBtn.className='w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2 border border-emerald-200 border-dashed';
+  bonusBtn.innerHTML='<i class="fas fa-plus-circle w-5 text-center"></i> คะแนนโบนัสรายสัปดาห์';
+  bonusBtn.addEventListener('click',function(){ W.openBonusScoreModal(); });
+  const starBtn=document.createElement('button');
+  starBtn.className='w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-amber-600 hover:bg-amber-50 mt-2 border border-amber-200 border-dashed';
+  starBtn.innerHTML='<i class="fas fa-star w-5 text-center"></i> ระบบดาวกลุ่ม';
+  starBtn.addEventListener('click',function(){ W.openStarGroupModal(); });
+  gradeBtn.after(bonusBtn);
+  bonusBtn.after(starBtn);
+}
+// Try immediately and after DOMContentLoaded, also on switchCourseTab
+setTimeout(injectSidebarButtons,500);
+setTimeout(injectSidebarButtons,1500);
+document.addEventListener('DOMContentLoaded',function(){ setTimeout(injectSidebarButtons,500); });
+
+// Patch switchCourseTab to inject buttons when course context menu appears
+const _origSwitchCourse=W.switchCourseTab;
+W.switchCourseTab=function(tabId){
+  if(typeof _origSwitchCourse==='function') _origSwitchCourse.apply(W,arguments);
+  setTimeout(injectSidebarButtons,100);
+};
+const _origSwitchView=W.switchView;
+W.switchView=function(){
+  if(typeof _origSwitchView==='function') _origSwitchView.apply(W,arguments);
+  setTimeout(injectSidebarButtons,100);
+};
+
+})(window);
+</script>
 </body>
 </html>
 
@@ -31873,5 +32460,49 @@ waitReady(()=>{
     }
 });
 
+})();
+</script>
+
+<!-- ===================================================================
+     SchoolHub fix: prevent "เลือกไม่ได้" on grade-type-select
+     Multiple legacy patch layers re-render the grade criteria modal
+     after it is already open/visible (via onOpen wrappers, attribute
+     MutationObservers on the modal, and chained "force render" calls).
+     Each re-render forcibly resets #grade-type-select back to the
+     saved value, undoing whatever the user just picked. This script
+     marks the dropdown "dirty" as soon as the user changes it, and all
+     of the render functions above have been patched to skip
+     overwriting the value while dirty. The flag is cleared whenever
+     the grade-criteria-modal transitions from hidden -> visible, so a
+     fresh open of the modal still loads the saved value correctly.
+     =================================================================== -->
+<script>
+(function(){
+  if (window.__schoolhubGradeTypeDirtyGuardInstalled) return;
+  window.__schoolhubGradeTypeDirtyGuardInstalled = true;
+  window.__schoolhubGradeTypeDirty = false;
+
+  document.addEventListener('change', function(e){
+    if (e.target && e.target.id === 'grade-type-select') {
+      window.__schoolhubGradeTypeDirty = true;
+    }
+  }, true);
+
+  // Wrap whichever "open grade criteria modal" functions exist at this point
+  // (this script runs last, so these are the final/active versions) so that
+  // every fresh "open" clears the dirty flag BEFORE any of the modal's
+  // render functions run. This lets a freshly opened modal still load the
+  // saved value, while a user's in-progress selection is never clobbered
+  // by the redundant re-render calls that happen while the modal stays open.
+  ['openGradeCriteriaModalForCurrentCourse', 'openGradeCriteriaModalForCourse'].forEach(function(name){
+    var orig = window[name];
+    if (typeof orig !== 'function' || orig.__schoolhubGradeTypeDirtyResetWrapped) return;
+    var wrapped = function(){
+      window.__schoolhubGradeTypeDirty = false;
+      return orig.apply(this, arguments);
+    };
+    wrapped.__schoolhubGradeTypeDirtyResetWrapped = true;
+    window[name] = wrapped;
+  });
 })();
 </script>
