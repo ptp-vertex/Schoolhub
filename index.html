@@ -3569,6 +3569,8 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                             <button onclick="switchCourseTab('attendance')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="attendance"><i class="fas fa-calendar-check"></i> เช็คชื่อ</button>
                             <button onclick="switchCourseTab('scores')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="scores"><i class="fas fa-star"></i> คะแนน</button>
                             <button type="button" data-schoolhub-plan-open-btn="1" onclick="return schoolhubOpenPlanModalSafe(event)" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100"><i class="fas fa-cog"></i> แผนคะแนน</button>
+                            <button onclick="openStarGroupModal()" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-amber-50 text-amber-600 border border-amber-200"><i class="fas fa-star"></i> ระบบดาวกลุ่ม</button>
+                            <button onclick="openBonusScoreModal()" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-emerald-50 text-emerald-600 border border-emerald-200"><i class="fas fa-plus-circle"></i> คะแนนโบนัส</button>
                         </div>
                     </div>
 
@@ -33948,3 +33950,30 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
   });
 })();
 </script>
+
+<!-- Mobile fix: ensure overview score cards are visible on phone -->
+<style id="schoolhub-mobile-overview-cards-final-fix">
+@media (max-width:767px){
+  /* Allow the table-container to grow past its border-radius clip
+     so the dynamically-inserted #course-summary-mobile-cards is not hidden */
+  #course-tab-overview .table-container{
+    overflow:visible !important;
+  }
+  /* The inner scroll wrapper must also be visible so it sizes to card content */
+  #course-tab-overview .overflow-x-auto{
+    overflow:visible !important;
+  }
+  /* Make sure the mobile cards container is always shown as a grid on phone */
+  #course-summary-mobile-cards{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:.85rem !important;
+    padding:1rem !important;
+    background:#f8fafc !important;
+  }
+  /* Override the :empty rule so a briefly-empty box doesn't flicker to none */
+  #course-summary-mobile-cards:empty{
+    display:none !important;
+  }
+}
+</style>
