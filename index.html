@@ -1,3 +1,11 @@
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -349,6 +357,11 @@ document.addEventListener('paste', function(e){
         #course-summary-table .summary-sticky-no { left: 0 !important; }
         #course-summary-table .summary-sticky-code { left: 32px !important; }
         #course-summary-table .summary-sticky-name { left: 124px !important; }
+        /* ลดภาระการ repaint ระหว่างสกอลตาราง: คอลัมน์ปักหมุด (sticky) มีจำนวนมากต่อแถว
+           การใส่ contain ช่วยให้เบราว์เซอร์ไม่ต้องคำนวณ layout/paint ของคอลัมน์เหล่านี้ใหม่ทั้งหมดทุกเฟรม */
+        #course-summary-table .sticky {
+            contain: layout paint style;
+        }
 
         #course-summary-table .summary-code-col,
         #course-summary-table .summary-name-col,
@@ -3015,7 +3028,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
     <!-- Landing View -->
     <div id="landing-view" class="fixed inset-0 landing-bg z-[90] flex flex-col hidden overflow-y-auto">
         <div id="public-announcement-topbar" class="announcement-topbar hidden"></div>
-        <nav class="w-full px-4 md:px-10 py-4 flex items-center justify-between fixed top-0 left-0 z-[95] bg-white/60 backdrop-blur-xl border-b border-white/60">
+        <nav class="w-full px-4 md:px-10 py-4 flex items-center justify-between fixed top-0 left-0 z-[95] bg-white/90 border-b border-white/60">
             <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-200"><i class="fas fa-graduation-cap"></i></div>
                 <div>
@@ -3245,7 +3258,10 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
             <!-- User Profile Area in Sidebar -->
             <div class="p-6 border-b border-slate-100 bg-slate-50/50 cursor-pointer hover:bg-indigo-50/60 transition" onclick="openUserProfileSettings()" title="โปรไฟล์ผู้ใช้งาน">
                 <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center text-xl font-bold shadow-md" id="user-avatar-initial">U</div>
+                    <div class="relative w-12 h-12 shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center text-xl font-bold shadow-md" id="user-avatar-initial">U</div>
+                        <img id="user-avatar-photo" class="hidden absolute inset-0 w-12 h-12 rounded-full object-cover border-2 border-white shadow-md" alt="">
+                    </div>
                     <div class="overflow-hidden">
                         <div id="user-display-name" class="font-bold text-slate-800 truncate">กำลังโหลด...</div>
                         <div id="user-display-email" class="text-xs font-medium text-slate-500 truncate">...</div>
@@ -3321,7 +3337,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
         </aside>
 
         <!-- Mobile Header -->
-        <div class="md:hidden fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 z-30 flex justify-between items-center px-4 h-16">
+        <div class="md:hidden fixed top-0 w-full bg-white/95 border-b border-slate-200 z-30 flex justify-between items-center px-4 h-16">
             <div class="text-xl font-bold flex items-center gap-2 text-slate-800"><div class="bg-indigo-50 text-primary w-8 h-8 rounded-lg flex items-center justify-center text-sm"><i class="fas fa-graduation-cap"></i></div> SchoolHub</div>
             <button onclick="toggleMobileMenu()" class="text-slate-600 focus:outline-none p-2 bg-slate-50 rounded-lg border"><i class="fas fa-bars"></i></button>
         </div>
@@ -3366,6 +3382,15 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                     <button onclick="closeModal('user-profile-modal')" class="w-10 h-10 rounded-xl bg-white text-slate-500 hover:text-rose-500 border"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="p-6 space-y-4">
+                    <div class="flex flex-col items-center pb-1">
+                        <div class="relative w-24 h-24">
+                            <div id="user-profile-avatar-initial" class="w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center text-3xl font-bold shadow-md select-none">U</div>
+                            <img id="user-profile-avatar-img" class="hidden absolute inset-0 w-24 h-24 rounded-full object-cover border-4 border-white shadow-md cursor-pointer" alt="รูปโปรไฟล์" title="กดเพื่อดูรูปขนาดเต็ม">
+                            <button type="button" id="user-profile-avatar-pick-btn" data-schoolhub-always-allowed="1" title="แก้ไขรูปโปรไฟล์" class="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg border-2 border-white transition"><i class="fas fa-camera text-sm"></i></button>
+                            <input type="file" id="user-profile-avatar-input" accept="image/*" class="hidden" data-schoolhub-always-allowed="1">
+                        </div>
+                        <button type="button" id="user-profile-avatar-remove-btn" data-schoolhub-always-allowed="1" class="hidden mt-2 text-xs font-bold text-rose-500 hover:text-rose-700"><i class="fas fa-trash mr-1"></i>ลบรูปโปรไฟล์</button>
+                    </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อที่แสดง</label>
                         <input id="profile-display-name-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="ชื่อ - นามสกุล">
@@ -3380,7 +3405,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                         <p class="text-xs text-rose-500 mt-2">บัญชี Admin สามารถแก้ชื่อและรหัสผ่านได้จากโปรไฟล์นี้โดยตรง</p>
                     </div>
                     <div class="grid grid-cols-1 gap-3 pt-2">
-                        <button onclick="saveUserProfileChanges()" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> บันทึกชื่อ</button>
+                        <button id="user-profile-save-btn" onclick="saveUserProfileChanges()" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> บันทึก</button>
                         <button type="button" data-reset-password class="forgot-password-link w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition" onclick="return openResetPasswordPage(event)"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
                     </div>
                 </div>
@@ -6298,6 +6323,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                 setSlipCheckBox('fail','ตรวจสลิปอัตโนมัติไม่สำเร็จ',`${verification.verificationError}\n\nระบบจะบันทึกเป็น “รอตรวจสอบ” และจะไม่อนุมัติอัตโนมัติจนกว่าข้อมูลจะถูกต้องจริง`,{ 'สถานะ':'รอตรวจสอบโดยแอดมิน' },[{status:'fail',text:'ระบบ OCR หรือตัวตรวจสอบทำงานไม่สำเร็จ'}]);
             }
             const slipDecision = await waitSlipReviewDecision(verification);
+            closeSlipCheckPopup();
             if(!slipDecision){
                 setPaymentSubmitBusy(false);
                 return;
@@ -9468,6 +9494,13 @@ async function submitPlanRequest(planId){
                     for (let C = 0; C <= range.e.c; C++) { if (ws[XLSX.utils.encode_cell({r:R,c:C})]) filled++; }
                     if (filled >= Math.max(2, Math.floor((range.e.c+1) * 0.5))) { headerRowIdx = R; break; }
                 }
+                let noteColIdx = -1;
+                if (headerRowIdx >= 0) {
+                    for (let Cn = 0; Cn <= range.e.c; Cn++) {
+                        const hCell = ws[XLSX.utils.encode_cell({r:headerRowIdx,c:Cn})];
+                        if (hCell && String(hCell.v||'').trim() === 'หมายเหตุ') { noteColIdx = Cn; break; }
+                    }
+                }
                 for(let R=0; R<=range.e.r; R++){
                     for(let C=0; C<=range.e.c; C++){
                         const ref = XLSX.utils.encode_cell({r:R,c:C});
@@ -9476,7 +9509,7 @@ async function submitPlanRequest(planId){
                         const v = String(cell.v == null ? '' : cell.v).trim();
 
                         if (R === headerRowIdx) {
-                            cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:11}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
+                            cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:7}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
                             continue;
                         }
 
@@ -9489,15 +9522,20 @@ async function submitPlanRequest(planId){
                         else if(v === 'ลาออก'){ fill='F1F5F9'; fontColor='64748B'; }
                         else if(/^\+\d/.test(v) || /⭐/.test(v)){ fill='FEF3C7'; fontColor='92400E'; bold=true; }
 
+                        const isLeftCol = C<=2 || C===noteColIdx;
                         cell.s = Object.assign(
-                            { alignment:{horizontal: (C<=2 ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
+                            { alignment:{horizontal: (isLeftCol ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
                             fill ? { fill:{patternType:'solid',fgColor:{rgb:fill}}, font:{color:{rgb:fontColor},bold:bold} } : (R % 2 === 0 ? { fill:{patternType:'solid',fgColor:{rgb:'F8FAFC'}} } : {})
                         );
                     }
                 }
                 ws['!cols'] = Array.from({length: range.e.c+1}, (_,C) => {
                     let maxLen = 4;
-                    for(let R=0; R<=range.e.r; R++){ if(R === headerRowIdx) continue; const cell = ws[XLSX.utils.encode_cell({r:R,c:C})]; if(cell && cell.v != null) maxLen = Math.max(maxLen, String(cell.v).length); }
+                    for(let R=0; R<=range.e.r; R++){
+                        if(R <= headerRowIdx) continue; // ไม่นับแถวหัวตาราง และแถวชื่อวิชา/ห้อง (เหนือหัวตาราง)
+                        const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+                        if(cell && cell.v != null){ String(cell.v).split('\n').forEach(line => { maxLen = Math.max(maxLen, line.length); }); }
+                    }
                     return { wch: Math.min(maxLen + 2, 40) };
                 });
                 if (headerRowIdx >= 0) ws['!freeze'] = { xSplit: 0, ySplit: headerRowIdx + 1 };
@@ -9551,7 +9589,7 @@ async function submitPlanRequest(planId){
 
                         // ปรับตอนออก Excel: ถ้ายังไม่เคยบันทึก = -, ถ้าบันทึกแล้วแต่เว้นว่าง = ขาดส่ง (-)
                         if (!task) row.push('-');
-                        else if ((window.isMissingScoreValue ? window.isMissingScoreValue(rawScore) : rawScore==='')) row.push('ขาดส่ง (-)');
+                        else if ((window.isMissingScoreValue ? window.isMissingScoreValue(rawScore) : rawScore==='')) row.push('ขาดส่ง');
                         else row.push(window.normalizeScoreNumber(rawScore, 2));
                     }
                 });
@@ -9773,7 +9811,7 @@ async function submitPlanRequest(planId){
             const now=Date.now();
             let locked=false, reason='';
             if(!dir.planId && !dir.requestedPlanId && !(dir.teamStatus==='accepted' || dir.teamOwnerUid)){ locked=true; reason='ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนเริ่มใช้งาน'; }
-            else if(dir.status==='pending_plan' || dir.requestedPlanId){ locked=true; reason='คำขอแผนของคุณอยู่ระหว่างรอแอดมินอนุมัติ'; }
+            else if((dir.status==='pending_plan' || dir.requestedPlanId) && !dir.planId){ locked=true; reason='คำขอแผนของคุณอยู่ระหว่างรอแอดมินอนุมัติ'; }
             else if(dir.planNextBillingAt && Number(dir.planNextBillingAt) <= now){ locked=true; reason='ถึงรอบเรียกเก็บเงินแล้ว หากยังไม่ชำระ ระบบจะล็อกการแก้ไข ใช้ดูข้อมูลได้เท่านั้น'; }
             window.__schoolhubPlanLocked=locked;
             window.__schoolhubPlanLockReason=reason;
@@ -9939,9 +9977,15 @@ async function submitPlanRequest(planId){
         requestSubscriptionPlan = window.requestSubscriptionPlan = async function(planId){
             const plan=getPlanById(planId); if(!plan)return showCustomAlert('ไม่พบแผน','กรุณาเลือกแผนอีกครั้ง',true);
             if(!currentUser||currentUser.uid==='admin-bypass'){localStorage.setItem(PENDING_PLAN_KEY,planId);openRegisterFromLanding();return;}
-            if(await hasPendingPlanRequestForCurrentUser()) return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','คุณส่งคำขอสมัครแผนไว้แล้ว กรุณารอแอดมินอนุมัติก่อน ไม่สามารถขอซ้ำได้',true);
-            const amount=getPlanChargeAmount(plan,plan.billingCycle);
-            if(amount===0) activateFreePlan(plan); else openPlanPaymentModal(planId);
+            toggleLoader(true);
+            try{
+                if(await hasPendingPlanRequestForCurrentUser()){ toggleLoader(false); return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','คุณส่งคำขอสมัครแผนไว้แล้ว กรุณารอแอดมินอนุมัติก่อน ไม่สามารถขอซ้ำได้',true); }
+                const amount=getPlanChargeAmount(plan,plan.billingCycle);
+                if(amount===0){ await activateFreePlan(plan); } else { await openPlanPaymentModal(planId); toggleLoader(false); }
+            }catch(e){
+                toggleLoader(false);
+                showCustomAlert('เกิดข้อผิดพลาด', (typeof getFirebaseErrorText==='function'?getFirebaseErrorText(e):(e.message||String(e))), true);
+            }
         };
         activateFreePlan = async function(plan){
             if(!currentUser)return; if(await hasPendingPlanRequestForCurrentUser())return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','ไม่สามารถขอแผนซ้ำได้',true); toggleLoader(true);
@@ -10383,7 +10427,7 @@ async function submitPlanRequest(planId){
       var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}));
       var aoa=[[`สรุปภาพรวมวิชา: ${cName}`],[`ชั้น/ห้อง: ${room}`],[]]; var header=['รหัส','ชื่อ','ชั้น/ห้อง','มา','สาย','ขาด']; var tMax=0;
       plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; header.push(`${p.title}(${isChecklist?'เช็คงาน':'เต็ม '+window.formatScoreDisplay(p.maxScore,2)})`); if(!isChecklist) tMax = window.addScoreToTotal(tMax, p.maxScore, 2); }); header.push(`รวมคะแนน(เต็ม ${window.formatScoreDisplay(tMax, 2)})`,'เกรดที่ได้'); aoa.push(header);
-      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }}); row.push(window.normalizeScoreNumber(total,2)); row.push(tMax>0 ? window.getFinalGradeForStudent(course, st, window.normalizeScoreNumber(total,2)) : '-'); aoa.push(row); });
+      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง':window.normalizeScoreNumber(raw,2))); }}); row.push(window.normalizeScoreNumber(total,2)); row.push(tMax>0 ? window.getFinalGradeForStudent(course, st, window.normalizeScoreNumber(total,2)) : '-'); aoa.push(row); });
       var sheetName=String(room||'ชั้น').replace(/[\\/?*\[\]:]/g,' ').slice(0,31) || 'ชั้น'; sheets[sheetName]=aoa;
     });
     window.downloadExcelMultiSheet(sheets, `ภาพรวม_${cName}_แยกชั้น`);
@@ -14998,6 +15042,11 @@ function pfEnsureAdminFields(){
         `;
         emailInput.closest('div')?.insertAdjacentElement('beforebegin', wrap);
     }
+    const uInput = $pf('profile-admin-username-input');
+    if (uInput) {
+        const uWrap = uInput.closest('div');
+        if (uWrap && uWrap.id !== 'profile-admin-username-wrap') uWrap.id = 'profile-admin-username-wrap';
+    }
     if (passWrap) {
         const note = passWrap.querySelector('p');
         if (note) note.textContent = 'แก้ชื่อผู้ใช้ อีเมล และรหัสผ่าน Admin ได้จากโปรไฟล์นี้ โดยบันทึกลง Firebase โดยตรง';
@@ -15052,6 +15101,7 @@ window.openUserProfileSettings = async function(){
             const displayName = (d.displayName || d.name || localStorage.getItem('schoolhub_admin_name') || 'Administrator').trim();
             const email = (d.email || localStorage.getItem('schoolhub_admin_email') || '').trim();
 
+            if ($pf('profile-admin-username-wrap')) $pf('profile-admin-username-wrap').classList.remove('hidden');
             if ($pf('profile-display-name-input')) $pf('profile-display-name-input').value = displayName;
             if ($pf('profile-admin-username-input')) $pf('profile-admin-username-input').value = username;
             if ($pf('profile-email-input')) $pf('profile-email-input').value = email;
@@ -15085,12 +15135,28 @@ window.openUserProfileSettings = async function(){
     pfOpenModal('user-profile-modal');
 };
 
+function pfSetSaveBtnLoading(loading){
+    const btn = $pf('user-profile-save-btn');
+    if (!btn) return;
+    if (loading) {
+        if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('opacity-70','cursor-not-allowed');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> กำลังบันทึก...';
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70','cursor-not-allowed');
+        if (btn.dataset.origHtml) { btn.innerHTML = btn.dataset.origHtml; delete btn.dataset.origHtml; }
+    }
+}
+
 window.saveUserProfileChanges = async function(){
     const isAdmin = pfIsAdminSession();
     const authUser = profileFixAuth.currentUser;
     const displayName = ($pf('profile-display-name-input')?.value || '').trim();
     if (!displayName) return pfAlert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกชื่อที่แสดง', true);
 
+    pfSetSaveBtnLoading(true);
     pfLoader(true);
     try {
         if (isAdmin) {
@@ -15128,6 +15194,7 @@ window.saveUserProfileChanges = async function(){
         pfAlert('บันทึกไม่สำเร็จ', e?.message || String(e), true);
     } finally {
         pfLoader(false);
+        pfSetSaveBtnLoading(false);
     }
 };
 
@@ -16858,7 +16925,7 @@ window.requestOwnPasswordReset = function(event){
     var criteria=(state.courseGrades&&state.courseGrades[cid])?state.courseGrades[cid]:window.defaultGradeCriteria;
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
     var totalMax=0;
-    plans.forEach(function(p){ var full=Number(p.maxScore); header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
+    plans.forEach(function(p){ var full=Number(p.maxScore); header.push('สัปดาห์ที่ '+p.week+'\n'+p.title+'\n'+(full===0?'(เช็คงาน)':'(เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
     header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(roomName||'ทุกห้อง')],[],header];
     list.forEach(function(st,idx){
@@ -16872,7 +16939,7 @@ window.requestOwnPasswordReset = function(event){
         var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
         var raw=task&&task.records?task.records[st.id]:null;
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
-        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
+        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task?'-':((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง':window.normalizeScoreNumber(raw,2))); }
       });
       row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0?calcGrade(window.normalizeScoreNumber(total,2),criteria,c,st):'-'));
       aoa.push(row);
@@ -17270,7 +17337,7 @@ window.requestOwnPasswordReset = function(event){
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
     plans.forEach(function(p){
       var full=Number(p.maxScore);
-      header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')'));
+      header.push('สัปดาห์ที่ '+p.week+'\n'+p.title+'\n'+(full===0?'(เช็คงาน)':'(เต็ม '+window.formatScoreDisplay(full,2)+')'));
       if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2);
     });
     header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
@@ -17292,7 +17359,7 @@ window.requestOwnPasswordReset = function(event){
         if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
         else{
           total = window.addScoreToTotal(total, raw, 2);
-          row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2)));
+          row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง':window.normalizeScoreNumber(raw,2)));
         }
       });
       row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? calcGrade(window.normalizeScoreNumber(total,2), criteria, c, st) : '-'));
@@ -17500,7 +17567,7 @@ window.requestOwnPasswordReset = function(event){
     var criteria=(state.courseGrades && state.courseGrades[cid]) || window.defaultGradeCriteria || [];
     var totalMax=0;
     var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด','ลา'];
-    plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ '+p.week+' - '+(p.title||'')+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
+    plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ที่ '+p.week+'\n'+(p.title||'')+'\n'+(full===0?'(เช็คงาน)':'(เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
     header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด','โบนัส','ดาว','หมายเหตุ');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(room || 'ทุกห้อง')],[],header];
     var bonusByCid=(state.bonusScores && state.bonusScores[cid]) || {};
@@ -17519,7 +17586,7 @@ window.requestOwnPasswordReset = function(event){
         var task=scores.find(function(ts){ return String(ts.week)===String(p.week) && String(ts.title)===String(p.title); });
         var raw=task && task.records ? task.records[st.id] : null;
         if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
-        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
+        else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง':window.normalizeScoreNumber(raw,2))); }
       });
       if (isWithdrawn) { row.push('ลาออก','ลาออก','ลาออก','ลาออก','ลาออก'); aoa.push(row); return; }
       var totalBonus=0;
@@ -19353,7 +19420,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     var now = Date.now();
     var locked = false, reason = '';
     if (!dir.planId && !(dir.teamStatus === 'accepted' || dir.teamOwnerUid)) { locked = true; reason = 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน'; }
-    else if (dir.status === 'pending_plan' || dir.requestedPlanId) { locked = true; reason = 'คำขอแผนอยู่ระหว่างรออนุมัติ'; }
+    else if ((dir.status === 'pending_plan' || dir.requestedPlanId) && !dir.planId) { locked = true; reason = 'คำขอแผนอยู่ระหว่างรออนุมัติ'; }
     else if (dir.status === 'blocked' || dir.status === 'deleted') { locked = true; reason = 'บัญชีนี้ถูกระงับสิทธิ์'; }
     else if ((dir.planExpiresAt && n(dir.planExpiresAt) <= now) || (dir.planNextBillingAt && n(dir.planNextBillingAt) <= now && !(plan && (plan.freeForever || plan.billingCycle === 'forever')))) { locked = true; reason = 'แผนหมดอายุหรือถึงรอบชำระเงินแล้ว'; }
     if (!plan && dir.planId) plan = dir;
@@ -19621,7 +19688,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     var d=dir(), p=plan(), now=Date.now();
     if(isAdmin()) return '';
     if(!d.planId && !(d.teamStatus==='accepted' || d.teamOwnerUid)) return 'ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนใช้งาน';
-    if(d.status==='pending_plan' || d.requestedPlanId) return 'คำขอแผนอยู่ระหว่างรออนุมัติ';
+    if((d.status==='pending_plan' || d.requestedPlanId) && !d.planId) return 'คำขอแผนอยู่ระหว่างรออนุมัติ';
     if(d.status==='blocked' || d.status==='deleted' || d.blocked===true) return 'บัญชีนี้ถูกระงับสิทธิ์';
     if((d.planExpiresAt && toNum(d.planExpiresAt)<=now) || (d.planNextBillingAt && toNum(d.planNextBillingAt)<=now && !(p && (p.freeForever || p.billingCycle==='forever')))) return 'แผนหมดอายุหรือถึงรอบชำระเงินแล้ว';
     return '';
@@ -24444,7 +24511,7 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     if(!field) return true;
     const d = window.__currentUserDir || {};
     if(!d.planId && !window.currentUserPlan && !window.activePlan && !(d.teamStatus === 'accepted' || d.teamOwnerUid)) return false;
-    if(d.status === 'pending_plan' || d.requestedPlanId || d.status === 'blocked' || d.status === 'deleted') return false;
+    if(((d.status === 'pending_plan' || d.requestedPlanId) && !d.planId) || d.status === 'blocked' || d.status === 'deleted') return false;
     const now = Date.now();
     if(d.planExpiresAt && Number(d.planExpiresAt) <= now){
       const p = currentPlanObject() || {};
@@ -25061,6 +25128,13 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
       'ลา':['EDE9FE','6D28D9'],
       'ลาออก':['F1F5F9','64748B']
     };
+    var noteColIdx = -1;
+    if (headerRowIdx >= 0) {
+      for (var Cn = range.s.c; Cn <= range.e.c; Cn++) {
+        var hCell = ws[XLSX.utils.encode_cell({r:headerRowIdx,c:Cn})];
+        if (hCell && String(hCell.v||'').trim() === 'หมายเหตุ') { noteColIdx = Cn; break; }
+      }
+    }
     for (var R2 = range.s.r; R2 <= range.e.r; R2++) {
       for (var C2 = range.s.c; C2 <= range.e.c; C2++) {
         var ref = XLSX.utils.encode_cell({r:R2,c:C2});
@@ -25069,7 +25143,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
         var v = String(cell.v == null ? '' : cell.v).trim();
 
         if (R2 === headerRowIdx) {
-          cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:11}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
+          var isTaskOrTotalHeader = /^รวมคะแนน/.test(v) || /\((เต็ม |เช็คงาน)/.test(v);
+          cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:(isTaskOrTotalHeader?7:11)}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
           continue;
         }
         if (R2 < headerRowIdx) {
@@ -25082,8 +25157,9 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
         else if (v.indexOf('ขาดส่ง') !== -1) { fill='FECACA'; fontColor='991B1B'; }
         else if (/^\+\d/.test(v) || v.indexOf('⭐') !== -1) { fill='FEF3C7'; fontColor='92400E'; bold=true; }
 
+        var isLeftCol = C2 <= range.s.c+2 || C2 === noteColIdx;
         cell.s = Object.assign(
-          { alignment:{horizontal:(C2 <= range.s.c+2 ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
+          { alignment:{horizontal:(isLeftCol ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
           fill ? { fill:{patternType:'solid',fgColor:{rgb:fill}}, font:{color:{rgb:fontColor},bold:bold} } : ((R2 - headerRowIdx) % 2 === 0 ? { fill:{patternType:'solid',fgColor:{rgb:'F8FAFC'}} } : {})
         );
       }
@@ -25092,8 +25168,11 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     for (var C3 = range.s.c; C3 <= range.e.c; C3++) {
       var maxLen = 4;
       for (var R3 = range.s.r; R3 <= range.e.r; R3++) {
-        if (R3 === headerRowIdx) continue; // fit the data, not the (often much longer) header label
-        var c3 = ws[XLSX.utils.encode_cell({r:R3,c:C3})]; if (c3 && c3.v != null) maxLen = Math.max(maxLen, String(c3.v).length);
+        if (R3 <= headerRowIdx) continue; // ไม่นับแถวหัวตาราง และแถวชื่อวิชา/ห้อง (เหนือหัวตาราง) ซึ่งมักยาวกว่าข้อมูลจริงมาก
+        var c3 = ws[XLSX.utils.encode_cell({r:R3,c:C3})]; if (c3 && c3.v != null) {
+          var lines3 = String(c3.v).split('\n');
+          for (var li3=0; li3<lines3.length; li3++) maxLen = Math.max(maxLen, lines3[li3].length);
+        }
       }
       cols.push({ wch: Math.min(maxLen + 2, 40) });
     }
@@ -28101,6 +28180,19 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
     if (!force && host.dataset.schoolhubProfilePanelRendered === '1' && host.querySelector('#settings-profile-display-name-input')) return;
     host.innerHTML = `
       <div class="space-y-4 settings-profile-form" data-schoolhub-always-allowed="1">
+        <div class="flex items-center gap-4 pb-2">
+          <div class="relative w-20 h-20 shrink-0">
+            <div id="settings-profile-avatar-initial" class="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center text-2xl font-bold shadow-md">U</div>
+            <img id="settings-profile-avatar-img" class="hidden absolute inset-0 w-20 h-20 rounded-full object-cover border-2 border-white shadow-md" alt="รูปโปรไฟล์">
+            <button type="button" id="settings-profile-avatar-pick-btn" data-schoolhub-always-allowed="1" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg border-2 border-white transition"><i class="fas fa-camera text-xs"></i></button>
+            <input type="file" id="settings-profile-avatar-input" accept="image/*" class="hidden" data-schoolhub-always-allowed="1">
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-bold text-slate-700">รูปโปรไฟล์</div>
+            <div class="text-xs text-slate-400 mt-0.5 leading-5">อัปโหลดรูป JPG/PNG ระบบจะบีบอัดให้อัตโนมัติก่อนบันทึก</div>
+            <button type="button" id="settings-profile-avatar-remove-btn" data-schoolhub-always-allowed="1" class="hidden mt-2 text-xs font-bold text-rose-500 hover:text-rose-700"><i class="fas fa-trash mr-1"></i>ลบรูปโปรไฟล์</button>
+          </div>
+        </div>
         <div id="settings-profile-admin-username-wrap" class="hidden">
           <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อผู้ใช้ Admin</label>
           <input id="settings-profile-admin-username-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Admin" data-schoolhub-always-allowed="1">
@@ -28505,8 +28597,15 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, quer
       'contact-messages': renderAdminMessagesPanel
     };
     const renderer = renderers[tab];
-    const panel = renderer ? renderer() : ensureSettingsPanel(tab);
-    if (panel) {
+    let panel = renderer ? renderer() : ensureSettingsPanel(tab);
+    if (panel && typeof panel.then === 'function') {
+      // Renderer is async (e.g. renderPlansPanel) - it already applies classes/attrs to the
+      // panel element synchronously before its first await, so just track errors and fall
+      // back to the panel element itself instead of the Promise.
+      panel.catch(e => console.error('Settings panel render failed', e));
+      panel = ensureSettingsPanel(tab);
+    }
+    if (panel && panel.classList) {
       panel.classList.add('schoolhub-settings-panel');
       panel.setAttribute('data-schoolhub-settings-panel', tab);
       panel.setAttribute('data-schoolhub-always-allowed', '1');
@@ -33163,5 +33262,636 @@ waitReady(()=>{
   document.addEventListener('DOMContentLoaded', wrapOpenModalOnce);
   setTimeout(wrapOpenModalOnce, 0);
   setTimeout(wrapOpenModalOnce, 500);
+})();
+</script>
+
+<!-- =========================================================
+     SchoolHub Custom Menu (เมนูแบบฝัง) — Full-screen Popup Patch
+     - แปลงหน้าเมนูฝัง (openCustomMenuUser) จาก "หน้า" ให้เป็น
+       ป็อปอัพเต็มจอแทน โดยไม่แตะระบบเดิม (ฝั่งแอดมินจัดการเมนูยังเป็นหน้าเดิม)
+     ========================================================= -->
+<style id="schoolhub-custom-menu-popup-style">
+#schoolhub-custom-menu-user-view.shcm-popup-mode{
+  position:fixed !important;
+  inset:0 !important;
+  margin:0 !important;
+  z-index:200000 !important;
+  background:rgba(15,23,42,.6);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  padding:1.25rem;
+  overflow-y:auto;
+}
+#schoolhub-custom-menu-user-view.shcm-popup-mode.hidden{ display:none !important; }
+body.schoolhub-custom-menu-popup-open{ overflow:hidden !important; }
+#schoolhub-custom-menu-user-view.shcm-popup-mode > div{
+  background:#fff !important;
+  border-radius:1.75rem !important;
+  box-shadow:0 30px 70px rgba(0,0,0,.35) !important;
+  width:100%;
+  max-width:1200px;
+  height:94vh;
+  max-height:94vh;
+  display:flex !important;
+  flex-direction:column;
+  overflow:hidden !important;
+  animation:shcmPopupIn .18s ease;
+}
+/* ทับกฎ overflow:visible!important เดิมของหน้าเมนูฝัง เพื่อให้ป็อปอัพนี้เลื่อน (scroll) ได้จริง */
+#schoolhub-custom-menu-user-view.shcm-popup-mode > div.bg-white{
+  overflow:hidden !important;
+}
+#schoolhub-custom-menu-user-view.shcm-popup-mode #shcm-user-content{
+  flex:1 1 auto !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  -webkit-overflow-scrolling:touch;
+}
+#schoolhub-custom-menu-user-view.shcm-popup-mode #shcm-user-content iframe{
+  width:100% !important;
+  display:block !important;
+}
+#shcm-popup-close-x{
+  position:absolute; top:.85rem; right:.85rem; width:2.25rem; height:2.25rem;
+  border-radius:9999px; background:#fff; border:1px solid #e2e8f0; color:#475569;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(0,0,0,.12);
+  cursor:pointer; z-index:2;
+}
+#shcm-popup-close-x:hover{ background:#f1f5f9; }
+@keyframes shcmPopupIn{ from{opacity:0; transform:translateY(10px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+@media(max-width:767px){
+  #schoolhub-custom-menu-user-view.shcm-popup-mode{ padding:0; }
+  #schoolhub-custom-menu-user-view.shcm-popup-mode > div{ max-width:100%; width:100%; height:100dvh; max-height:100dvh; border-radius:0 !important; }
+}
+</style>
+<script id="schoolhub-custom-menu-popup-final-patch">
+(function(){
+  if(window.__schoolhubCustomMenuPopupFinalPatch) return;
+  window.__schoolhubCustomMenuPopupFinalPatch = true;
+
+  var lastVisibleViewId = null;
+
+  function getView(){ return document.getElementById('schoolhub-custom-menu-user-view'); }
+
+  function closePopup(){
+    var view = getView();
+    if(!view) return;
+    view.classList.add('hidden');
+    view.classList.remove('shcm-popup-mode');
+    document.body.classList.remove('schoolhub-custom-menu-popup-open');
+    if(lastVisibleViewId){
+      document.querySelectorAll('.view-section').forEach(function(v){ v.classList.add('hidden'); });
+      var prev = document.getElementById(lastVisibleViewId);
+      if(prev) prev.classList.remove('hidden');
+      lastVisibleViewId = null;
+    }
+  }
+  window.closeCustomMenuUserPopup = closePopup;
+
+  function ensureChrome(){
+    var view = getView();
+    if(!view) return;
+    var panel = view.querySelector(':scope > div');
+    if(!panel) return;
+    panel.style.position = panel.style.position || 'relative';
+
+    // เอาปุ่ม "กลับ" ข้อความเดิมออก เหลือไว้แค่ปุ่มกากบาท (X) มุมขวาบนอย่างเดียว
+    var backBtn = panel.querySelector('button[onclick*="goToHome"]');
+    if(backBtn && !backBtn.dataset.shcmPopupRemoved){
+      backBtn.dataset.shcmPopupRemoved = '1';
+      backBtn.style.display = 'none';
+    }
+    // เพิ่มปุ่มปิด (X) มุมขวาบนของป็อปอัพ
+    if(!panel.querySelector('#shcm-popup-close-x')){
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.id = 'shcm-popup-close-x';
+      x.setAttribute('aria-label','ปิด');
+      x.innerHTML = '<i class="fas fa-times"></i>';
+      x.addEventListener('click', function(e){ e.preventDefault(); closePopup(); });
+      panel.appendChild(x);
+    }
+  }
+
+  function wrapUserOpen(){
+    var fn = window.openCustomMenuUser;
+    if(typeof fn !== 'function' || fn.__shcmPopupFinal) return;
+    var original = fn;
+    var wrapped = function(id){
+      var visible = document.querySelector('.view-section:not(.hidden)');
+      if(visible && visible.id !== 'schoolhub-custom-menu-user-view') lastVisibleViewId = visible.id;
+      var r = original.apply(this, arguments);
+      var view = getView();
+      if(view){
+        view.classList.remove('hidden');
+        view.classList.add('shcm-popup-mode');
+        document.body.classList.add('schoolhub-custom-menu-popup-open');
+        ensureChrome();
+      }
+      return r;
+    };
+    wrapped.__shcmPopupFinal = true;
+    // ตั้งค่า flag เดิมไว้ด้วย กันสคริปต์แพตช์รุ่นก่อนหน้าห่อฟังก์ชันนี้ซ้ำวนไม่รู้จบ
+    wrapped.__safeFramePatchWrapped = true;
+    window.openCustomMenuUser = wrapped;
+  }
+
+  document.addEventListener('click', function(e){
+    var view = getView();
+    if(view && view.classList.contains('shcm-popup-mode') && e.target === view){ closePopup(); }
+  }, true);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      var view = getView();
+      if(view && view.classList.contains('shcm-popup-mode')) closePopup();
+    }
+  });
+
+  var tries = 0;
+  var iv = setInterval(function(){
+    wrapUserOpen();
+    tries++;
+    if(tries > 60) clearInterval(iv);
+  }, 1000);
+  document.addEventListener('DOMContentLoaded', wrapUserOpen);
+  wrapUserOpen();
+})();
+</script>
+
+<!-- =========================================================
+     SchoolHub Profile Avatar Upload (บีบอัดรูปแบบเดียวกับสลิป)
+     - อัปโหลดรูปโปรไฟล์ -> บีบอัดเป็น dataURL ฝั่ง client แล้วบันทึกลง
+       Firestore (public_users_directory / admin_settings) เหมือนวิธีเก็บสลิปโอนเงิน
+     - ไม่มีการใช้ Firebase Storage (ตรงกับที่ระบบสลิปทำอยู่เดิม)
+     ========================================================= -->
+<script type="module" id="schoolhub-profile-avatar-upload-patch">
+import { getApps, getApp, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+(function(){
+  if (window.__schoolhubProfileAvatarPatch) return;
+  window.__schoolhubProfileAvatarPatch = true;
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+    authDomain: "shoolhub-5677e.firebaseapp.com",
+    projectId: "shoolhub-5677e",
+    storageBucket: "shoolhub-5677e.firebasestorage.app",
+    messagingSenderId: "630487358153",
+    appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+    measurementId: "G-2Q6R46DC38"
+  };
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const PUBLIC = 'public_users_directory';
+
+  const alertBox = (t, m, err = false) => (window.showCustomAlert ? window.showCustomAlert(t, m, err) : alert(t + '\n' + (m || '')));
+  const norm = v => String(v || '').trim().toLowerCase();
+  const isAdminSession = () => (typeof window.isAdminSession === 'function') ? window.isAdminSession() : (localStorage.getItem('schoolhub_admin_active') === 'true');
+
+  // undefined = ยังไม่แก้ไข, null = ต้องการลบรูป, string(dataURL) = รูปใหม่ที่บีบอัดแล้ว
+  let pendingAvatarDataUrl = undefined;
+
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('อ่านไฟล์ไม่ได้'));
+      reader.readAsDataURL(file);
+    });
+  }
+  function dataUrlByteLength(dataUrl) {
+    try { return Math.ceil(String(dataUrl || '').length * 0.75); } catch (e) { return 999999999; }
+  }
+  // บีบอัดรูปโปรไฟล์ด้วยวิธีเดียวกับ compressSlipForFirestore ที่ใช้กับสลิปโอนเงิน
+  // รับ dataURL ตรงๆ (ใช้ได้ทั้งไฟล์ต้นฉบับ และรูปที่ผ่านการครอบวงกลมมาแล้ว)
+  function compressDataUrlForFirestore(rawDataUrl) {
+    const MAX_BYTES = 350000; // เผื่อพื้นที่ document ไว้เยอะกว่าฝั่งสลิปเพราะรูปโปรไฟล์เล็กกว่ามาก
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let maxSide = 480;
+          let quality = 0.86;
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { alpha: false });
+          let result = rawDataUrl;
+          for (let round = 0; round < 12; round++) {
+            const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+            canvas.width = Math.max(1, Math.round(img.width * ratio));
+            canvas.height = Math.max(1, Math.round(img.height * ratio));
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            result = canvas.toDataURL('image/jpeg', quality);
+            if (dataUrlByteLength(result) <= MAX_BYTES) break;
+            quality = Math.max(0.4, quality - 0.08);
+            maxSide = Math.max(160, Math.floor(maxSide * 0.85));
+          }
+          resolve(result);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = () => reject(new Error('บีบอัดรูปโปรไฟล์ไม่ได้ กรุณาเลือกรูปใหม่'));
+      img.src = rawDataUrl;
+    });
+  }
+  async function compressAvatarForFirestore(file) {
+    const rawDataUrl = await readFileAsDataURL(file);
+    return compressDataUrlForFirestore(rawDataUrl);
+  }
+
+  // ── ตัวครอบรูปโปรไฟล์เป็นวงกลม (drag เพื่อเลื่อน, แถบเลื่อนเพื่อซูม) ──────────
+  // คืนค่าเป็น dataURL สี่เหลี่ยมจัตุรัสของส่วนที่อยู่ในกรอบวงกลม (พร้อมส่งต่อให้ compressDataUrlForFirestore)
+  // หรือคืนค่า null ถ้าผู้ใช้กดยกเลิก
+  function openAvatarCropper(file) {
+    return new Promise((resolve) => {
+      const rawUrl = URL.createObjectURL(file);
+      const VIEWPORT = 260;
+      const OUTPUT = 640;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:2147483100;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:#fff;border-radius:28px;padding:20px;width:100%;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit;';
+
+      const title = document.createElement('div');
+      title.textContent = 'ครอบรูปโปรไฟล์';
+      title.style.cssText = 'font-weight:800;font-size:18px;color:#1e1b4b;margin-bottom:4px;';
+
+      const subtitle = document.createElement('div');
+      subtitle.textContent = 'ลากรูปเพื่อเลื่อนตำแหน่ง ใช้แถบเลื่อนเพื่อซูม';
+      subtitle.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:14px;';
+
+      const viewportWrap = document.createElement('div');
+      viewportWrap.style.cssText = `position:relative;width:${VIEWPORT}px;height:${VIEWPORT}px;margin:0 auto;overflow:hidden;border-radius:9999px;background:#f1f5f9;cursor:grab;touch-action:none;box-shadow:0 0 0 4px #eef2ff, 0 0 0 5px #c7d2fe;`;
+
+      const imgEl = document.createElement('img');
+      imgEl.style.cssText = 'position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;pointer-events:none;max-width:none;max-height:none;';
+      imgEl.draggable = false;
+      viewportWrap.appendChild(imgEl);
+
+      const zoomRow = document.createElement('div');
+      zoomRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:16px;';
+      const zoomIconMinus = document.createElement('i');
+      zoomIconMinus.className = 'fas fa-magnifying-glass-minus';
+      zoomIconMinus.style.cssText = 'color:#94a3b8;font-size:12px;';
+      const zoomSlider = document.createElement('input');
+      zoomSlider.type = 'range';
+      zoomSlider.min = '100';
+      zoomSlider.max = '300';
+      zoomSlider.value = '100';
+      zoomSlider.style.cssText = 'flex:1;accent-color:#4f46e5;';
+      const zoomIconPlus = document.createElement('i');
+      zoomIconPlus.className = 'fas fa-magnifying-glass-plus';
+      zoomIconPlus.style.cssText = 'color:#94a3b8;font-size:12px;';
+      zoomRow.appendChild(zoomIconMinus);
+      zoomRow.appendChild(zoomSlider);
+      zoomRow.appendChild(zoomIconPlus);
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:10px;margin-top:18px;';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'ยกเลิก';
+      cancelBtn.style.cssText = 'flex:1;padding:12px;border-radius:16px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-weight:700;cursor:pointer;';
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> ใช้รูปนี้';
+      confirmBtn.disabled = true;
+      confirmBtn.style.cssText = 'flex:1;padding:12px;border-radius:16px;border:none;background:#4f46e5;color:#fff;font-weight:800;cursor:pointer;opacity:.5;';
+      btnRow.appendChild(cancelBtn);
+      btnRow.appendChild(confirmBtn);
+
+      panel.appendChild(title);
+      panel.appendChild(subtitle);
+      panel.appendChild(viewportWrap);
+      panel.appendChild(zoomRow);
+      panel.appendChild(btnRow);
+      overlay.appendChild(panel);
+
+      let naturalW = 0, naturalH = 0, baseScale = 1, scale = 1, tx = 0, ty = 0;
+      let dragging = false, startX = 0, startY = 0, startTx = 0, startTy = 0;
+      let settled = false;
+
+      function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+      function applyTransform() {
+        const dispW = naturalW * scale;
+        const dispH = naturalH * scale;
+        tx = clamp(tx, VIEWPORT - dispW, 0);
+        ty = clamp(ty, VIEWPORT - dispH, 0);
+        imgEl.style.width = dispW + 'px';
+        imgEl.style.height = dispH + 'px';
+        imgEl.style.left = tx + 'px';
+        imgEl.style.top = ty + 'px';
+      }
+
+      function finish(result) {
+        if (settled) return;
+        settled = true;
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        URL.revokeObjectURL(rawUrl);
+        resolve(result);
+      }
+
+      imgEl.onload = () => {
+        naturalW = imgEl.naturalWidth;
+        naturalH = imgEl.naturalHeight;
+        if (!naturalW || !naturalH) { finish(null); alertBox('เปิดรูปไม่สำเร็จ', 'กรุณาเลือกไฟล์รูปภาพใหม่', true); return; }
+        baseScale = Math.max(VIEWPORT / naturalW, VIEWPORT / naturalH);
+        scale = baseScale;
+        tx = (VIEWPORT - naturalW * scale) / 2;
+        ty = (VIEWPORT - naturalH * scale) / 2;
+        applyTransform();
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+      };
+      imgEl.onerror = () => { finish(null); alertBox('เปิดรูปไม่สำเร็จ', 'กรุณาเลือกไฟล์รูปภาพใหม่', true); };
+      imgEl.src = rawUrl;
+
+      viewportWrap.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        startX = e.clientX; startY = e.clientY;
+        startTx = tx; startTy = ty;
+        viewportWrap.style.cursor = 'grabbing';
+        try { viewportWrap.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      viewportWrap.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        tx = startTx + (e.clientX - startX);
+        ty = startTy + (e.clientY - startY);
+        applyTransform();
+      });
+      function endDrag() { dragging = false; viewportWrap.style.cursor = 'grab'; }
+      viewportWrap.addEventListener('pointerup', endDrag);
+      viewportWrap.addEventListener('pointercancel', endDrag);
+      viewportWrap.addEventListener('pointerleave', endDrag);
+
+      zoomSlider.addEventListener('input', () => {
+        if (!naturalW) return;
+        const factor = Number(zoomSlider.value) / 100;
+        const centerX = VIEWPORT / 2, centerY = VIEWPORT / 2;
+        const imgCenterX = (centerX - tx) / scale;
+        const imgCenterY = (centerY - ty) / scale;
+        scale = baseScale * factor;
+        tx = centerX - imgCenterX * scale;
+        ty = centerY - imgCenterY * scale;
+        applyTransform();
+      });
+
+      cancelBtn.addEventListener('click', () => finish(null));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+      confirmBtn.addEventListener('click', () => {
+        try {
+          const sx = -tx / scale;
+          const sy = -ty / scale;
+          const sSize = VIEWPORT / scale;
+          const outCanvas = document.createElement('canvas');
+          outCanvas.width = OUTPUT;
+          outCanvas.height = OUTPUT;
+          const ctx = outCanvas.getContext('2d', { alpha: false });
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, OUTPUT, OUTPUT);
+          ctx.drawImage(imgEl, sx, sy, sSize, sSize, 0, 0, OUTPUT, OUTPUT);
+          const dataUrl = outCanvas.toDataURL('image/jpeg', 0.95);
+          finish(dataUrl);
+        } catch (e) {
+          finish(null);
+          alertBox('ครอบรูปไม่สำเร็จ', e?.message || String(e), true);
+        }
+      });
+
+      document.body.appendChild(overlay);
+    });
+  }
+
+
+  function setSettingsAvatarPreview(url) {
+    const img = document.getElementById('settings-profile-avatar-img');
+    const initial = document.getElementById('settings-profile-avatar-initial');
+    if (img) {
+      if (url) { img.src = url; img.classList.remove('hidden'); } else { img.src = ''; img.classList.add('hidden'); }
+    }
+    if (initial) initial.classList.toggle('hidden', !!url);
+    const removeBtn = document.getElementById('settings-profile-avatar-remove-btn');
+    if (removeBtn) removeBtn.classList.toggle('hidden', !url);
+  }
+
+  // เช่นเดียวกับ setSettingsAvatarPreview แต่สำหรับป็อปอัพ "โปรไฟล์ผู้ใช้งาน" (user-profile-modal)
+  function setUserProfileModalAvatarPreview(url) {
+    const img = document.getElementById('user-profile-avatar-img');
+    const initial = document.getElementById('user-profile-avatar-initial');
+    if (img) {
+      if (url) { img.src = url; img.classList.remove('hidden'); } else { img.src = ''; img.classList.add('hidden'); }
+    }
+    if (initial) initial.classList.toggle('hidden', !!url);
+    const removeBtn = document.getElementById('user-profile-avatar-remove-btn');
+    if (removeBtn) removeBtn.classList.toggle('hidden', !url);
+  }
+
+  // อัปเดต preview ทุกจุดที่แสดงรูปโปรไฟล์พร้อมกัน (แผงตั้งค่า + ป็อปอัพโปรไฟล์)
+  function setAllAvatarPreviews(url) {
+    setSettingsAvatarPreview(url);
+    setUserProfileModalAvatarPreview(url);
+  }
+
+  // เปิดรูปโปรไฟล์แบบเต็มจอ (กดที่รูปเพื่อ "ดู")
+  function openAvatarLightbox(url) {
+    if (!url) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;';
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = 'รูปโปรไฟล์';
+    img.style.cssText = 'max-width:min(90vw,420px);max-height:80vh;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:4px solid #fff;';
+    overlay.appendChild(img);
+    const closeIt = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') closeIt(); };
+    overlay.addEventListener('click', closeIt);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }
+
+  // อัปเดตรูปโปรไฟล์วงกลมที่แถบเมนูด้านซ้าย (sidebar) ทันทีเมื่อโหลด/บันทึกเสร็จ
+  window.setUserAvatarPhoto = function (url) {
+    const img = document.getElementById('user-avatar-photo');
+    const initial = document.getElementById('user-avatar-initial');
+    if (img) {
+      if (url) { img.src = url; img.classList.remove('hidden'); } else { img.src = ''; img.classList.add('hidden'); }
+    }
+    if (initial) initial.style.visibility = url ? 'hidden' : 'visible';
+  };
+
+  async function loadAvatarForCurrentUser() {
+    pendingAvatarDataUrl = undefined;
+    let url = '';
+    try {
+      if (isAdminSession()) {
+        const snap = await getDoc(doc(db, 'admin_settings', 'credentials'));
+        url = snap.exists() ? (snap.data().photoURL || '') : '';
+      } else {
+        const user = auth.currentUser;
+        const email = norm(user && user.email);
+        if (email) {
+          const snap = await getDoc(doc(db, PUBLIC, email));
+          url = snap.exists() ? (snap.data().photoURL || '') : '';
+        }
+      }
+    } catch (e) { console.warn('โหลดรูปโปรไฟล์ไม่สำเร็จ', e); }
+    setAllAvatarPreviews(url);
+    window.setUserAvatarPhoto(url);
+    return url;
+  }
+  window.schoolhubLoadProfileAvatar = loadAvatarForCurrentUser;
+
+  async function saveAvatarIfChanged() {
+    if (pendingAvatarDataUrl === undefined) return; // ผู้ใช้ไม่ได้แก้รูป ไม่ต้องบันทึกซ้ำ
+    const value = pendingAvatarDataUrl === null ? '' : pendingAvatarDataUrl;
+    if (isAdminSession()) {
+      await setDoc(doc(db, 'admin_settings', 'credentials'), { photoURL: value, updatedAt: serverTimestamp() }, { merge: true });
+    } else {
+      const user = auth.currentUser;
+      const email = norm(user && user.email);
+      if (email) {
+        await setDoc(doc(db, PUBLIC, email), { photoURL: value, updatedAt: serverTimestamp() }, { merge: true });
+      }
+    }
+    pendingAvatarDataUrl = undefined;
+    window.setUserAvatarPhoto(value);
+    setAllAvatarPreviews(value);
+  }
+
+  document.addEventListener('click', function (e) {
+    const pickBtn = e.target.closest && e.target.closest('#settings-profile-avatar-pick-btn, #user-profile-avatar-pick-btn');
+    if (pickBtn) {
+      e.preventDefault();
+      const inputId = pickBtn.id === 'user-profile-avatar-pick-btn' ? 'user-profile-avatar-input' : 'settings-profile-avatar-input';
+      document.getElementById(inputId)?.click();
+      return;
+    }
+    const removeBtn = e.target.closest && e.target.closest('#settings-profile-avatar-remove-btn, #user-profile-avatar-remove-btn');
+    if (removeBtn) {
+      e.preventDefault();
+      pendingAvatarDataUrl = null;
+      setAllAvatarPreviews('');
+      return;
+    }
+    // กดที่รูปโปรไฟล์เอง (ทั้งวงกลมตัวอักษร และรูปจริง) ในป็อปอัพ -> ถ้ามีรูปแล้วให้ดูขนาดเต็ม ถ้ายังไม่มีรูปให้เปิดเลือกไฟล์เลย
+    const avatarImg = e.target.closest && e.target.closest('#user-profile-avatar-img');
+    if (avatarImg) {
+      e.preventDefault();
+      openAvatarLightbox(avatarImg.src);
+      return;
+    }
+    const avatarInitial = e.target.closest && e.target.closest('#user-profile-avatar-initial');
+    if (avatarInitial) {
+      e.preventDefault();
+      document.getElementById('user-profile-avatar-input')?.click();
+      return;
+    }
+  });
+
+  document.addEventListener('change', async function (e) {
+    const input = e.target.closest && e.target.closest('#settings-profile-avatar-input, #user-profile-avatar-input');
+    if (!input || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (!file.type || !file.type.startsWith('image/')) {
+      alertBox('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์รูปภาพ (JPG/PNG)', true);
+      input.value = '';
+      return;
+    }
+    input.value = ''; // เคลียร์ไว้ก่อน เพื่อให้เลือกไฟล์เดิมซ้ำได้ในครั้งถัดไป
+    try {
+      const croppedDataUrl = await openAvatarCropper(file);
+      if (!croppedDataUrl) return; // ผู้ใช้กดยกเลิกตอนครอบรูป
+      if (typeof window.loader === 'function') window.loader(true);
+      const compressed = await compressDataUrlForFirestore(croppedDataUrl);
+      pendingAvatarDataUrl = compressed;
+      setAllAvatarPreviews(compressed);
+    } catch (err) {
+      alertBox('บีบอัดรูปไม่สำเร็จ', err?.message || String(err), true);
+    } finally {
+      if (typeof window.loader === 'function') window.loader(false);
+    }
+  });
+
+  // เมื่อแผงโปรไฟล์ในหน้าตั้งค่าถูก render ขึ้นมา (มีปุ่มกล้องปรากฏ) ให้โหลดรูปปัจจุบันมาแสดง
+  const observer = new MutationObserver(function () {
+    const host = document.getElementById('schoolhub-settings-profile-host');
+    if (host && host.querySelector('#settings-profile-avatar-pick-btn') && host.dataset.shcmAvatarLoaded !== '1') {
+      host.dataset.shcmAvatarLoaded = '1';
+      loadAvatarForCurrentUser();
+    }
+    // ถ้าแผงถูก render ใหม่ทับ (เช่นสลับแท็บไปมา) ให้รีเซ็ต flag เพื่อโหลดรูปให้ตรงกับ session ปัจจุบันอีกครั้ง
+    if (host && !host.querySelector('#settings-profile-avatar-pick-btn')) {
+      host.dataset.shcmAvatarLoaded = '';
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // ห่อฟังก์ชันบันทึกโปรไฟล์เดิม เพื่อบันทึกรูปโปรไฟล์ไปพร้อมกันทุกครั้งที่กด "บันทึกโปรไฟล์"
+  function wrapSaveProfile() {
+    const fn = window.saveSettingsProfileChanges;
+    if (typeof fn !== 'function' || fn.__avatarPatchWrapped) return;
+    const original = fn;
+    const wrapped = async function () {
+      try { await saveAvatarIfChanged(); } catch (e) { console.warn('บันทึกรูปโปรไฟล์ไม่สำเร็จ', e); alertBox('บันทึกรูปโปรไฟล์ไม่สำเร็จ', e?.message || String(e), true); }
+      return original.apply(this, arguments);
+    };
+    wrapped.__avatarPatchWrapped = true;
+    window.saveSettingsProfileChanges = wrapped;
+  }
+  let saveWrapTries = 0;
+  const saveWrapIv = setInterval(function () {
+    wrapSaveProfile();
+    saveWrapTries++;
+    if (saveWrapTries > 60) clearInterval(saveWrapIv);
+  }, 1000);
+  document.addEventListener('DOMContentLoaded', wrapSaveProfile);
+  wrapSaveProfile();
+
+  // ห่อฟังก์ชันเปิด/บันทึกของป็อปอัพ "โปรไฟล์ผู้ใช้งาน" (user-profile-modal) เพื่อให้โหลด/บันทึกรูปโปรไฟล์ไปพร้อมกันด้วย
+  function wrapUserProfilePopup() {
+    const openFn = window.openUserProfileSettings;
+    if (typeof openFn === 'function' && !openFn.__avatarPatchWrapped) {
+      const originalOpen = openFn;
+      const wrappedOpen = async function () {
+        const result = await originalOpen.apply(this, arguments);
+        try { await loadAvatarForCurrentUser(); } catch (e) { console.warn('โหลดรูปโปรไฟล์ในป็อปอัพไม่สำเร็จ', e); }
+        return result;
+      };
+      wrappedOpen.__avatarPatchWrapped = true;
+      window.openUserProfileSettings = wrappedOpen;
+    }
+    const saveFn = window.saveUserProfileChanges;
+    if (typeof saveFn === 'function' && !saveFn.__avatarPatchWrapped) {
+      const originalSave = saveFn;
+      const wrappedSave = async function () {
+        try { await saveAvatarIfChanged(); } catch (e) { console.warn('บันทึกรูปโปรไฟล์ในป็อปอัพไม่สำเร็จ', e); alertBox('บันทึกรูปโปรไฟล์ไม่สำเร็จ', e?.message || String(e), true); }
+        return originalSave.apply(this, arguments);
+      };
+      wrappedSave.__avatarPatchWrapped = true;
+      window.saveUserProfileChanges = wrappedSave;
+    }
+  }
+  let userProfileWrapTries = 0;
+  const userProfileWrapIv = setInterval(function () {
+    wrapUserProfilePopup();
+    userProfileWrapTries++;
+    if (userProfileWrapTries > 60) clearInterval(userProfileWrapIv);
+  }, 1000);
+  document.addEventListener('DOMContentLoaded', wrapUserProfilePopup);
+  wrapUserProfilePopup();
+
+  onAuthStateChanged(auth, function (user) {
+    if (user) setTimeout(loadAvatarForCurrentUser, 700);
+    else window.setUserAvatarPhoto('');
+  });
 })();
 </script>
