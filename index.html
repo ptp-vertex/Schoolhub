@@ -7257,6 +7257,18 @@ async function submitPlanRequest(planId){
                 const c = (state.courses || []).find(x => String(x.id) === String(cid));
                 if(c && c.__sharedOwnerKey) delete state.courseGrades[cid];
             });
+            Object.keys(state.bonusScores || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.bonusScores[cid];
+            });
+            Object.keys(state.starGroups || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.starGroups[cid];
+            });
+            Object.keys(state.bonusMergeSettings || {}).forEach(cid => {
+                const c = (state.courses || []).find(x => String(x.id) === String(cid));
+                if(c && c.__sharedOwnerKey) delete state.bonusMergeSettings[cid];
+            });
         }
         async function schoolhubReadOwnerState(ownerKey){
             if(!ownerKey) return null;
@@ -7301,6 +7313,12 @@ async function submitPlanRequest(planId){
             state.attendance[cid] = schoolhubCloneClean((ownerState.attendance || {})[cid] || {});
             state.coursePlans[cid] = schoolhubCloneClean((ownerState.coursePlans || {})[cid] || []);
             state.courseGrades[cid] = schoolhubCloneClean((ownerState.courseGrades || {})[cid] || null);
+            if(!state.bonusScores) state.bonusScores = {};
+            if(!state.starGroups) state.starGroups = {};
+            if(!state.bonusMergeSettings) state.bonusMergeSettings = {};
+            state.bonusScores[cid] = schoolhubCloneClean((ownerState.bonusScores || {})[cid] || {});
+            state.starGroups[cid] = schoolhubCloneClean((ownerState.starGroups || {})[cid] || {});
+            state.bonusMergeSettings[cid] = schoolhubCloneClean((ownerState.bonusMergeSettings || {})[cid] || null);
         }
         async function schoolhubLoadSharedCoursesForCurrentUser(){
             window.__schoolhubIncomingSharedCourses = [];
@@ -7404,6 +7422,7 @@ async function submitPlanRequest(planId){
             detail.querySelectorAll('input, textarea, select, button').forEach(el => {
                 if(el.id === 'course-back-btn' || el.classList.contains('course-tab-btn') || el.classList.contains('mobile-course-tab-btn')) return;
                 if(el.id === 'course-teachers-manage-btn') return;
+                if(el.classList.contains('week-detail-btn')) return;
                 if(isView){ el.disabled = true; el.classList.add('opacity-60','pointer-events-none'); }
                 else { el.disabled = false; el.classList.remove('opacity-60','pointer-events-none'); }
             });
@@ -31958,6 +31977,7 @@ W.shOvShowStarDetail = function(sid, name, jsonEnc, cid){
 
 // ── Delete individual / all bonus entries for a student ────────────
 W.shOvDeleteBonusEntry = function(cid, sid, week){
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ลบคะแนนโบนัส')) return;
   shConfirm('ยืนยันการลบ', 'ต้องการลบคะแนนโบนัสสัปดาห์ที่ '+week+' ของนักเรียนคนนี้ใช่หรือไม่?', async function(){
     const s = st();
     const wk = 'w'+week;
@@ -31971,6 +31991,7 @@ W.shOvDeleteBonusEntry = function(cid, sid, week){
   });
 };
 W.shOvDeleteAllBonusEntries = function(cid, sid){
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ลบคะแนนโบนัส')) return;
   shConfirm('ยืนยันการลบ', 'ต้องการลบประวัติคะแนนโบนัสทั้งหมดของนักเรียนคนนี้ใช่หรือไม่?', async function(){
     const s = st();
     const byCid = (s.bonusScores && s.bonusScores[cid]) || {};
@@ -31982,6 +32003,7 @@ W.shOvDeleteAllBonusEntries = function(cid, sid){
   });
 };
 W.shOvDeleteStarEntry = function(cid, sid, week){
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ลบดาว')) return;
   shConfirm('ยืนยันการลบ', 'ต้องการลบดาวสัปดาห์ที่ '+week+' ของนักเรียนคนนี้ใช่หรือไม่?', async function(){
     const s = st();
     const wk = 'w'+week;
@@ -31997,6 +32019,7 @@ W.shOvDeleteStarEntry = function(cid, sid, week){
   });
 };
 W.shOvDeleteAllStarEntries = function(cid, sid){
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ลบดาว')) return;
   shConfirm('ยืนยันการลบ', 'ต้องการลบประวัติดาวทั้งหมดของนักเรียนคนนี้ใช่หรือไม่?', async function(){
     const s = st();
     const cd = (s.starGroups && s.starGroups[cid]) || {};
@@ -32045,6 +32068,7 @@ W.shOvShowAttendanceDetail = function(sid, name, jsonEnc){
 W.shOvOpenBonusMergeSettings = function(cid){
   cid = cid || getCid();
   if(!cid) return;
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ตั้งค่าการรวมคะแนนโบนัส')) return;
   initFields();
   const s = st();
   ensureField(s, 'bonusMergeSettings', {});
@@ -32076,6 +32100,7 @@ W.shOvOpenBonusMergeSettings = function(cid){
   modal.classList.remove('hidden');
 };
 W.shOvSaveBonusMergeSettings = async function(cid){
+  if(typeof window.schoolhubAssertCanEditCourse === 'function' && !window.schoolhubAssertCanEditCourse(cid, 'ตั้งค่าการรวมคะแนนโบนัส')) return;
   const s = st();
   ensureField(s, 'bonusMergeSettings', {});
   const enabled = !!(document.getElementById('sh-bm-enabled') && document.getElementById('sh-bm-enabled').checked);
