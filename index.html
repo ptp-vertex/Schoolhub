@@ -15437,7 +15437,7 @@ window.requestOwnPasswordReset = function(event){
       var subtitle = isChecklist ? 'เช็คงาน' : 'เต็ม '+window.formatScoreDisplay(p.maxScore,2);
       thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>';
     });
-    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-emerald-600 text-white font-bold sh-bonus-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="คะแนนโบนัส — คลิกที่ช่องของนักเรียนเพื่อดูรายละเอียด, ดับเบิลคลิกที่หัวข้อนี้เพื่อตั้งค่าการรวมกับคะแนนรวม" ondblclick="shOvOpenBonusMergeSettings(\''+cid+'\')">+โบนัส</th><th class="text-center bg-amber-500 text-white font-bold sh-star-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="ดาวกลุ่มสะสม (คลิกเพื่อดูรายละเอียด)">⭐ดาว</th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
 
     var tbody = '<tbody>';
     var mobileHtml = '';
@@ -15476,13 +15476,57 @@ window.requestOwnPasswordReset = function(event){
         }
       });
       total = isWithdrawn ? 0 : window.normalizeScoreNumber(total, 2);
+      var __bonusByCid = (state.bonusScores && state.bonusScores[cid]) || {};
+      var __totalBonus = 0;
+      var __bonusDetail = [];
+      Object.keys(__bonusByCid).forEach(function(wk){
+        var wVal = __bonusByCid[wk] && __bonusByCid[wk][st.id];
+        if (wVal !== undefined && wVal !== '' && !isNaN(Number(wVal)) && Number(wVal) !== 0) {
+          __totalBonus += Number(wVal);
+          __bonusDetail.push({ week: wk.replace('w',''), val: Number(wVal) });
+        }
+      });
+      var __bonusDetailJson = encodeURIComponent(JSON.stringify(__bonusDetail));
+      var __bonusCellColor = __totalBonus > 0 ? 'color:#065f46;font-weight:800' : 'color:#94a3b8';
+      var __bonusCellBg = __totalBonus > 0 ? 'background:#d1fae5' : '';
+      var __starCourseData = (state.starGroups && state.starGroups[cid]) || {};
+      var __starGroups = __starCourseData.groups || [];
+      var __weekStars = __starCourseData.weekStars || {};
+      var __totalStars = 0;
+      var __starDetail = [];
+      var __studentGroups = __starGroups.filter(function(g){ return (g.members||[]).includes(st.id); });
+      Object.keys(__weekStars).forEach(function(wk){
+        var weekData = __weekStars[wk] || {};
+        var weekStarSum = 0;
+        __studentGroups.forEach(function(g){ weekStarSum += weekData[g.id] || 0; });
+        if (weekStarSum > 0) {
+          __totalStars += weekStarSum;
+          __starDetail.push({ week: wk.replace('w',''), stars: weekStarSum });
+        }
+      });
+      var __starDetailJson = encodeURIComponent(JSON.stringify(__starDetail));
+      var __starCellColor = __totalStars > 0 ? 'color:#92400e;font-weight:800' : 'color:#94a3b8';
+      var __starCellBg = __totalStars > 0 ? 'background:#fef3c7' : '';
+      var __bmSettings = (state.bonusMergeSettings && state.bonusMergeSettings[cid]) || null;
+      var __bonusMerged = 0;
+      if (__bmSettings && __bmSettings.enabled && !isWithdrawn) {
+        var __included = __bmSettings.mode === 'selected' ? (__bmSettings.selected||[]).includes(st.id) : true;
+        if (__included && __totalBonus) {
+          __bonusMerged = __totalBonus * ((Number(__bmSettings.percent)||0) / 100);
+          total = window.addScoreToTotal(total, __bonusMerged, 2);
+        }
+      }
+      var __safeName = String(st.name||st.id||'').replace(/'/g, "\\'");
       var gg = scoreAndGrade(st, total, totalMax, gradeCriteria, cid);
-      var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td>';
+      var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col" style="position:relative">'+window.formatScoreDisplay(total,2)+(__bonusMerged ? '<span style="position:absolute;top:2px;right:4px;font-size:9px;font-weight:800;color:#059669;line-height:1">+'+window.formatScoreDisplay(__bonusMerged,2)+'</span>' : '')+'</td>';
+      var bonusCell = isWithdrawn ? '<td class="text-center sh-bonus-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center sh-bonus-col" style="'+__bonusCellBg+';cursor:pointer" title="โบนัสรวม: '+__totalBonus+' คะแนน — คลิกเพื่อดูรายละเอียด" onclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')" ondblclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')"><span style="'+__bonusCellColor+'">'+(__totalBonus > 0 ? '+'+__totalBonus : '-')+'</span></td>';
+      var starCell = isWithdrawn ? '<td class="text-center sh-star-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center sh-star-col" style="'+__starCellBg+';cursor:pointer" title="ดาวรวม: '+__totalStars+' — คลิกเพื่อดูรายละเอียด" onclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')" ondblclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')"><span style="'+__starCellColor+'">'+(__totalStars > 0 ? __totalStars+'⭐' : '-')+'</span></td>';
       var gradeCell = isWithdrawn ? '<td class="text-center font-bold bg-amber-50/30 summary-grade-col withdrawn">'+(window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold '+gg.color+' bg-amber-50/30 summary-grade-col">'+(gg.html || esc(gg.grade))+'</td>';
       var attendanceCell = isWithdrawn ? '<td class="text-center font-bold summary-att-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
-      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td>'+attendanceCell+planCells+totalCell+gradeCell+'</tr>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td>'+attendanceCell+planCells+totalCell+bonusCell+starCell+gradeCell+'</tr>';
 
-      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+
+      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-stats" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.5rem"><div class="summary-mobile-stat" style="'+__bonusCellBg+';cursor:pointer" onclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')"><b style="'+__bonusCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalBonus > 0 ? '+'+__totalBonus : '-'))+'</b>+โบนัส</div><div class="summary-mobile-stat" style="'+__starCellBg+';cursor:pointer" onclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')"><b style="'+__starCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalStars > 0 ? __totalStars+'⭐' : '-'))+'</b>ดาว</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
