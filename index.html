@@ -11,6 +11,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>SchoolHub - ระบบจัดการห้องเรียน</title>
 
     <!-- เพิ่ม Favicon รูปหมวกปริญญา -->
@@ -15572,6 +15575,10 @@ window.requestOwnPasswordReset = function(event){
   }
 
   function buildFixedMobileOverviewCards(){
+    // ปิดการทำงาน: การ์ดมือถือฉบับนี้อ่านข้อมูลจากตาราง (DOM) โดยเดาตำแหน่งคอลัมน์
+    // ทำให้เพี้ยนเมื่อจำนวนคอลัมน์เปลี่ยน (เช่น มีคอลัมน์โบนัส/ดาว) จนคะแนนรวม/เกรดหาย
+    // และมีการ์ดปลอมโผล่มาแทรก ตอนนี้ใช้การ์ดที่สร้างจากข้อมูลจริงใน renderCourseOverview() แทน
+    return;
     if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
     var table = document.getElementById('course-summary-table');
     var box = ensureBox();
@@ -15831,7 +15838,8 @@ window.requestOwnPasswordReset = function(event){
   display:block!important;
   line-height:1.25!important;
 }
-#course-summary-mobile-cards .summary-mobile-card-code{display:none!important;}
+/* หมายเหตุ: เดิมซ่อน .summary-mobile-card-code เพราะมีบรรทัดรหัสนักเรียนแบบใหม่มาแทนที่จากตัวสร้างการ์ดที่ถูกปิดไปแล้ว
+   ตอนนี้เปิดกลับมาให้ใช้ปุ่ม "เปิด/ปิดรหัสนักเรียน" แบบเดิมแทน เพื่อไม่ให้รหัสนักเรียนหายไปจากการ์ด */
 </style>
 <style id="schoolhub-mobile-att-no-circle-color-only-final">
 /* Mobile View เท่านั้น: หน้าเช็คชื่อ ใช้สีของกล่องแทนวงกลม radio */
@@ -15979,6 +15987,9 @@ window.requestOwnPasswordReset = function(event){
   }
 
   function buildOverviewCardsNoFoldCode(){
+    // ปิดการทำงาน (เหมือนกับ buildFixedMobileOverviewCards ด้านบน): อ่าน DOM ตาราง
+    // แล้วเดาตำแหน่งคอลัมน์รวม/เกรด ซึ่งเพี้ยนเมื่อคอลัมน์เปลี่ยน ทำให้ข้อมูลการ์ดมือถือผิดเพี้ยน
+    return;
     if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
     var table = document.getElementById('course-summary-table');
     var box = ensureBox();
