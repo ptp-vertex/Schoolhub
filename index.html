@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -74,7 +74,7 @@ document.addEventListener('paste', function(e){
 
 </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -3326,8 +3326,8 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
             <button onclick="toggleMobileMenu()" class="text-slate-600 focus:outline-none p-2 bg-slate-50 rounded-lg border"><i class="fas fa-bars"></i></button>
         </div>
 
-        <div id="mobile-menu" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex justify-end">
-            <div class="bg-white w-4/5 max-w-sm h-full shadow-2xl flex flex-col animate-fadeInRight">
+        <div id="mobile-menu" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-lg max-h-[85vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden fade-in">
                 <div class="p-4 border-b flex justify-between items-center bg-slate-50">
                     <span class="font-bold text-slate-800">เมนู</span>
                     <button onclick="toggleMobileMenu()" class="p-2 bg-white rounded-lg border shadow-sm"><i class="fas fa-times"></i></button>
@@ -4521,6 +4521,17 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
     </div>
     <div id="public-share-view" class="fixed inset-0 share-public-bg z-[210] hidden overflow-y-auto p-4 md:p-8"><div class="max-w-4xl mx-auto"><div class="flex items-center gap-3 mb-5"><div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg"><i class="fas fa-graduation-cap"></i></div><div><h1 class="text-2xl font-black text-slate-900">SchoolHub</h1><p class="text-sm text-slate-500">ข้อมูลที่ครูแชร์ให้ดู</p></div></div><div id="public-share-content" class="share-mini-card rounded-[2rem] p-6 md:p-8 shadow-xl"></div></div></div>
 
+    <!-- Public Student Share: stat detail modal (มา/สาย/ขาด/ลา/โบนัส/ดาว) -->
+    <div id="student-share-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[220] hidden flex items-center justify-center fade-in p-4" onclick="if(event.target===this) closeStudentShareDetailModal()">
+        <div class="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 id="student-share-detail-title" class="text-lg font-black text-slate-800"></h3>
+                <button type="button" onclick="closeStudentShareDetailModal()" class="w-8 h-8 flex items-center justify-center bg-white border text-slate-500 rounded-full hover:bg-slate-100" aria-label="ปิด"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="student-share-detail-body" class="p-5 overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
 
 
     <!-- Course Teachers Modal (SchoolHub patch: shared teachers per course only) -->
@@ -4979,7 +4990,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
 
         let currentUser = null;
         let isAdmin = false;
-        let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+        let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {}, bonusScores: {}, starGroups: {}, bonusMergeSettings: {} };
         window.state = state;
 
 
@@ -6559,11 +6570,67 @@ async function submitPlanRequest(planId){
             const courseScores=(state.scores||[]).filter(x=>String(x.courseId)===String(cid));
             const attendanceHistory=(state.attendance&&state.attendance[cid])||{};
             const attDates=Object.keys(attendanceHistory).sort();
-            let present=0,late=0,absent=0;
-            attDates.forEach(d=>{const st=attendanceHistory[d]?.records?.[student.id];if(st==='present')present++;else if(st==='late')late++;else if(st==='absent')absent++;});
+            let present=0,late=0,absent=0,leave=0;
+            const attendanceDetail={present:[],late:[],absent:[],leave:[]};
+            attDates.forEach(d=>{
+                const st=attendanceHistory[d]?.records?.[student.id];
+                if(st==='present'){present++;attendanceDetail.present.push(d);}
+                else if(st==='late'){late++;attendanceDetail.late.push(d);}
+                else if(st==='absent'){absent++;attendanceDetail.absent.push(d);}
+                else if(st==='leave'){
+                    leave++;
+                    const reason=(attendanceHistory[d]&&attendanceHistory[d].leaveReasons&&attendanceHistory[d].leaveReasons[student.id])||'';
+                    attendanceDetail.leave.push({date:d,reason});
+                }
+            });
             let totalScore=0,totalMax=0;
             const scoreRows=plans.map(p=>{const task=courseScores.find(ts=>Number(ts.week)===Number(p.week)&&String(ts.title)===String(p.title));const raw=task&&task.records?task.records[student.id]:undefined;const checklist=Number(p.maxScore)===0;if(!checklist)totalMax=window.addScoreToTotal(totalMax,p.maxScore,2);let display='-';if(checklist)display=raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-');else{if(raw!==undefined&&raw!==''&&window.scoreNumberOrNull(raw)!==null){totalScore=window.addScoreToTotal(totalScore,raw,2);display=`${window.formatScoreDisplay(raw,2)}/${window.formatScoreDisplay(p.maxScore,2)}`;}else if(task)display='ขาดส่ง';}return{week:p.week,title:p.title,maxScore:p.maxScore,checklist,display};});
-            return{student,course,note,expireMinutes:Number(expireMinutes||1),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,totalScore:window.normalizeScoreNumber(totalScore,2),totalMax:window.normalizeScoreNumber(totalMax,2)},scoreRows};
+
+            // Bonus scores (per week, same source as the teacher overview table)
+            const bonusByCid=(state.bonusScores&&state.bonusScores[cid])||{};
+            let totalBonus=0;
+            const bonusDetail=[];
+            Object.keys(bonusByCid).forEach(wk=>{
+                const wVal=bonusByCid[wk]&&bonusByCid[wk][student.id];
+                if(wVal!==undefined&&wVal!==''&&!isNaN(Number(wVal))&&Number(wVal)!==0){
+                    totalBonus+=Number(wVal);
+                    bonusDetail.push({week:wk.replace('w',''),val:Number(wVal)});
+                }
+            });
+            bonusDetail.sort((a,b)=>Number(a.week)-Number(b.week));
+
+            // Stars (from group membership, same source as the teacher overview table)
+            const starCourseData=(state.starGroups&&state.starGroups[cid])||{};
+            const starGroups=starCourseData.groups||[];
+            const weekStars=starCourseData.weekStars||{};
+            let totalStars=0;
+            const starDetail=[];
+            const studentGroups=starGroups.filter(g=>(g.members||[]).includes(student.id));
+            Object.keys(weekStars).forEach(wk=>{
+                const weekData=weekStars[wk]||{};
+                let weekStarSum=0;
+                studentGroups.forEach(g=>{weekStarSum+=weekData[g.id]||0;});
+                if(weekStarSum>0){
+                    totalStars+=weekStarSum;
+                    starDetail.push({week:wk.replace('w',''),stars:weekStarSum});
+                }
+            });
+            starDetail.sort((a,b)=>Number(a.week)-Number(b.week));
+
+            // Bonus-merge-into-total setting (configured by the teacher via the +โบนัส header)
+            const bmSettings=(state.bonusMergeSettings&&state.bonusMergeSettings[cid])||null;
+            let bonusMerged=0, bonusMergeEnabled=false, bonusMergePercent=0;
+            if(bmSettings&&bmSettings.enabled){
+                const included=bmSettings.mode==='selected'?(bmSettings.selected||[]).includes(student.id):true;
+                if(included&&totalBonus){
+                    bonusMergePercent=Number(bmSettings.percent)||0;
+                    bonusMerged=totalBonus*(bonusMergePercent/100);
+                    totalScore=window.addScoreToTotal(totalScore,bonusMerged,2);
+                    bonusMergeEnabled=true;
+                }
+            }
+
+            return{student,course,note,expireMinutes:Number(expireMinutes||1),firstViewedAt:null,expiresAt:null,createdAt:Date.now(),teacherName:currentUser?.displayName||currentUser?.email||'ครูผู้สอน',summary:{present,late,absent,leave,totalScore:window.normalizeScoreNumber(totalScore,2),totalMax:window.normalizeScoreNumber(totalMax,2),totalBonus:window.normalizeScoreNumber(totalBonus,2),totalStars,bonusMerged:window.normalizeScoreNumber(bonusMerged,2),bonusMergeEnabled,bonusMergePercent},scoreRows,attendanceDetail,bonusDetail,starDetail};
         }
         window.openCreateStudentShareLinkPopup = function(studentId){
             const cid = getCurrentShareCourseId();
@@ -6685,6 +6752,65 @@ async function submitPlanRequest(planId){
             return false;
         };
         window.createStudentShareLink = function(studentId){ return window.openCreateStudentShareLinkPopup(studentId); };
+        window.__studentShareCurrentData = window.__studentShareCurrentData || null;
+
+        function formatStudentShareDateThai(d){
+            const thMonth=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            const parts=String(d).split('-');
+            if(parts.length!==3) return d;
+            return parseInt(parts[2],10)+' '+thMonth[parseInt(parts[1],10)-1]+' '+(parseInt(parts[0],10)+543);
+        }
+
+        window.showStudentShareStatDetail = function(type){
+            const data = window.__studentShareCurrentData;
+            const modal = document.getElementById('student-share-detail-modal');
+            const titleEl = document.getElementById('student-share-detail-title');
+            const bodyEl = document.getElementById('student-share-detail-body');
+            if(!data || !modal || !titleEl || !bodyEl) return;
+            const cfg = {
+                present:{label:'มา', color:'#059669', icon:'fa-circle-check'},
+                late:{label:'สาย', color:'#d97706', icon:'fa-clock'},
+                absent:{label:'ขาด', color:'#e11d48', icon:'fa-circle-xmark'},
+                leave:{label:'ลา', color:'#7c3aed', icon:'fa-user-clock'},
+                bonus:{label:'คะแนนโบนัส', color:'#059669', icon:'fa-plus-circle'},
+                star:{label:'ดาวสะสม', color:'#d97706', icon:'fa-star'}
+            }[type];
+            if(!cfg) return;
+            titleEl.innerHTML = `<i class="fas ${cfg.icon} mr-2" style="color:${cfg.color}"></i>${cfg.label}`;
+
+            let rows = '';
+            if(type==='present' || type==='late' || type==='absent'){
+                const list = (data.attendanceDetail && data.attendanceDetail[type]) || [];
+                rows = list.length
+                    ? list.map(d=>`<div class="py-2 border-b border-slate-100 text-sm text-slate-600">• ${formatStudentShareDateThai(d)}</div>`).join('')
+                    : `<div class="text-center text-slate-400 py-8">ยังไม่มีข้อมูล</div>`;
+            } else if(type==='leave'){
+                const list = (data.attendanceDetail && data.attendanceDetail.leave) || [];
+                rows = list.length
+                    ? list.map(item=>`<div class="py-2 border-b border-slate-100 text-sm text-slate-600">• ${formatStudentShareDateThai(item.date)}${item.reason?` — เหตุผล: ${escapeHTML(item.reason)}`:' — <span class="text-slate-400">ไม่ได้ระบุเหตุผล</span>'}</div>`).join('')
+                    : `<div class="text-center text-slate-400 py-8">ยังไม่มีข้อมูล</div>`;
+            } else if(type==='bonus'){
+                const list = data.bonusDetail || [];
+                rows = list.length
+                    ? list.map(d=>`<div class="flex justify-between items-center py-2 border-b border-slate-100 text-sm"><span class="text-slate-600">สัปดาห์ที่ ${escapeHTML(String(d.week))}</span><span class="font-bold text-emerald-600">+${window.formatScoreDisplay(d.val,2)} คะแนน</span></div>`).join('')
+                        + `<div class="flex justify-between items-center pt-3 mt-2 border-t-2 border-emerald-100 font-black"><span>รวมโบนัส</span><span class="text-emerald-600">+${window.formatScoreDisplay(data.summary?.totalBonus||0,2)} คะแนน</span></div>`
+                    : `<div class="text-center text-slate-400 py-8">ยังไม่มีคะแนนโบนัส</div>`;
+            } else if(type==='star'){
+                const list = data.starDetail || [];
+                rows = list.length
+                    ? list.map(d=>`<div class="flex justify-between items-center py-2 border-b border-slate-100 text-sm"><span class="text-slate-600">สัปดาห์ที่ ${escapeHTML(String(d.week))}</span><span class="font-bold text-amber-600">${d.stars} ⭐</span></div>`).join('')
+                        + `<div class="flex justify-between items-center pt-3 mt-2 border-t-2 border-amber-100 font-black"><span>รวมดาว</span><span class="text-amber-600">${data.summary?.totalStars||0} ⭐</span></div>`
+                    : `<div class="text-center text-slate-400 py-8">ยังไม่มีดาวสะสม</div>`;
+            }
+            bodyEl.innerHTML = rows;
+            modal.classList.remove('hidden');
+        };
+
+        window.closeStudentShareDetailModal = function(){
+            const modal = document.getElementById('student-share-detail-modal');
+            if(modal) modal.classList.add('hidden');
+        };
+
         window.__schoolhubStudentShareCountdownTimer = window.__schoolhubStudentShareCountdownTimer || null;
 
         function clearStudentShareCountdownTimer() {
@@ -6696,6 +6822,7 @@ async function submitPlanRequest(planId){
 
         function renderStudentShareExpired(content) {
             clearStudentShareCountdownTimer();
+            window.__studentShareCurrentData = null;
 
             if (!content) return;
 
@@ -6760,7 +6887,9 @@ async function submitPlanRequest(planId){
                     return true;
                 }
 
-                content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div id="student-share-countdown-box" class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือเวลา <span id="student-share-countdown-text">--:--</span></div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6"><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center md:col-span-2"><div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม</div></div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;
+                window.__studentShareCurrentData = data;
+                const __bonusBadge = data.summary?.bonusMergeEnabled ? `<span style="position:absolute;top:8px;right:12px;font-size:10px;font-weight:800;color:#059669">+${window.formatScoreDisplay(data.summary.bonusMerged,2)} โบนัส</span>` : '';
+                content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div id="student-share-countdown-box" class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือเวลา <span id="student-share-countdown-text">--:--</span></div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-3"><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('present')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('late')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('absent')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('leave')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black" style="color:#7c3aed">${data.summary?.leave||0}</div><div class="text-xs text-slate-500">ลา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('bonus')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${(data.summary?.totalBonus||0)>0?'+'+window.formatScoreDisplay(data.summary.totalBonus,2):'-'}</div><div class="text-xs text-slate-500">โบนัส</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('star')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${(data.summary?.totalStars||0)>0?(data.summary.totalStars+'⭐'):'-'}</div><div class="text-xs text-slate-500">ดาว</div></div></div><div class="share-mini-card rounded-2xl p-4 text-center mb-6" style="position:relative">${__bonusBadge}<div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม${data.summary?.bonusMergeEnabled?' (รวมโบนัสแล้ว)':''}</div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;
 
                 clearStudentShareCountdownTimer();
 
@@ -7071,7 +7200,8 @@ async function submitPlanRequest(planId){
                 coursePlans: {},
                 courseGrades: {},
                 bonusScores: {},
-                starGroups: {}
+                starGroups: {},
+                bonusMergeSettings: {}
             };
             const ownCourseIds = new Set(clean.courses.map(c => String(c.id)));
             Object.keys(state.attendance || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.attendance[cid] = schoolhubCloneClean(state.attendance[cid]); });
@@ -7079,6 +7209,7 @@ async function submitPlanRequest(planId){
             Object.keys(state.courseGrades || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.courseGrades[cid] = schoolhubCloneClean(state.courseGrades[cid]); });
             Object.keys(state.bonusScores || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.bonusScores[cid] = schoolhubCloneClean(state.bonusScores[cid]); });
             Object.keys(state.starGroups || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.starGroups[cid] = schoolhubCloneClean(state.starGroups[cid]); });
+            Object.keys(state.bonusMergeSettings || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.bonusMergeSettings[cid] = schoolhubCloneClean(state.bonusMergeSettings[cid]); });
             return clean;
         }
         function schoolhubRemoveSharedMergedData(){
@@ -7420,6 +7551,7 @@ async function submitPlanRequest(planId){
         async function saveStateToDB() {
             if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return false; }
             if (!currentUser || currentUser.uid === 'admin-bypass') return true;
+            try { if (typeof window.toggleLoader === 'function') window.toggleLoader(true); } catch(e){}
             try {
                 let savePayload = schoolhubOwnStateOnly();
                 try { savePayload = hydrateGradeCriteriaIntoSavePayload(savePayload); } catch(e) { console.warn('[GRADE SAVE] hydrate own payload failed:', e); }
@@ -7473,6 +7605,9 @@ async function submitPlanRequest(planId){
                 }
                 return false;
             }
+            finally {
+                try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e){}
+            }
         }
         window.saveStateToDB = saveStateToDB;
         /* expose Firebase internals สำหรับ module อื่น */
@@ -7497,10 +7632,11 @@ async function submitPlanRequest(planId){
                     state.courseGrades = data.courseGrades || {};
                     state.bonusScores = data.bonusScores || {};
                     state.starGroups = data.starGroups || {};
+                    state.bonusMergeSettings = data.bonusMergeSettings || {};
                     hydrateGradeCriteriaAfterLoad();
                     window.state = state;
                 } else {
-                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {}, bonusScores: {}, starGroups: {}, bonusMergeSettings: {} };
                     window.state = state;
                     await saveStateToDB();
                 }
@@ -8700,7 +8836,7 @@ async function submitPlanRequest(planId){
 
             // Build Header
             let thead = `<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th>`;
-            thead += `<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>`;
+            thead += `<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col" style="cursor:pointer" title="มา/สาย/ขาด/ลา — ดับเบิลคลิกที่ช่องของนักเรียนแต่ละคนเพื่อดูรายละเอียดวันที่">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด/ลา</span></th>`;
             let totalMax = 0;
             plans.forEach(p => {
                 const isChecklist = Number(p.maxScore) === 0;
@@ -8709,22 +8845,31 @@ async function submitPlanRequest(planId){
                 if (!isChecklist) totalMax = window.addScoreToTotal(totalMax, p.maxScore, 2);
             });
             thead += `<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">${window.formatScoreDisplay(totalMax, 2)}</span></th>`;
-            thead += `<th class="text-center bg-emerald-600 text-white font-bold sh-bonus-col" title="คะแนนโบนัสรายสัปดาห์ (ดับเบิลคลิกเพื่อดูรายละเอียด)">โบนัส<br><span class="text-[9px] text-emerald-100">ดับเบิลคลิก</span></th>`;
-            thead += `<th class="text-center bg-amber-400 text-white font-bold sh-star-col" title="ดาวกลุ่มสะสม (ดับเบิลคลิกเพื่อดูรายละเอียด)">⭐ ดาว<br><span class="text-[9px] text-amber-100">ดับเบิลคลิก</span></th>`;
+            thead += `<th class="text-center bg-emerald-600 text-white font-bold sh-bonus-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="คะแนนโบนัส — คลิกที่ช่องของนักเรียนเพื่อดูรายละเอียด, ดับเบิลคลิกที่หัวข้อนี้เพื่อตั้งค่าการรวมกับคะแนนรวม" ondblclick="shOvOpenBonusMergeSettings('${cid}')">+โบนัส</th>`;
+            thead += `<th class="text-center bg-amber-500 text-white font-bold sh-star-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="ดาวกลุ่มสะสม (คลิกเพื่อดูรายละเอียด)">⭐ดาว</th>`;
             thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>`;
             table.innerHTML = thead;
 
             let tbody = '<tbody>';
             courseStudents.forEach((s, index) => {
                 // Calculate Attendance
-                let pr=0, la=0, ab=0;
+                let pr=0, la=0, ab=0, lv=0;
+                const __attDetail = { present:[], late:[], absent:[], leave:[] };
                 attDates.forEach(d => {
                     const st = history[d].records[s.id];
-                    if(st==='present') pr++; else if(st==='late') la++; else if(st==='absent') ab++;
+                    if(st==='present'){ pr++; __attDetail.present.push(d); }
+                    else if(st==='late'){ la++; __attDetail.late.push(d); }
+                    else if(st==='absent'){ ab++; __attDetail.absent.push(d); }
+                    else if(st==='leave'){
+                        lv++;
+                        const __reason = (history[d].leaveReasons && history[d].leaveReasons[s.id]) || '';
+                        __attDetail.leave.push({ date: d, reason: __reason });
+                    }
                 });
+                const __attDetailJson = encodeURIComponent(JSON.stringify(__attDetail));
 
                 tbody += `<tr class="${window.getStudentWithdrawnRowClass(s)}"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500${window.getStudentWithdrawnClass(s)}">${index + 1}</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700${window.getStudentWithdrawnClass(s)}" title="${s.code}">${s.code}</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700${window.getStudentWithdrawnClass(s)}" title="${s.name}">${s.name}${window.getStudentWithdrawnBadge(s)}</td>`;
-                tbody += `<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">${pr}</span>/<span class="text-amber-500">${la}</span>/<span class="text-rose-500">${ab}</span></td>`;
+                tbody += `<td class="text-center font-bold summary-att-col" style="cursor:pointer" title="ดับเบิลคลิกเพื่อดูรายละเอียดวันที่มา/สาย/ขาด/ลา" ondblclick="shOvShowAttendanceDetail('${s.id}','${(s.name||s.id).replace(/'/g,"\\'")}','${__attDetailJson}')"><span class="text-emerald-500">${pr}</span>/<span class="text-amber-500">${la}</span>/<span class="text-rose-500">${ab}</span>/<span style="color:#7c3aed">${lv}</span></td>`;
 
                 let totalScore = 0;
                 plans.forEach(p => {
@@ -8786,9 +8931,26 @@ async function submitPlanRequest(planId){
                 const __starCellColor = __totalStars > 0 ? 'color:#92400e;font-weight:800' : 'color:#94a3b8';
                 const __starCellBg = __totalStars > 0 ? 'background:#fef3c7' : '';
 
-                tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${window.formatScoreDisplay(totalScore, 2)}</td>`;
-                tbody += `<td class="text-center sh-bonus-col" style="${__bonusCellBg};cursor:pointer" title="โบนัสรวม: ${__totalBonus} คะแนน — ดับเบิลคลิกเพื่อดูรายละเอียด" ondblclick="shOvShowBonusDetail('${s.id}','${s.name||s.id}','${__bonusDetailJson}')"><span style="${__bonusCellColor}">${__totalBonus > 0 ? '+'+__totalBonus : '-'}</span></td>`;
-                tbody += `<td class="text-center sh-star-col" style="${__starCellBg};cursor:pointer" title="ดาวรวม: ${__totalStars} — ดับเบิลคลิกเพื่อดูรายละเอียด" ondblclick="shOvShowStarDetail('${s.id}','${s.name||s.id}','${__starDetailJson}')"><span style="${__starCellColor}">${__totalStars > 0 ? __totalStars+'⭐' : '-'}</span></td>`;
+                // Apply bonus-merge-into-total setting (configured via double-click on the +โบนัส header)
+                const __bmSettings = (state.bonusMergeSettings && state.bonusMergeSettings[cid]) || null;
+                let __bonusMerged = 0;
+                if (__bmSettings && __bmSettings.enabled) {
+                    const __included = __bmSettings.mode === 'selected' ? (__bmSettings.selected||[]).includes(s.id) : true;
+                    if (__included && __totalBonus) {
+                        __bonusMerged = __totalBonus * ((Number(__bmSettings.percent)||0) / 100);
+                        totalScore = window.addScoreToTotal(totalScore, __bonusMerged, 2);
+                    }
+                }
+                const __isWithdrawnForBonus = window.isStudentWithdrawn(s);
+                const __totalCellTitle = __bonusMerged ? `title="รวมคะแนนโบนัส +${window.formatScoreDisplay(__bonusMerged,2)} แล้ว (${__bmSettings.percent}%)"` : '';
+                tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col" style="position:relative" ${__totalCellTitle}>${window.formatScoreDisplay(totalScore, 2)}${__bonusMerged ? '<span style="position:absolute;top:2px;right:4px;font-size:9px;font-weight:800;color:#059669;line-height:1">+'+window.formatScoreDisplay(__bonusMerged,2)+'</span>' : ''}</td>`;
+                if (__isWithdrawnForBonus) {
+                    tbody += `<td class="text-center sh-bonus-col withdrawn-score-cell">ลาออก</td>`;
+                    tbody += `<td class="text-center sh-star-col withdrawn-score-cell">ลาออก</td>`;
+                } else {
+                    tbody += `<td class="text-center sh-bonus-col" style="${__bonusCellBg};cursor:pointer" title="โบนัสรวม: ${__totalBonus} คะแนน — คลิกเพื่อดูรายละเอียด" onclick="shOvShowBonusDetail('${s.id}','${(s.name||s.id).replace(/'/g,"\\'")}','${__bonusDetailJson}','${cid}')" ondblclick="shOvShowBonusDetail('${s.id}','${(s.name||s.id).replace(/'/g,"\\'")}','${__bonusDetailJson}','${cid}')"><span style="${__bonusCellColor}">${__totalBonus > 0 ? '+'+__totalBonus : '-'}</span></td>`;
+                    tbody += `<td class="text-center sh-star-col" style="${__starCellBg};cursor:pointer" title="ดาวรวม: ${__totalStars} — คลิกเพื่อดูรายละเอียด" onclick="shOvShowStarDetail('${s.id}','${(s.name||s.id).replace(/'/g,"\\'")}','${__starDetailJson}','${cid}')" ondblclick="shOvShowStarDetail('${s.id}','${(s.name||s.id).replace(/'/g,"\\'")}','${__starDetailJson}','${cid}')"><span style="${__starCellColor}">${__totalStars > 0 ? __totalStars+'⭐' : '-'}</span></td>`;
+                }
 
                 // Calculate and display grade (single source of truth)
                 let gradeDisplay = '-';
@@ -8873,11 +9035,30 @@ async function submitPlanRequest(planId){
             document.getElementById('plan-submit-btn').innerHTML = '<i class="fas fa-save"></i> บันทึก'; document.getElementById('plan-submit-btn').classList.replace('bg-primary', 'bg-blue-600');
             document.getElementById('plan-cancel-edit-btn').classList.remove('hidden'); document.getElementById('plan-edit-badge').classList.remove('hidden');
 
-            setTimeout(() => {
-                const modalBox = document.querySelector('#plan-modal > div');
-                if(modalBox && modalBox.children[1]) modalBox.children[1].scrollTo({ top: 0, behavior: 'smooth' });
-                document.getElementById('plan-title').focus();
-            }, 50);
+            const scrollPlanModalToTop = () => {
+                const modal = document.getElementById('plan-modal');
+                if(!modal) return;
+                const scrollers = [];
+                const modalBox = modal.querySelector(':scope > div');
+                if(modalBox) scrollers.push(modalBox);
+                modal.querySelectorAll('.overflow-y-auto').forEach(el => scrollers.push(el));
+                if(modalBox && modalBox.children[1]) scrollers.push(modalBox.children[1]);
+                scrollers.push(modal);
+                scrollers.forEach(el => { try { el.scrollTop = 0; } catch(e) {} });
+            };
+
+            // Snap to the top immediately, then re-assert it after the DOM/keyboard settles,
+            // no matter which row (week) triggered the edit.
+            scrollPlanModalToTop();
+            requestAnimationFrame(() => {
+                scrollPlanModalToTop();
+                setTimeout(() => {
+                    scrollPlanModalToTop();
+                    const titleInput = document.getElementById('plan-title');
+                    if(titleInput && titleInput.focus) titleInput.focus({ preventScroll: true });
+                    setTimeout(scrollPlanModalToTop, 120);
+                }, 50);
+            });
         };
         window.cancelEditPlan = () => {
             editingPlanId = null; document.getElementById('plan-week').value = '1'; document.getElementById('plan-title').value = ''; document.getElementById('plan-max').value = '10';
@@ -8998,11 +9179,11 @@ async function submitPlanRequest(planId){
                                 </div>
                             </div>
                             <div class="schoolhub-mobile-att-actions${disabledClass}" style="flex-wrap:wrap;gap:6px">
-                                <label class="schoolhub-mobile-att-btn present ${st==='present'?'is-active':''}"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span>มา</span></label>
-                                <label class="schoolhub-mobile-att-btn late ${st==='late'?'is-active':''}"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span>สาย</span></label>
-                                <label class="schoolhub-mobile-att-btn absent ${st==='absent'?'is-active':''}"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span>ขาด</span></label>
-                                <label class="schoolhub-mobile-att-btn leave ${st==='leave'?'is-active':''}" style="border-color:#c4b5fd;color:#7c3aed"><input type="radio" name="att_${s.id}" value="leave" ${st==='leave'?'checked':''} class="w-4 h-4 text-purple-500 accent-purple-500" ${disabledAttr}> <span>ลา</span></label>
-                                ${st==='leave'?'<button type="button" onclick="openLeaveReasonView(\''+cid+'\',\''+date+'\',\''+s.id+'\')" style="font-size:11px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;border-radius:8px;padding:4px 10px;font-weight:700;width:100%;text-align:center;cursor:pointer;margin-top:4px"><i class=\'fas fa-align-left mr-1\'></i>เหตุผลการลา</button>':''}
+                                <label class="schoolhub-mobile-att-btn present ${st==='present'?'is-active':''}" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','present')"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span>มา</span></label>
+                                <label class="schoolhub-mobile-att-btn late ${st==='late'?'is-active':''}" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','late')"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span>สาย</span></label>
+                                <label class="schoolhub-mobile-att-btn absent ${st==='absent'?'is-active':''}" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','absent')"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span>ขาด</span></label>
+                                <label class="schoolhub-mobile-att-btn leave ${st==='leave'?'is-active':''}" style="border-color:#c4b5fd;color:#7c3aed" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','leave')"><input type="radio" name="att_${s.id}" value="leave" ${st==='leave'?'checked':''} class="w-4 h-4 text-purple-500 accent-purple-500" ${disabledAttr}> <span>ลา</span></label>
+                                <span id="leave-btn-wrap-${s.id}" style="width:100%">${st==='leave'?'<button type="button" onclick="openLeaveReasonView(\''+cid+'\',\''+date+'\',\''+s.id+'\')" style="font-size:11px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;border-radius:8px;padding:4px 10px;font-weight:700;width:100%;text-align:center;cursor:pointer;margin-top:4px"><i class=\'fas fa-align-left mr-1\'></i>เหตุผลการลา</button>':''}</span>
                             </div>
                         </div>
                     </td></tr>`;
@@ -9012,11 +9193,11 @@ async function submitPlanRequest(planId){
                         <td class="text-center"><span class="schoolhub-seq-text${window.getStudentWithdrawnClass(s)}">#${studentOrder}</span></td><td class="font-mono text-slate-400${window.getStudentWithdrawnClass(s)}">${s.code}</td><td class="font-bold text-slate-700${window.getStudentWithdrawnClass(s)}">${s.name}${window.getStudentWithdrawnBadge(s)}</td>
                         <td>
                             <div class="flex justify-center gap-3 flex-wrap bg-slate-50 p-2 rounded-xl${disabledClass}">
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span class="font-bold text-emerald-700">มา</span></label>
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span class="font-bold text-amber-600">สาย</span></label>
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span class="font-bold text-rose-600">ขาด</span></label>
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="leave" ${st==='leave'?'checked':''} class="w-4 h-4 text-purple-500 accent-purple-500" ${disabledAttr}> <span class="font-bold text-purple-600">ลา</span></label>
-                                ${st==='leave'?'<button type="button" onclick="openLeaveReasonView(\''+cid+'\',\''+date+'\',\''+s.id+'\')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-bold border border-purple-200 hover:bg-purple-200"><i class=\'fas fa-align-left mr-1\'></i>เหตุผล</button>':''}
+                                <label class="cursor-pointer flex items-center gap-2" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','present')"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span class="font-bold text-emerald-700">มา</span></label>
+                                <label class="cursor-pointer flex items-center gap-2" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','late')"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span class="font-bold text-amber-600">สาย</span></label>
+                                <label class="cursor-pointer flex items-center gap-2" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','absent')"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span class="font-bold text-rose-600">ขาด</span></label>
+                                <label class="cursor-pointer flex items-center gap-2" onclick="schoolhubOnAttRadioChange('${s.id}','${cid}','${date}','leave')"><input type="radio" name="att_${s.id}" value="leave" ${st==='leave'?'checked':''} class="w-4 h-4 text-purple-500 accent-purple-500" ${disabledAttr}> <span class="font-bold text-purple-600">ลา</span></label>
+                                <span id="leave-btn-wrap-${s.id}">${st==='leave'?'<button type="button" onclick="openLeaveReasonView(\''+cid+'\',\''+date+'\',\''+s.id+'\')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-bold border border-purple-200 hover:bg-purple-200"><i class=\'fas fa-align-left mr-1\'></i>เหตุผล</button>':''}</span>
                             </div>
                         </td>
                     </tr>`;
@@ -9272,34 +9453,61 @@ async function submitPlanRequest(planId){
 
         // Export Logics
         window.downloadExcelMultiSheet = (sheetsDataObj, fileName) => {
+            try { if (typeof window.toggleLoader === 'function') window.toggleLoader(true); } catch(e){}
+            try {
             const wb = XLSX.utils.book_new();
             for (const sheetName in sheetsDataObj) {
                 const data = sheetsDataObj[sheetName];
                 const ws = Array.isArray(data[0]) ? XLSX.utils.aoa_to_sheet(data) : XLSX.utils.json_to_sheet(data);
 
                 const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+                // หาแถวหัวตาราง (แถวแรกที่มีข้อความหลายช่อง) เพื่อทำสีหัวตารางให้สวยงาม
+                let headerRowIdx = -1;
+                for (let R = 0; R <= range.e.r; R++) {
+                    let filled = 0;
+                    for (let C = 0; C <= range.e.c; C++) { if (ws[XLSX.utils.encode_cell({r:R,c:C})]) filled++; }
+                    if (filled >= Math.max(2, Math.floor((range.e.c+1) * 0.5))) { headerRowIdx = R; break; }
+                }
                 for(let R=0; R<=range.e.r; R++){
                     for(let C=0; C<=range.e.c; C++){
                         const ref = XLSX.utils.encode_cell({r:R,c:C});
                         const cell = ws[ref];
                         if(!cell) continue;
-                        const v = String(cell.v || '').trim();
+                        const v = String(cell.v == null ? '' : cell.v).trim();
 
-                        if(v === 'ส่งแล้ว' || v === 'มา'){
-                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'DCFCE7'}}};
-                        }else if(v === 'สาย'){
-                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FEF9C3'}}};
-                        }else if(v === 'ขาด'){
-                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FEE2E2'}}};
-                        }else if(v.includes('ขาดส่ง') || v === 'ยังไม่ส่ง'){
-                            cell.s = {fill:{patternType:'solid',fgColor:{rgb:'FECACA'}}};
+                        if (R === headerRowIdx) {
+                            cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:11}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
+                            continue;
                         }
+
+                        let fill = null, fontColor = null, bold = false;
+                        if(v === 'ส่งแล้ว' || v === 'มา'){ fill='DCFCE7'; fontColor='166534'; }
+                        else if(v === 'สาย'){ fill='FEF9C3'; fontColor='854D0E'; }
+                        else if(v === 'ขาด'){ fill='FEE2E2'; fontColor='991B1B'; }
+                        else if(v === 'ลา'){ fill='EDE9FE'; fontColor='6D28D9'; }
+                        else if(v.includes('ขาดส่ง') || v === 'ยังไม่ส่ง'){ fill='FECACA'; fontColor='991B1B'; }
+                        else if(v === 'ลาออก'){ fill='F1F5F9'; fontColor='64748B'; }
+                        else if(/^\+\d/.test(v) || /⭐/.test(v)){ fill='FEF3C7'; fontColor='92400E'; bold=true; }
+
+                        cell.s = Object.assign(
+                            { alignment:{horizontal: (C<=2 ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
+                            fill ? { fill:{patternType:'solid',fgColor:{rgb:fill}}, font:{color:{rgb:fontColor},bold:bold} } : (R % 2 === 0 ? { fill:{patternType:'solid',fgColor:{rgb:'F8FAFC'}} } : {})
+                        );
                     }
                 }
+                ws['!cols'] = Array.from({length: range.e.c+1}, (_,C) => {
+                    let maxLen = 4;
+                    for(let R=0; R<=range.e.r; R++){ if(R === headerRowIdx) continue; const cell = ws[XLSX.utils.encode_cell({r:R,c:C})]; if(cell && cell.v != null) maxLen = Math.max(maxLen, String(cell.v).length); }
+                    return { wch: Math.min(maxLen + 2, 40) };
+                });
+                if (headerRowIdx >= 0) ws['!freeze'] = { xSplit: 0, ySplit: headerRowIdx + 1 };
 
                 XLSX.utils.book_append_sheet(wb, ws, sheetName);
             }
             XLSX.writeFile(wb, fileName + '.xlsx');
+            } finally {
+                try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e){}
+            }
         };
         window.exportStudentsToExcel = () => {
             if(state.students.length===0) return showCustomAlert("ผิดพลาด", "ไม่มีข้อมูล", true);
@@ -17291,14 +17499,19 @@ window.requestOwnPasswordReset = function(event){
     var scores=((state.scores) || []).filter(function(s){ return String(s.courseId) === String(cid); });
     var criteria=(state.courseGrades && state.courseGrades[cid]) || window.defaultGradeCriteria || [];
     var totalMax=0;
-    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด','ลา'];
     plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ '+p.week+' - '+(p.title||'')+(full===0?' (เช็คงาน)':' (เต็ม '+window.formatScoreDisplay(full,2)+')')); if(full!==0) totalMax = window.addScoreToTotal(totalMax, full, 2); });
-    header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด');
+    header.push('รวมคะแนน(เต็ม '+window.formatScoreDisplay(totalMax,2)+')','เกรด','โบนัส','ดาว','หมายเหตุ');
     var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(room || 'ทุกห้อง')],[],header];
+    var bonusByCid=(state.bonusScores && state.bonusScores[cid]) || {};
+    var starCourseData=(state.starGroups && state.starGroups[cid]) || {};
+    var starGroups=starCourseData.groups || [];
+    var weekStars=starCourseData.weekStars || {};
+    var bmSettings=(state.bonusMergeSettings && state.bonusMergeSettings[cid]) || null;
     students.forEach(function(st,idx){
-      var pr=0, la=0, ab=0;
-      dates.forEach(function(d){ var rec=(history[d] && history[d].records) || {}; var v=rec[st.id]; if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++; });
-      var row=[idx+1, st.code||'', st.name||'', roomOf(st), pr, la, ab];
+      var pr=0, la=0, ab=0, lv=0;
+      dates.forEach(function(d){ var rec=(history[d] && history[d].records) || {}; var v=rec[st.id]; if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++; else if(v==='leave') lv++; });
+      var row=[idx+1, st.code||'', st.name||'', roomOf(st), pr, la, ab, lv];
       var total=0;
       var isWithdrawn = (window.isWithdrawnStudent || window.isStudentWithdrawn || function(){return false;})(st);
       plans.forEach(function(p){
@@ -17308,13 +17521,34 @@ window.requestOwnPasswordReset = function(event){
         if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
         else { total = window.addScoreToTotal(total, raw, 2); row.push(!task ? '-' : ((window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw==='')?'ขาดส่ง (-)':window.normalizeScoreNumber(raw,2))); }
       });
-      row.push(isWithdrawn ? 'ลาออก' : window.normalizeScoreNumber(total,2), isWithdrawn ? 'ลาออก' : (totalMax>0 ? gradeOf(window.normalizeScoreNumber(total,2), criteria, c, st) : '-'));
+      if (isWithdrawn) { row.push('ลาออก','ลาออก','ลาออก','ลาออก','ลาออก'); aoa.push(row); return; }
+      var totalBonus=0;
+      Object.keys(bonusByCid).forEach(function(wk){ var wVal=bonusByCid[wk] && bonusByCid[wk][st.id]; if(wVal!==undefined && wVal!=='' && !isNaN(Number(wVal)) && Number(wVal)!==0) totalBonus += Number(wVal); });
+      var studentGroups=starGroups.filter(function(g){ return (g.members||[]).indexOf(st.id) !== -1; });
+      var totalStars=0;
+      Object.keys(weekStars).forEach(function(wk){ var weekData=weekStars[wk] || {}; studentGroups.forEach(function(g){ totalStars += weekData[g.id] || 0; }); });
+      // Merge bonus into the total exactly like the on-screen overview table, if the teacher has enabled it
+      var note = '';
+      if (bmSettings && bmSettings.enabled) {
+        var included = bmSettings.mode === 'selected' ? (bmSettings.selected||[]).indexOf(st.id) !== -1 : true;
+        if (included && totalBonus) {
+          var mergedAmount = totalBonus * ((Number(bmSettings.percent)||0) / 100);
+          total = window.addScoreToTotal(total, mergedAmount, 2);
+          note = 'รวมคะแนนโบนัส +' + window.formatScoreDisplay(mergedAmount,2) + ' คะแนนในคะแนนรวมแล้ว (' + (Number(bmSettings.percent)||0) + '%)';
+        }
+      }
+      total = window.normalizeScoreNumber(total,2);
+      row.push(total, (totalMax>0 ? gradeOf(total, criteria, c, st) : '-'));
+      row.push(totalBonus > 0 ? ('+'+totalBonus) : '-', totalStars > 0 ? (totalStars+'⭐') : '-');
+      row.push(note);
       aoa.push(row);
     });
     return aoa;
   }
   function writeExcel(value){
     if(typeof XLSX === 'undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX',true);
+    try { if (typeof window.toggleLoader === 'function') window.toggleLoader(true); } catch(e){}
+    try {
     var cid=getCourseId(), c=getCourse();
     var rooms=roomsForExport();
     var wb=XLSX.utils.book_new();
@@ -17325,6 +17559,9 @@ window.requestOwnPasswordReset = function(event){
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeAoa(room)), safeSheetName(room));
     }
     XLSX.writeFile(wb, 'ภาพรวม_'+(((c && (c.code || c.name)) || 'รายวิชา'))+'.xlsx');
+    } finally {
+      try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e){}
+    }
   }
   function openPopup(){
     if (window.__schoolhubDenyExportNow && window.__schoolhubDenyExportNow()) return;
@@ -17433,7 +17670,7 @@ window.requestOwnPasswordReset = function(event){
       return roomOf(a).localeCompare(roomOf(b),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th');
     });
   }
-  function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
+  function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':(v==='leave'?'ลา':'-'))); }
   function sheetName(name, used){
     var base=String(name || 'เช็คชื่อ').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'เช็คชื่อ';
     var n=base, i=2;
@@ -17452,20 +17689,26 @@ window.requestOwnPasswordReset = function(event){
   function buildAttendanceAoa(students, roomName, dates){
     var c=course() || {};
     var history=(state.attendance && state.attendance[cid()]) || {};
-    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง'].concat(dates);
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง'].concat(dates, ['มา (รวม)','สาย (รวม)','ขาด (รวม)','ลา (รวม)']);
     var aoa=[['รายงานเช็คชื่อ: '+(c.name || c.code || 'รายวิชา')],['ห้อง: '+(roomName || 'ทุกห้อง')],['ช่วงวันที่: '+(dates[0] || '-')+' ถึง '+(dates[dates.length-1] || '-')],[],header];
     students.forEach(function(st,idx){
       var row=[idx+1, st.code || '', st.name || '', roomOf(st)];
+      var pr=0, la=0, ab=0, lv=0;
       dates.forEach(function(d){
         var rec=(history[d] && history[d].records) || {};
-        row.push(statusThai(rec[st.id]));
+        var v=rec[st.id];
+        row.push(statusThai(v));
+        if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++; else if(v==='leave') lv++;
       });
+      row.push(pr, la, ab, lv);
       aoa.push(row);
     });
     return aoa;
   }
   function writeAttendanceWorkbook(roomChoice, dates){
     if(typeof XLSX === 'undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่',true);
+    try { if (typeof window.toggleLoader === 'function') window.toggleLoader(true); } catch(e){}
+    try {
     var c=course() || {};
     var rooms=roomsForCourse(c);
     var wb=XLSX.utils.book_new();
@@ -17480,6 +17723,9 @@ window.requestOwnPasswordReset = function(event){
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildAttendanceAoa(list, roomChoice==='all'?'ทุกห้อง':room, dates)), sheetName(roomChoice==='all'?'เช็คชื่อ':room, used));
     }
     XLSX.writeFile(wb, 'เช็คชื่อ_'+(c.code || c.name || 'รายวิชา')+'.xlsx');
+    } finally {
+      try { if (typeof window.toggleLoader === 'function') window.toggleLoader(false); } catch(e){}
+    }
   }
 
   window.exportAttendanceToExcel = function(){
@@ -19572,6 +19818,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
   };
 
   var oldConfirm = window.showCustomConfirm;
+  // Re-entrancy guard: prevents the "confirm asks to confirm again instead of
+  // showing success" symptom that happened when showCustomConfirm was invoked
+  // more than once for the same action (e.g. a click handler firing twice),
+  // which used to stack a second confirm dialog on top of / after the first.
+  window.__shConfirmBusy = false;
   window.showCustomConfirm = function(title,message,confirmCallback,cancelCallback){
     var modal = document.getElementById('custom-confirm');
     var box = document.getElementById('custom-confirm-box');
@@ -19586,13 +19837,27 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11
     if(confirmBtn){
       var newConfirmBtn = confirmBtn.cloneNode(true);
       confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-      newConfirmBtn.addEventListener('click', function(){ window.closeCustomConfirm && window.closeCustomConfirm(); confirmCallback && confirmCallback(); });
+      newConfirmBtn.addEventListener('click', function(){
+        // Ignore a second click while the first confirm click is still being
+        // processed, and guarantee the callback fires exactly once.
+        if(window.__shConfirmBusy) return;
+        window.__shConfirmBusy = true;
+        window.closeCustomConfirm && window.closeCustomConfirm();
+        try{ confirmCallback && confirmCallback(); }
+        finally{ setTimeout(function(){ window.__shConfirmBusy = false; }, 300); }
+      });
     }
     var cancelBtn = document.getElementById('custom-confirm-cancel-btn');
     if(cancelBtn){
       var newCancelBtn = cancelBtn.cloneNode(true);
       cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-      newCancelBtn.addEventListener('click', function(){ window.closeCustomConfirm && window.closeCustomConfirm(); cancelCallback && cancelCallback(); });
+      newCancelBtn.addEventListener('click', function(){
+        if(window.__shConfirmBusy) return;
+        window.__shConfirmBusy = true;
+        window.closeCustomConfirm && window.closeCustomConfirm();
+        try{ cancelCallback && cancelCallback(); }
+        finally{ setTimeout(function(){ window.__shConfirmBusy = false; }, 300); }
+      });
     }
     setFixedLayer(modal, CONFIRM_Z);
     box.style.zIndex = String(TOP_Z);
@@ -22900,6 +23165,14 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
         forceClosePlanModal(e);
     }, true);
 
+    // ปุ่มกากบาท "ยกเลิกแก้ไข" (plan-cancel-edit-btn) โดน stopPropagation ของ modal (capture) ดักไว้เหมือนกัน
+    // เลยต้องดักที่ document ก่อนถึง modal เสมอ แล้วเรียก cancelEditPlan ตรงๆ
+    document.addEventListener('click', function(e){
+        var btn = e.target && e.target.closest ? e.target.closest('#plan-cancel-edit-btn') : null;
+        if (!btn) return;
+        if (typeof window.cancelEditPlan === 'function') window.cancelEditPlan();
+    }, true);
+
     ['click','touchend','pointerup'].forEach(function(evName){
         document.addEventListener(evName, function(e){
             if (Date.now() > swallowClicksUntil) return;
@@ -24443,6 +24716,8 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
 
   function isModalCloseButton(el){
     if(!el || !el.matches) return false;
+    // Plan "cancel edit" button is internal UX, not a permission action
+    if(el.id === 'plan-cancel-edit-btn') return true;
     const txt = String((el.textContent || '').trim());
     const inExportModal = !!(el.closest && el.closest('.schoolhub-export-popup,#schoolhub-overview-export-room-modal,#schoolhub-attendance-export-modal,#student-export-room-modal,#export-date-modal,#download-modal,#attendance-export-modal,#export-room-modal,#schoolhub-overview-excel-room-modal,#schoolhub-overview-excel-room-modal-force'));
     const hasExportDismiss = inExportModal && (el.hasAttribute('data-export-dismiss') ||
@@ -24758,10 +25033,74 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     var old = XLSX.utils.aoa_to_sheet;
     XLSX.utils.aoa_to_sheet = function(aoa){
       if(Array.isArray(aoa)) sanitizeExportAoa(aoa);
-      return old.apply(this, arguments);
+      var ws = old.apply(this, arguments);
+      try { schoolhubBeautifySheet(ws); } catch(e){ console.warn('beautify sheet failed', e); }
+      return ws;
     };
     XLSX.utils.aoa_to_sheet.__withdrawnCanonicalGuard = true;
   }
+
+  /* จัดสีและรูปแบบทุกไฟล์ Excel ที่สร้างในระบบให้สวยงามและอ่านง่าย
+     - หัวตารางพื้นสีน้ำเงินม่วง ตัวหนังสือขาวหนา จัดกึ่งกลาง
+     - เซลล์สถานะ มา/สาย/ขาด/ลา/โบนัส/ดาว ใส่สีตามความหมาย
+     - แถวลายม้าลาย (สลับสีอ่อน) ให้อ่านง่ายเมื่อข้อมูลเยอะ
+     - ปรับความกว้างคอลัมน์อัตโนมัติ และตรึงแถวหัวตาราง */
+  function schoolhubBeautifySheet(ws){
+    if(!ws || !ws['!ref'] || !window.XLSX || !XLSX.utils) return;
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var headerRowIdx = -1;
+    for (var R = range.s.r; R <= range.e.r; R++) {
+      var filled = 0;
+      for (var C = range.s.c; C <= range.e.c; C++) { if (ws[XLSX.utils.encode_cell({r:R,c:C})]) filled++; }
+      if (filled >= Math.max(2, Math.floor((range.e.c - range.s.c + 1) * 0.5))) { headerRowIdx = R; break; }
+    }
+    var STATUS_COLORS = {
+      'มา':['DCFCE7','166534'], 'ส่งแล้ว':['DCFCE7','166534'],
+      'สาย':['FEF9C3','854D0E'],
+      'ขาด':['FEE2E2','991B1B'], 'ยังไม่ส่ง':['FEE2E2','991B1B'],
+      'ลา':['EDE9FE','6D28D9'],
+      'ลาออก':['F1F5F9','64748B']
+    };
+    for (var R2 = range.s.r; R2 <= range.e.r; R2++) {
+      for (var C2 = range.s.c; C2 <= range.e.c; C2++) {
+        var ref = XLSX.utils.encode_cell({r:R2,c:C2});
+        var cell = ws[ref];
+        if(!cell) continue;
+        var v = String(cell.v == null ? '' : cell.v).trim();
+
+        if (R2 === headerRowIdx) {
+          cell.s = { fill:{patternType:'solid',fgColor:{rgb:'4F46E5'}}, font:{bold:true,color:{rgb:'FFFFFF'},sz:11}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{bottom:{style:'thin',color:{rgb:'C7D2FE'}}} };
+          continue;
+        }
+        if (R2 < headerRowIdx) {
+          if (C2 === range.s.c) cell.s = { font:{bold:true,color:{rgb:'1E293B'},sz:12} };
+          continue;
+        }
+
+        var fill=null, fontColor=null, bold=false;
+        if (STATUS_COLORS[v]) { fill=STATUS_COLORS[v][0]; fontColor=STATUS_COLORS[v][1]; }
+        else if (v.indexOf('ขาดส่ง') !== -1) { fill='FECACA'; fontColor='991B1B'; }
+        else if (/^\+\d/.test(v) || v.indexOf('⭐') !== -1) { fill='FEF3C7'; fontColor='92400E'; bold=true; }
+
+        cell.s = Object.assign(
+          { alignment:{horizontal:(C2 <= range.s.c+2 ? 'left':'center'), vertical:'center'}, border:{bottom:{style:'hair',color:{rgb:'E2E8F0'}}} },
+          fill ? { fill:{patternType:'solid',fgColor:{rgb:fill}}, font:{color:{rgb:fontColor},bold:bold} } : ((R2 - headerRowIdx) % 2 === 0 ? { fill:{patternType:'solid',fgColor:{rgb:'F8FAFC'}} } : {})
+        );
+      }
+    }
+    var cols = [];
+    for (var C3 = range.s.c; C3 <= range.e.c; C3++) {
+      var maxLen = 4;
+      for (var R3 = range.s.r; R3 <= range.e.r; R3++) {
+        if (R3 === headerRowIdx) continue; // fit the data, not the (often much longer) header label
+        var c3 = ws[XLSX.utils.encode_cell({r:R3,c:C3})]; if (c3 && c3.v != null) maxLen = Math.max(maxLen, String(c3.v).length);
+      }
+      cols.push({ wch: Math.min(maxLen + 2, 40) });
+    }
+    ws['!cols'] = cols;
+    if (headerRowIdx >= 0) ws['!freeze'] = { xSplit: 0, ySplit: headerRowIdx + 1 };
+  }
+  window.schoolhubBeautifySheet = schoolhubBeautifySheet;
 
   function sanitizeExportAoa(aoa){
     aoa.forEach(function(row){
@@ -24947,10 +25286,12 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
       };
     }).filter(function(r){ return r.label && (r.lateCount > 0 || r.absentCount > 0); });
   }
-  function lateToAbsentCount(lateCount){
+  function lateToAbsentCount(lateCount, ratePerAbsent){
     var nLate = Number(lateCount || 0);
+    var nRate = Number(ratePerAbsent || 0);
     if(!Number.isFinite(nLate) || nLate <= 0) return 0;
-    return Math.floor(nLate / 3);
+    if(!Number.isFinite(nRate) || nRate <= 0) return 0;
+    return Math.floor(nLate / nRate);
   }
   window.lateToAbsentCount = lateToAbsentCount;
   function oldObjectToRules(raw, format){
@@ -25162,19 +25503,18 @@ import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/fireb
     var counts = getStudentAttendanceCounts(course, student.id);
     var rawLate = counts.late || 0;
     var rawAbsent = counts.absent || 0;
-    var convertedAbsentFromLate = lateToAbsentCount(rawLate);
-    var totalAbsent = rawAbsent + convertedAbsentFromLate;
     var hits = [];
     for(var i=0;i<rules.length;i++){
       var rule = rules[i] || {};
       var label = String(rule.label || '').trim();
-      var lateLimit = Math.max(0, num(rule.lateCount,0));
+      var lateRate = Math.max(0, num(rule.lateCount,0));
       var absentLimit = Math.max(0, num(rule.absentCount,0));
       if(!label) continue;
-      var lateHit = lateLimit > 0 && rawLate >= lateLimit;
+      var convertedAbsentFromLate = lateToAbsentCount(rawLate, lateRate);
+      var totalAbsent = rawAbsent + convertedAbsentFromLate;
       var absentHit = absentLimit > 0 && totalAbsent >= absentLimit;
-      if(lateHit || absentHit){
-        hits.push({label:label, order:i, hitScore:Math.max(lateHit ? rawLate : 0, absentHit ? totalAbsent : 0)});
+      if(absentHit){
+        hits.push({label:label, order:i, hitScore:totalAbsent});
       }
     }
     if(!hits.length) return '';
@@ -30978,7 +31318,7 @@ document.addEventListener('paste', function(e){
       <div id="sh-star-list"></div>
       <!-- Add group -->
       <div class="sh-add-group">
-        <input type="text" id="sh-new-grp" placeholder="ชื่อกลุ่มใหม่ เช่น กลุ่ม 1">
+        <input type="text" id="sh-new-grp" placeholder="ชื่อกลุ่มใหม่ เช่น กลุ่ม 1" onkeydown="if(event.key==='Enter'){event.preventDefault();shStarAddGroup();}">
         <button onclick="shStarAddGroup()"><i class="fas fa-plus mr-1"></i>เพิ่มกลุ่ม</button>
       </div>
     </div>
@@ -31200,9 +31540,12 @@ W.shStarApplyBonus=function(){
     +(applied===0?'\n\n⚠️ หมายเหตุ: ยังไม่มีสมาชิกในกลุ่ม — ไปที่หน้ากลุ่มเพื่อเพิ่มสมาชิก':'\n\n✅ อัปเดตคะแนนให้ '+applied+' คน'));
 };
 W.shStarSave=async function(){
-  await dbSave();
-  W.shStarClose();
-  alert2('บันทึกสำเร็จ','บันทึกข้อมูลดาวกลุ่มเรียบร้อย');
+  const ok=await dbSave();
+  if(ok!==false){
+    W.shStarClose();
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('บันทึกสำเร็จ','บันทึกข้อมูลดาวกลุ่มเรียบร้อย');
+  }
 };
 
 // ── Grade preset patch (safety wrapper) ─────────────────────────
@@ -31232,12 +31575,18 @@ else document.addEventListener('DOMContentLoaded',()=>setTimeout(initNewFields,1
 <style>
 /* ── Bonus / Star overview columns ─────────────────────────────────── */
 #course-summary-table .sh-bonus-col {
-  width:44px!important; min-width:44px!important; max-width:44px!important;
-  background:#d1fae5!important; font-size:10px!important; padding:2px!important;
+  width:34px!important; min-width:34px!important; max-width:38px!important;
+  font-size:10px!important; padding:2px 1px!important;
+}
+#course-summary-table thead .sh-bonus-col {
+  background:#059669!important; color:#fff!important; cursor:pointer!important;
 }
 #course-summary-table .sh-star-col {
-  width:44px!important; min-width:44px!important; max-width:44px!important;
-  background:#fef3c7!important; font-size:10px!important; padding:2px!important;
+  width:34px!important; min-width:34px!important; max-width:38px!important;
+  font-size:10px!important; padding:2px 1px!important;
+}
+#course-summary-table thead .sh-star-col {
+  background:#d97706!important; color:#fff!important;
 }
 /* ── Plan-list desktop buttons always on top ────────────────────────── */
 #plan-list tr td:last-child { position:relative!important; z-index:12!important; pointer-events:auto!important; }
@@ -31485,39 +31834,178 @@ function initFields(){
 if(document.readyState!=='loading') setTimeout(initFields,1500);
 else document.addEventListener('DOMContentLoaded',()=>setTimeout(initFields,1500));
 
-// ── OVERVIEW: Bonus detail popup (double-click) ───────────────────
-W.shOvShowBonusDetail = function(sid, name, jsonEnc){
+// ── OVERVIEW: Bonus detail popup (click) — supports per-row delete ─
+W.shOvShowBonusDetail = function(sid, name, jsonEnc, cid){
+  cid = cid || getCid();
   const detail = JSON.parse(decodeURIComponent(jsonEnc));
-  eid('sh-detail-title').innerHTML = '<i class="fas fa-plus-circle" style="color:#059669;margin-right:6px"></i>โบนัสของ ' + name;
+  eid('sh-detail-title').innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;line-height:1.35"><span><i class="fas fa-plus-circle" style="color:#059669;margin-right:6px"></i>โบนัส</span><span style="font-size:12.5px;font-weight:500;color:#94a3b8">' + name + '</span></div>';
   if(!detail.length){
     eid('sh-detail-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีคะแนนโบนัส</div>';
   } else {
     let total=0;
     const rows = detail.map(function(d){
       total+=d.val;
-      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span class="sh-breakdown-val" style="color:#059669">+'+d.val+' คะแนน</span></div>';
+      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span style="display:flex;align-items:center;gap:8px"><span class="sh-breakdown-val" style="color:#059669">+'+d.val+' คะแนน</span><button type="button" onclick="shOvDeleteBonusEntry(\''+cid+'\',\''+sid+'\','+d.week+')" title="ลบรายการนี้" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;width:24px;height:24px;cursor:pointer;font-weight:800;line-height:1">×</button></span></div>';
     }).join('');
     eid('sh-detail-body').innerHTML = rows +
-      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #d1fae5"><span class="sh-breakdown-label" style="font-weight:800">รวมโบนัสทั้งหมด</span><span class="sh-breakdown-val" style="color:#059669;font-size:16px">+'+total+' คะแนน</span></div>';
+      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #d1fae5"><span class="sh-breakdown-label" style="font-weight:800">รวมโบนัสทั้งหมด</span><span class="sh-breakdown-val" style="color:#059669;font-size:16px">+'+total+' คะแนน</span></div>' +
+      '<button type="button" onclick="shOvDeleteAllBonusEntries(\''+cid+'\',\''+sid+'\')" style="width:100%;margin-top:10px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:10px;padding:8px;font-weight:800;cursor:pointer"><i class="fas fa-trash mr-1"></i>ลบประวัติโบนัสทั้งหมดของนักเรียนคนนี้</button>';
   }
   eid('sh-detail-modal').classList.remove('hidden');
 };
 
-W.shOvShowStarDetail = function(sid, name, jsonEnc){
+W.shOvShowStarDetail = function(sid, name, jsonEnc, cid){
+  cid = cid || getCid();
   const detail = JSON.parse(decodeURIComponent(jsonEnc));
-  eid('sh-detail-title').innerHTML = '⭐ ดาวของ ' + name;
+  eid('sh-detail-title').innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;line-height:1.35"><span>⭐ ดาว</span><span style="font-size:12.5px;font-weight:500;color:#94a3b8">' + name + '</span></div>';
   if(!detail.length){
     eid('sh-detail-body').innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีดาวสะสม</div>';
   } else {
     let total=0;
     const rows = detail.map(function(d){
       total+=d.stars;
-      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span class="sh-breakdown-val" style="color:#d97706">'+d.stars+' ⭐</span></div>';
+      return '<div class="sh-breakdown-row"><span class="sh-breakdown-label">สัปดาห์ที่ '+d.week+'</span><span style="display:flex;align-items:center;gap:8px"><span class="sh-breakdown-val" style="color:#d97706">'+d.stars+' ⭐</span><button type="button" onclick="shOvDeleteStarEntry(\''+cid+'\',\''+sid+'\','+d.week+')" title="ลบรายการนี้" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;width:24px;height:24px;cursor:pointer;font-weight:800;line-height:1">×</button></span></div>';
     }).join('');
     eid('sh-detail-body').innerHTML = rows +
-      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #fef3c7"><span class="sh-breakdown-label" style="font-weight:800">รวมดาวทั้งหมด</span><span class="sh-breakdown-val" style="color:#d97706;font-size:16px">'+total+' ⭐</span></div>';
+      '<div class="sh-breakdown-row" style="margin-top:8px;border-top:2px solid #fef3c7"><span class="sh-breakdown-label" style="font-weight:800">รวมดาวทั้งหมด</span><span class="sh-breakdown-val" style="color:#d97706;font-size:16px">'+total+' ⭐</span></div>' +
+      '<button type="button" onclick="shOvDeleteAllStarEntries(\''+cid+'\',\''+sid+'\')" style="width:100%;margin-top:10px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:10px;padding:8px;font-weight:800;cursor:pointer"><i class="fas fa-trash mr-1"></i>ลบประวัติดาวทั้งหมดของนักเรียนคนนี้</button>';
   }
   eid('sh-detail-modal').classList.remove('hidden');
+};
+
+// ── Delete individual / all bonus entries for a student ────────────
+W.shOvDeleteBonusEntry = function(cid, sid, week){
+  shConfirm('ยืนยันการลบ', 'ต้องการลบคะแนนโบนัสสัปดาห์ที่ '+week+' ของนักเรียนคนนี้ใช่หรือไม่?', async function(){
+    const s = st();
+    const wk = 'w'+week;
+    if(s.bonusScores && s.bonusScores[cid] && s.bonusScores[cid][wk]){
+      delete s.bonusScores[cid][wk][sid];
+    }
+    await dbSave();
+    eid('sh-detail-modal').classList.add('hidden');
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('ลบสำเร็จ','ลบคะแนนโบนัสรายการนี้เรียบร้อยแล้ว');
+  });
+};
+W.shOvDeleteAllBonusEntries = function(cid, sid){
+  shConfirm('ยืนยันการลบ', 'ต้องการลบประวัติคะแนนโบนัสทั้งหมดของนักเรียนคนนี้ใช่หรือไม่?', async function(){
+    const s = st();
+    const byCid = (s.bonusScores && s.bonusScores[cid]) || {};
+    Object.keys(byCid).forEach(function(wk){ if(byCid[wk]) delete byCid[wk][sid]; });
+    await dbSave();
+    eid('sh-detail-modal').classList.add('hidden');
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('ลบสำเร็จ','ลบประวัติคะแนนโบนัสทั้งหมดเรียบร้อยแล้ว');
+  });
+};
+W.shOvDeleteStarEntry = function(cid, sid, week){
+  shConfirm('ยืนยันการลบ', 'ต้องการลบดาวสัปดาห์ที่ '+week+' ของนักเรียนคนนี้ใช่หรือไม่?', async function(){
+    const s = st();
+    const wk = 'w'+week;
+    const cd = (s.starGroups && s.starGroups[cid]) || {};
+    const groups = (cd.groups||[]).filter(function(g){ return (g.members||[]).includes(sid); });
+    if(cd.weekStars && cd.weekStars[wk]){
+      groups.forEach(function(g){ cd.weekStars[wk][g.id] = 0; });
+    }
+    await dbSave();
+    eid('sh-detail-modal').classList.add('hidden');
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('ลบสำเร็จ','ลบดาวรายการนี้เรียบร้อยแล้ว');
+  });
+};
+W.shOvDeleteAllStarEntries = function(cid, sid){
+  shConfirm('ยืนยันการลบ', 'ต้องการลบประวัติดาวทั้งหมดของนักเรียนคนนี้ใช่หรือไม่?', async function(){
+    const s = st();
+    const cd = (s.starGroups && s.starGroups[cid]) || {};
+    const groups = (cd.groups||[]).filter(function(g){ return (g.members||[]).includes(sid); });
+    if(cd.weekStars){
+      Object.keys(cd.weekStars).forEach(function(wk){
+        groups.forEach(function(g){ if(cd.weekStars[wk]) cd.weekStars[wk][g.id] = 0; });
+      });
+    }
+    await dbSave();
+    eid('sh-detail-modal').classList.add('hidden');
+    if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+    shAlert('ลบสำเร็จ','ลบประวัติดาวทั้งหมดเรียบร้อยแล้ว');
+  });
+};
+
+// ── OVERVIEW: Attendance detail popup (double-click on เช็คชื่อ cell) ─
+W.shOvShowAttendanceDetail = function(sid, name, jsonEnc){
+  const detail = JSON.parse(decodeURIComponent(jsonEnc));
+  const thMonth = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function fmt(d){
+    const parts=String(d).split('-');
+    if(parts.length!==3) return d;
+    return parseInt(parts[2],10)+' '+thMonth[parseInt(parts[1],10)-1]+' '+(parseInt(parts[0],10)+543);
+  }
+  eid('sh-detail-title').innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;line-height:1.35"><span><i class="fas fa-calendar-check" style="color:#0891b2;margin-right:6px"></i>การเข้าเรียน</span><span style="font-size:12.5px;font-weight:500;color:#94a3b8">' + name + '</span></div>';
+  function section(label, color, list, isLeave){
+    if(!list.length) return '<div class="sh-breakdown-row"><span class="sh-breakdown-label" style="color:'+color+';font-weight:800">'+label+' (0)</span></div>';
+    const items = list.map(function(item){
+      if(isLeave){
+        return '<div style="padding:4px 0 4px 12px;font-size:12px;color:#475569">• '+fmt(item.date)+(item.reason?' — เหตุผล: '+item.reason:' — <span style="color:#94a3b8">ไม่ได้ระบุเหตุผล</span>')+'</div>';
+      }
+      return '<div style="padding:4px 0 4px 12px;font-size:12px;color:#475569">• '+fmt(item)+'</div>';
+    }).join('');
+    return '<div class="sh-breakdown-row" style="flex-direction:column;align-items:flex-start"><span class="sh-breakdown-label" style="color:'+color+';font-weight:800">'+label+' ('+list.length+')</span>'+items+'</div>';
+  }
+  eid('sh-detail-body').innerHTML =
+    section('มา', '#059669', detail.present||[]) +
+    section('สาย', '#d97706', detail.late||[]) +
+    section('ขาด', '#e11d48', detail.absent||[]) +
+    section('ลา', '#7c3aed', detail.leave||[], true);
+  eid('sh-detail-modal').classList.remove('hidden');
+};
+
+// ── Bonus merge-into-total settings (double-click on +โบนัส header) ─
+W.shOvOpenBonusMergeSettings = function(cid){
+  cid = cid || getCid();
+  if(!cid) return;
+  initFields();
+  const s = st();
+  ensureField(s, 'bonusMergeSettings', {});
+  const cur = s.bonusMergeSettings[cid] || { enabled:false, percent:100, mode:'all', selected:[] };
+  const students = getStudents(cid).filter(function(x){ return !window.isStudentWithdrawn(x); });
+  let modal = document.getElementById('sh-bonus-merge-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'sh-bonus-merge-modal';
+    modal.className = 'sh-overlay hidden';
+    document.body.appendChild(modal);
+  }
+  const studentRows = students.map(function(st2){
+    const checked = (cur.mode==='selected' && (cur.selected||[]).includes(st2.id)) ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid #f1f5f9;font-size:13px"><input type="checkbox" class="sh-bm-student" value="'+st2.id+'" '+checked+'> '+ (st2.name||st2.id) + '</label>';
+  }).join('') || '<div style="color:#94a3b8;font-size:13px;padding:8px">ไม่มีนักเรียนในรายวิชานี้</div>';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:440px;width:100%;max-height:86vh;overflow:auto;padding:22px">' +
+      '<h3 style="font-weight:900;font-size:18px;margin-bottom:4px"><i class="fas fa-plus-circle" style="color:#059669;margin-right:6px"></i>ตั้งค่าการรวมคะแนนโบนัส</h3>' +
+      '<p style="color:#64748b;font-size:12px;margin-bottom:14px">เลือกว่าจะนำคะแนนโบนัสไปรวมกับคะแนนรวมทั้งหมดหรือไม่ กี่เปอร์เซ็นต์ และรวมให้เฉพาะใคร</p>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px"><input type="checkbox" id="sh-bm-enabled" '+(cur.enabled?'checked':'')+'> รวมคะแนนโบนัสในคะแนนรวม</label>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><label style="font-size:13px;font-weight:700;color:#475569">รวมกี่เปอร์เซ็นต์:</label><input type="number" id="sh-bm-percent" min="0" max="100" value="'+(cur.percent!=null?cur.percent:100)+'" style="width:80px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 8px"> <span>%</span></div>' +
+      '<div style="margin-bottom:8px"><label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><input type="radio" name="sh-bm-mode" value="all" '+(cur.mode!=='selected'?'checked':'')+'> รวมให้นักเรียนทุกคน</label>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;margin-top:4px"><input type="radio" name="sh-bm-mode" value="selected" '+(cur.mode==='selected'?'checked':'')+'> เลือกเฉพาะบางคน</label></div>' +
+      '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:6px 10px;max-height:220px;overflow:auto;margin-bottom:16px">'+studentRows+'</div>' +
+      '<div style="display:flex;gap:10px"><button type="button" onclick="document.getElementById(\'sh-bonus-merge-modal\').classList.add(\'hidden\')" style="flex:1;background:#f1f5f9;color:#334155;border:none;border-radius:12px;padding:10px;font-weight:800;cursor:pointer">ยกเลิก</button>' +
+      '<button type="button" onclick="shOvSaveBonusMergeSettings(\''+cid+'\')" style="flex:1;background:#059669;color:#fff;border:none;border-radius:12px;padding:10px;font-weight:800;cursor:pointer">บันทึก</button></div>' +
+    '</div>';
+  modal.classList.remove('hidden');
+};
+W.shOvSaveBonusMergeSettings = async function(cid){
+  const s = st();
+  ensureField(s, 'bonusMergeSettings', {});
+  const enabled = !!(document.getElementById('sh-bm-enabled') && document.getElementById('sh-bm-enabled').checked);
+  const percent = Number(document.getElementById('sh-bm-percent') && document.getElementById('sh-bm-percent').value) || 0;
+  const modeEl = document.querySelector('input[name="sh-bm-mode"]:checked');
+  const mode = modeEl ? modeEl.value : 'all';
+  const selected = Array.prototype.map.call(document.querySelectorAll('.sh-bm-student:checked'), function(el){ return el.value; });
+  s.bonusMergeSettings[cid] = { enabled: enabled, percent: percent, mode: mode, selected: selected };
+  await dbSave();
+  const modal = document.getElementById('sh-bonus-merge-modal');
+  if(modal) modal.classList.add('hidden');
+  if(typeof W.renderCourseOverview==='function') W.renderCourseOverview();
+  shAlert('บันทึกสำเร็จ','บันทึกการตั้งค่าคะแนนโบนัสเรียบร้อยแล้ว');
 };
 
 // ── Bonus Score Modal ────────────────────────────────────────────
@@ -31601,26 +32089,26 @@ W.shStarRender=function(){
   container.innerHTML=ranked.map(function(g,idx){
     const rankEmoji=idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':('#'+(idx+1));
     const starsHtml=Array.from({length:MAX},function(_,i){
-      return '<button type="button" class="sh-star-btn '+(i<g.stars?'filled':'')+'" onmousedown="shStarSet(''+g.id+'','+(i+1)+')" title="'+(i+1)+' ดาว">⭐</button>';
+      return `<button type="button" class="sh-star-btn ${i<g.stars?'filled':''}" onmousedown="shStarSet('${g.id}',${i+1})" title="${i+1} ดาว">⭐</button>`;
     }).join('');
     // Members
     const memberNames=(g.members||[]).map(function(mid){
       const s=allStudents.find(function(x){ return x.id===mid; });
-      return s ? '<span class="sh-member-chip">'+escSafe(s.name||s.id)+'<span class="rm" onmousedown="shStarRemoveMember(''+g.id+'',''+mid+'')">✕</span></span>' : '';
+      return s ? `<span class="sh-member-chip">${escSafe(s.name||s.id)}<span class="rm" onmousedown="shStarRemoveMember('${g.id}','${mid}')">✕</span></span>` : '';
     }).join('');
     const addMemberOpts=allStudents.filter(function(s){ return !(g.members||[]).includes(s.id); }).map(function(s){
-      return '<option value="'+s.id+'">'+escSafe(s.name||s.id)+'</option>';
+      return `<option value="${s.id}">${escSafe(s.name||s.id)}</option>`;
     }).join('');
-    return '<div class="sh-group-card" id="sg-'+g.id+'">'
-      +'<div class="sh-group-top"><span class="sh-group-name">'+rankEmoji+' '+g.name+'</span>'
-      +'<div style="display:flex;gap:6px;align-items:center">'
-      +'<span class="sh-group-star-count">⭐ '+g.stars+' ดาว</span>'
-      +'<button class="sh-del-group" onmousedown="shStarDelGroup(''+g.id+'')">ลบ</button></div></div>'
-      +'<div class="sh-stars-row">'+starsHtml+'</div>'
-      +'<div class="sh-member-chips" style="margin-top:8px">'+memberNames+'</div>'
-      +'<div class="sh-add-member-row"><select id="sh-mem-sel-'+g.id+'"><option value="">-- เพิ่มสมาชิก --</option>'+addMemberOpts+'</select>'
-      +'<button onmousedown="shStarAddMember(''+g.id+'')">เพิ่ม</button></div>'
-      +'</div>';
+    return `<div class="sh-group-card" id="sg-${g.id}">
+      <div class="sh-group-top"><span class="sh-group-name">${rankEmoji} ${g.name}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+      <span class="sh-group-star-count">⭐ ${g.stars} ดาว</span>
+      <button class="sh-del-group" onmousedown="shStarDelGroup('${g.id}')">ลบ</button></div></div>
+      <div class="sh-stars-row">${starsHtml}</div>
+      <div class="sh-member-chips" style="margin-top:8px">${memberNames}</div>
+      <div class="sh-add-member-row"><select id="sh-mem-sel-${g.id}"><option value="">-- เพิ่มสมาชิก --</option>${addMemberOpts}</select>
+      <button onmousedown="shStarAddMember('${g.id}')">เพิ่ม</button></div>
+      </div>`;
   }).join('');
 };
 function escSafe(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -31636,12 +32124,18 @@ W.shStarSet=function(gid,count){
 };
 W.shStarAddGroup=function(){
   const inp=eid('sh-new-grp'); const name=(inp?inp.value.trim():'');
-  if(!name) return;
+  if(!name){ shAlert('กรุณากรอกชื่อกลุ่ม','กรุณากรอกชื่อกลุ่มก่อนเพิ่ม'); return; }
   const cid=getCid(); if(!cid) return;
   const cd=starCD(cid);
-  cd.groups.push({id:'sg'+Date.now(),name,members:[]});
+  const newGid='sg'+Date.now();
+  cd.groups.push({id:newGid,name,members:[]});
   if(inp) inp.value='';
   shStarRender();
+  // auto-scroll to the new group so teacher can immediately add members
+  setTimeout(function(){
+    var el=eid('sg-'+newGid);
+    if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+  },60);
 };
 W.shStarDelGroup=function(gid){
   const cid=getCid(); if(!cid) return;
@@ -31712,6 +32206,25 @@ W.shStarSave=async function(){
   }
 };
 
+// ── Attendance radio change: show/hide "เหตุผลการลา" button immediately ─
+// (previously the button only appeared after saving attendance and
+// re-selecting the date; now it appears the instant "ลา" is picked)
+W.schoolhubOnAttRadioChange = function(sid, cid, date, val){
+  const wrap = document.getElementById('leave-btn-wrap-' + sid);
+  if(!wrap) return;
+  if(val === 'leave'){
+    const safeCid = String(cid).replace(/'/g,"\\'");
+    const safeDate = String(date).replace(/'/g,"\\'");
+    const safeSid = String(sid).replace(/'/g,"\\'");
+    const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    wrap.innerHTML = isMobileCardView
+      ? '<button type="button" onclick="openLeaveReasonView(\''+safeCid+'\',\''+safeDate+'\',\''+safeSid+'\')" style="font-size:11px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;border-radius:8px;padding:4px 10px;font-weight:700;width:100%;text-align:center;cursor:pointer;margin-top:4px"><i class="fas fa-align-left mr-1"></i>เหตุผลการลา</button>'
+      : '<button type="button" onclick="openLeaveReasonView(\''+safeCid+'\',\''+safeDate+'\',\''+safeSid+'\')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-bold border border-purple-200 hover:bg-purple-200"><i class="fas fa-align-left mr-1"></i>เหตุผล</button>';
+  } else {
+    wrap.innerHTML = '';
+  }
+};
+
 // ── Leave Reason ─────────────────────────────────────────────────
 W.openLeaveReasonView = function(cid,date,sid){
   const s=(st().students||[]).find(function(x){ return x.id===sid; });
@@ -31745,21 +32258,27 @@ W.shLeaveSave=async function(){
 // Inject bonus/star buttons after grade criteria button using MutationObserver
 // (the menu might render dynamically)
 function injectSidebarButtons(){
+  // DISABLED: the static sidebar HTML already contains the "คะแนนโบนัสรายสัปดาห์"
+  // and "ระบบดาวกลุ่ม" buttons (see #course-context-menu markup). This injector
+  // used to add a second copy of those buttons, which caused the duplicated
+  // menu items reported by users. Kept as a no-op instead of being removed
+  // entirely so any other code that still calls injectSidebarButtons() does
+  // not break.
   const menu=document.getElementById('course-context-menu');
-  if(!menu||menu.dataset.shBtnsInjected) return;
-  menu.dataset.shBtnsInjected='1';
-  const gradeBtn=menu.querySelector('button[onclick*="openGradeCriteriaModal"]');
-  if(!gradeBtn) return;
-  const bonusBtn=document.createElement('button');
-  bonusBtn.className='w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2 border border-emerald-200 border-dashed';
-  bonusBtn.innerHTML='<i class="fas fa-plus-circle w-5 text-center"></i> คะแนนโบนัสรายสัปดาห์';
-  bonusBtn.addEventListener('click',function(){ W.openBonusScoreModal(); });
-  const starBtn=document.createElement('button');
-  starBtn.className='w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-amber-600 hover:bg-amber-50 mt-2 border border-amber-200 border-dashed';
-  starBtn.innerHTML='<i class="fas fa-star w-5 text-center"></i> ระบบดาวกลุ่ม';
-  starBtn.addEventListener('click',function(){ W.openStarGroupModal(); });
-  gradeBtn.after(bonusBtn);
-  bonusBtn.after(starBtn);
+  if(menu) menu.dataset.shBtnsInjected='1';
+  // Clean up any previously-injected duplicate buttons from earlier sessions
+  // (defensive: in case this ran before on the same page load).
+  if(menu){
+    const dups=menu.querySelectorAll('button');
+    const seen={};
+    dups.forEach(function(btn){
+      const label=(btn.textContent||'').trim();
+      if(label==='คะแนนโบนัสรายสัปดาห์' || label==='ระบบดาวกลุ่ม'){
+        if(seen[label]){ btn.remove(); } else { seen[label]=true; }
+      }
+    });
+  }
+  return;
 }
 // Try immediately and after DOMContentLoaded, also on switchCourseTab
 setTimeout(injectSidebarButtons,500);
@@ -31988,7 +32507,7 @@ async function loadXLSX(){
     if(window.XLSX) return;
     await new Promise((res,rej)=>{
         const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.src='https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
         s.onload=res; s.onerror=rej; document.head.appendChild(s);
     });
 }
@@ -32496,5 +33015,153 @@ waitReady(()=>{
     wrapped.__schoolhubGradeTypeDirtyResetWrapped = true;
     window[name] = wrapped;
   });
+})();
+</script>
+
+<!-- Patch: mobile hamburger menu -> centered, fully-expanded popup (was a right-side sliding drawer) -->
+<style id="schoolhub-mobile-menu-as-popup-fix">
+#mobile-menu:not(.hidden){
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+}
+#mobile-menu > div{
+  width: min(94vw, 480px) !important;
+  max-width: 480px !important;
+  height: auto !important;
+  max-height: min(85vh, calc(100dvh - 2rem)) !important;
+  border-radius: 1.75rem !important;
+  animation: fadeIn 0.25s ease !important;
+}
+@media (max-width: 480px){
+  #mobile-menu > div{
+    width: min(96vw, 480px) !important;
+    max-height: min(88vh, calc(100dvh - 1.5rem)) !important;
+  }
+}
+</style>
+<script id="schoolhub-mobile-menu-as-popup-fix-script">
+(function(){
+  if(window.__schoolhubMobileMenuAsPopupFix) return;
+  window.__schoolhubMobileMenuAsPopupFix = true;
+  function fixMobileMenuLayout(){
+    var menu = document.getElementById('mobile-menu');
+    if(!menu) return;
+    menu.classList.remove('justify-end');
+    menu.classList.add('items-center','justify-center');
+    var box = menu.querySelector(':scope > div');
+    if(box){
+      box.classList.remove('w-4/5','max-w-sm','h-full','animate-fadeInRight');
+      box.classList.add('max-h-[85vh]','rounded-[2rem]','overflow-hidden');
+    }
+  }
+  var oldToggle = window.toggleMobileMenu;
+  if(typeof oldToggle === 'function' && !oldToggle.__schoolhubMobileMenuAsPopupFixWrapped){
+    var wrapped = function(){
+      var r = oldToggle.apply(this, arguments);
+      fixMobileMenuLayout();
+      return r;
+    };
+    wrapped.__schoolhubMobileMenuAsPopupFixWrapped = true;
+    window.toggleMobileMenu = wrapped;
+  }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(fixMobileMenuLayout, 0); });
+  fixMobileMenuLayout();
+})();
+</script>
+
+<!-- Patch: ป็อปอัพทุกตัวเปิดทันที + ถ้ายังโหลดเนื้อหาไม่เสร็จ ให้ขึ้นสัญลักษณ์กำลังโหลดแทนจอค้าง/มืดเฉยๆ -->
+<style id="schoolhub-modal-instant-loader-style">
+.schoolhub-modal-mini-spinner{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.6rem; background:rgba(255,255,255,.7); backdrop-filter:blur(3px); z-index:2147483600;
+  animation: schoolhubSpinnerFadeIn .12s ease; pointer-events:none;
+}
+.schoolhub-modal-mini-spinner .sh-spin{
+  width:34px; height:34px; border-radius:50%;
+  border:3px solid rgba(79,70,229,.18); border-top-color:#4f46e5;
+  animation: schoolhubSpin .6s linear infinite;
+}
+.schoolhub-modal-mini-spinner span{ font-size:.78rem; font-weight:700; color:#64748b; }
+@keyframes schoolhubSpin{ to { transform:rotate(360deg); } }
+@keyframes schoolhubSpinnerFadeIn{ from{opacity:0;} to{opacity:1;} }
+</style>
+<script id="schoolhub-modal-instant-loader-script">
+(function(){
+  if(window.__schoolhubModalInstantLoaderPatched) return;
+  window.__schoolhubModalInstantLoaderPatched = true;
+
+  function getModalBox(modal){
+    if(!modal) return null;
+    for(var i=0;i<modal.children.length;i++){
+      var c = modal.children[i];
+      if(c.nodeType === 1 && !c.classList.contains('schoolhub-modal-mini-spinner')) return c;
+    }
+    return null;
+  }
+
+  // ถ้าเนื้อหาข้างในมีอยู่แล้วพอสมควร (กรณีปกติที่โหลดเร็วอยู่แล้ว) ไม่ต้องขึ้น spinner ให้กระพริบรบกวน
+  function hasEnoughContent(box){
+    if(!box) return false;
+    return (box.textContent || '').trim().length > 30;
+  }
+
+  function showMiniSpinnerIfSlow(modal){
+    var box = getModalBox(modal);
+    if(hasEnoughContent(box)) return; // เนื้อหาพร้อมอยู่แล้ว ไม่ต้องขึ้น
+    if(modal.querySelector(':scope > .schoolhub-modal-mini-spinner')) return;
+
+    var cs = getComputedStyle(modal);
+    if(cs.position === 'static') modal.style.position = 'relative';
+
+    var sp = document.createElement('div');
+    sp.className = 'schoolhub-modal-mini-spinner';
+    sp.innerHTML = '<div class="sh-spin"></div><span>กำลังโหลด...</span>';
+    modal.appendChild(sp);
+
+    var removed = false;
+    function removeSpinner(){
+      if(removed) return; removed = true;
+      try{ if(mo) mo.disconnect(); }catch(e){}
+      try{ clearTimeout(safety); }catch(e){}
+      sp.style.opacity = '0';
+      setTimeout(function(){ try{ sp.remove(); }catch(e){} }, 150);
+    }
+
+    var mo = new MutationObserver(function(){
+      var b = getModalBox(modal);
+      if(hasEnoughContent(b)) removeSpinner();
+    });
+    try{ mo.observe(modal, {childList:true, subtree:true, characterData:true}); }catch(e){}
+
+    // กันค้าง: ไม่ว่าจะโหลดเสร็จหรือยัง เอา spinner ออกสูงสุดใน 6 วิ
+    var safety = setTimeout(removeSpinner, 6000);
+
+    // เผื่อ modal ถูกปิดไปเองระหว่างรอ ก็เอา spinner ออกด้วย
+    var closeWatcher = new MutationObserver(function(){
+      if(modal.classList.contains('hidden')) { removeSpinner(); closeWatcher.disconnect(); }
+    });
+    try{ closeWatcher.observe(modal, {attributes:true, attributeFilter:['class']}); }catch(e){}
+  }
+
+  function wrapOpenModalOnce(){
+    var base = window.openModal;
+    if(typeof base !== 'function' || base.__schoolhubModalInstantLoaderWrapped) return;
+    var wrapped = function(id){
+      var modal = document.getElementById(id);
+      var r = base.apply(this, arguments);
+      try{ if(modal) showMiniSpinnerIfSlow(modal); }catch(e){}
+      return r;
+    };
+    wrapped.__schoolhubModalInstantLoaderWrapped = true;
+    window.openModal = wrapped;
+  }
+
+  // ห่ออีกทีหลังสคริปต์อื่นๆ ทำงานหมดแล้ว เผื่อมี openModal เวอร์ชันใหม่กว่ามาทับทีหลัง
+  wrapOpenModalOnce();
+  document.addEventListener('DOMContentLoaded', wrapOpenModalOnce);
+  setTimeout(wrapOpenModalOnce, 0);
+  setTimeout(wrapOpenModalOnce, 500);
 })();
 </script>
