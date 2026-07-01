@@ -1,3 +1,11 @@
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -6907,7 +6915,7 @@ async function submitPlanRequest(planId){
 
                 window.__studentShareCurrentData = data;
                 const __bonusBadge = data.summary?.bonusMergeEnabled ? `<span style="position:absolute;top:8px;right:12px;font-size:10px;font-weight:800;color:#059669">+${window.formatScoreDisplay(data.summary.bonusMerged,2)} โบนัส</span>` : '';
-                content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div id="student-share-countdown-box" class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือเวลา <span id="student-share-countdown-text">--:--</span></div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-3"><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('present')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('late')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('absent')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('leave')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black" style="color:#7c3aed">${data.summary?.leave||0}</div><div class="text-xs text-slate-500">ลา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('bonus')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${(data.summary?.totalBonus||0)>0?'+'+window.formatScoreDisplay(data.summary.totalBonus,2):'-'}</div><div class="text-xs text-slate-500">โบนัส</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('star')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${(data.summary?.totalStars||0)>0?(data.summary.totalStars+'⭐'):'-'}</div><div class="text-xs text-slate-500">ดาว</div></div></div><div class="share-mini-card rounded-2xl p-4 text-center mb-6" style="position:relative">${__bonusBadge}<div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม${data.summary?.bonusMergeEnabled?' (รวมโบนัสแล้ว)':''}</div></div><div class="overflow-x-auto rounded-2xl border border-slate-200"><table class="w-full text-left"><thead><tr><th>สัปดาห์</th><th>งาน</th><th class="text-center">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold">${r.week}</td><td>${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;
+                content.innerHTML=`<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6"><div><h2 class="text-3xl font-black text-slate-900">${escapeHTML(data.student?.name||'')}</h2><p class="text-slate-500 font-mono mt-1">${escapeHTML(data.student?.code||'')} • ${escapeHTML(data.student?.grade||'')}</p><p class="text-primary font-bold mt-2">${escapeHTML(data.course?.code||'')} ${escapeHTML(data.course?.name||'')}</p></div><div id="student-share-countdown-box" class="bg-amber-50 text-amber-700 px-4 py-3 rounded-2xl font-bold text-sm"><i class="fas fa-clock"></i> เหลือเวลา <span id="student-share-countdown-text">--:--</span></div></div>${data.note?`<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-5 text-slate-700"><b>หมายเหตุ:</b> ${escapeHTML(data.note)}</div>`:''}<div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-3"><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('present')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${data.summary?.present||0}</div><div class="text-xs text-slate-500">มา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('late')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${data.summary?.late||0}</div><div class="text-xs text-slate-500">สาย</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('absent')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-rose-600">${data.summary?.absent||0}</div><div class="text-xs text-slate-500">ขาด</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('leave')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black" style="color:#7c3aed">${data.summary?.leave||0}</div><div class="text-xs text-slate-500">ลา</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('bonus')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-emerald-600">${(data.summary?.totalBonus||0)>0?'+'+window.formatScoreDisplay(data.summary.totalBonus,2):'-'}</div><div class="text-xs text-slate-500">โบนัส</div></div><div class="share-mini-card rounded-2xl p-4 text-center" style="cursor:pointer" onclick="showStudentShareStatDetail('star')" title="แตะเพื่อดูรายละเอียด"><div class="text-2xl font-black text-amber-600">${(data.summary?.totalStars||0)>0?(data.summary.totalStars+'⭐'):'-'}</div><div class="text-xs text-slate-500">ดาว</div></div></div><div class="share-mini-card rounded-2xl p-4 text-center mb-6" style="position:relative">${__bonusBadge}<div class="text-2xl font-black text-primary">${window.formatScoreDisplay(data.summary?.totalScore||0,2)}/${window.formatScoreDisplay(data.summary?.totalMax||0,2)}</div><div class="text-xs text-slate-500">คะแนนรวม${data.summary?.bonusMergeEnabled?' (รวมโบนัสแล้ว)':''}</div></div><div class="rounded-2xl border border-slate-200 overflow-hidden"><table class="w-full text-left" style="table-layout:fixed"><thead><tr><th style="width:64px">สัปดาห์</th><th>งาน</th><th class="text-center" style="width:88px">ผล</th></tr></thead><tbody>${(data.scoreRows||[]).map(r=>`<tr><td class="font-bold" style="white-space:normal;word-break:break-word">${r.week}</td><td style="white-space:normal;word-break:break-word;overflow-wrap:anywhere">${escapeHTML(r.title||'')}</td><td class="text-center font-bold text-primary" style="white-space:normal;word-break:break-word">${escapeHTML(r.display||'-')}</td></tr>`).join('')}</tbody></table></div><p class="text-xs text-slate-400 mt-5">แชร์โดย ${escapeHTML(data.teacherName||'ครูผู้สอน')}</p>`;
 
                 clearStudentShareCountdownTimer();
 
@@ -9086,11 +9094,61 @@ async function submitPlanRequest(planId){
         window.handleAddPlan = async (e) => {
             const id = document.getElementById('plan-course-id').value; if(!schoolhubAssertCanEditCourse(id, 'เพิ่มหรือแก้ไขแผนคะแนน')) return;
             if(!state.coursePlans[id]) state.coursePlans[id] = [];
-            if(editingPlanId) {
+
+            const newWeek = document.getElementById('plan-week').value;
+            const newTitle = document.getElementById('plan-title').value;
+            const newMax = document.getElementById('plan-max').value;
+
+            // คะแนนที่บันทึกไว้ (state.scores) จะผูกกับ "สัปดาห์ + ชื่องาน" ของแผนนี้
+            // ถ้าแก้ไขสัปดาห์/ชื่องานแล้วบันทึกทันที คะแนนเดิมจะหลุดการเชื่อมโยง (ดูเหมือนหายไป)
+            // ฟังก์ชันนี้จึงต้องถามผู้ใช้ก่อนว่าจะ "เก็บคะแนนเดิมไว้" (ย้ายไปผูกกับชื่อ/สัปดาห์ใหม่)
+            // หรือจะ "ล้างคะแนนเดิมทิ้ง" เมื่อพบว่ามีคะแนนที่เคยบันทึกไว้ของสัปดาห์/ชื่องานเดิมอยู่จริง
+            const commitPlanSave = async (keepOldScore) => {
+                if (editingPlanId) {
+                    const idx = state.coursePlans[id].findIndex(p => p.id === editingPlanId);
+                    if (idx > -1) {
+                        const oldWeek = state.coursePlans[id][idx].week;
+                        const oldTitle = state.coursePlans[id][idx].title;
+                        const oldScoreIdx = state.scores.findIndex(s => s.courseId === id && String(s.week) === String(oldWeek) && String(s.title) === String(oldTitle));
+                        if (oldScoreIdx > -1 && (String(oldWeek) !== String(newWeek) || String(oldTitle) !== String(newTitle))) {
+                            if (keepOldScore) {
+                                // ย้ายคะแนนเดิมไปผูกกับสัปดาห์/ชื่องานใหม่ เพื่อไม่ให้คะแนนหาย
+                                state.scores[oldScoreIdx].week = newWeek;
+                                state.scores[oldScoreIdx].title = newTitle;
+                                state.scores[oldScoreIdx].maxScore = newMax;
+                            } else {
+                                // ล้างคะแนนเดิมทิ้งตามที่ผู้ใช้เลือก
+                                state.scores.splice(oldScoreIdx, 1);
+                            }
+                        }
+                        state.coursePlans[id][idx].week = newWeek; state.coursePlans[id][idx].title = newTitle; state.coursePlans[id][idx].maxScore = newMax;
+                    }
+                } else {
+                    state.coursePlans[id].push({ id: Date.now().toString(), week: newWeek, title: newTitle, maxScore: newMax });
+                }
+                window.cancelEditPlan(); window.renderPlanList(id); await saveStateToDB();
+            };
+
+            if (editingPlanId) {
                 const idx = state.coursePlans[id].findIndex(p => p.id === editingPlanId);
-                if(idx > -1) { state.coursePlans[id][idx].week = document.getElementById('plan-week').value; state.coursePlans[id][idx].title = document.getElementById('plan-title').value; state.coursePlans[id][idx].maxScore = document.getElementById('plan-max').value; }
-            } else { state.coursePlans[id].push({ id: Date.now().toString(), week: document.getElementById('plan-week').value, title: document.getElementById('plan-title').value, maxScore: document.getElementById('plan-max').value }); }
-            window.cancelEditPlan(); window.renderPlanList(id); await saveStateToDB();
+                if (idx > -1) {
+                    const oldWeek = state.coursePlans[id][idx].week;
+                    const oldTitle = state.coursePlans[id][idx].title;
+                    const weekOrTitleChanged = String(oldWeek) !== String(newWeek) || String(oldTitle) !== String(newTitle);
+                    const hasOldScore = weekOrTitleChanged && state.scores.some(s => s.courseId === id && String(s.week) === String(oldWeek) && String(s.title) === String(oldTitle));
+                    if (hasOldScore) {
+                        window.showCustomConfirm(
+                            'พบคะแนนที่เคยบันทึกไว้',
+                            `งาน "${oldTitle}" (สัปดาห์ที่ ${oldWeek}) มีการบันทึกคะแนนไว้แล้ว\n\nกด "ยืนยัน" เพื่อเก็บคะแนนเดิมไว้ (ย้ายไปผูกกับชื่องาน/สัปดาห์ที่แก้ไขใหม่)\nกด "ยกเลิก" เพื่อล้างคะแนนเดิมทิ้ง แล้วเริ่มเก็บคะแนนใหม่ในสัปดาห์นี้`,
+                            async () => { await commitPlanSave(true); },
+                            async () => { await commitPlanSave(false); }
+                        );
+                        return;
+                    }
+                }
+            }
+
+            await commitPlanSave(true);
         };
         window.deletePlan = (cId, pId) => { if(!schoolhubAssertCanEditCourse(cId, 'ลบแผนคะแนน')) return; window.showCustomConfirm("ยืนยัน", "ต้องการลบแผนคะแนนนี้ใช่หรือไม่?", async () => { state.coursePlans[cId] = state.coursePlans[cId].filter(p => p.id !== pId); window.renderPlanList(cId); await saveStateToDB(); }); };
 
@@ -15451,83 +15509,6 @@ window.requestOwnPasswordReset = function(event){
 }
 @media (min-width:768px){ #course-summary-mobile-cards{ display:none !important; } }
 </style>
-<script>
-(function(){
-  if(window.__schoolhubFinalMobileOverviewCardsFix) return;
-  window.__schoolhubFinalMobileOverviewCardsFix = true;
-  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
-  function text(el){ return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim(); }
-  function ensureBox(){
-    var table=document.getElementById('course-summary-table');
-    if(!table) return null;
-    var box=document.getElementById('course-summary-mobile-cards');
-    if(!box){
-      box=document.createElement('div');
-      box.id='course-summary-mobile-cards';
-      var wrap=table.closest('.overflow-x-auto') || table.parentNode;
-      if(wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
-      else table.parentNode.insertBefore(box, table.nextSibling);
-    }
-    return box;
-  }
-  function splitAttendance(v){
-    var m=String(v||'0/0/0').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
-    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
-  }
-  function buildMobileOverviewCards(){
-    if(!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
-    var table=document.getElementById('course-summary-table');
-    var box=ensureBox();
-    if(!table || !box) return;
-    var rows=[].slice.call(table.querySelectorAll('tbody tr'));
-    if(!rows.length){ box.innerHTML=''; return; }
-    var headers=[].slice.call(table.querySelectorAll('thead th')).map(text);
-    var planHeaders=headers.slice(5, Math.max(5, headers.length-2));
-    box.innerHTML=rows.map(function(row, idx){
-      var cells=[].slice.call(row.children);
-      var no=text(cells[0]) || String(idx+1);
-      var code=text(cells[1]) || '-';
-      var name=text(cells[2]) || '-';
-      var room=text(cells[3]) || '-';
-      var att=splitAttendance(text(cells[4]));
-      var total=text(cells[cells.length-2]) || '0';
-      var grade=text(cells[cells.length-1]) || '-';
-      var planHtml='';
-      for(var i=5;i<cells.length-2;i++){
-        var label=(planHeaders[i-5] || ('งาน '+(i-4))).replace(/คลิกเพื่อดูรายละเอียด[: ]*/g,'').trim();
-        var value=text(cells[i]) || '-';
-        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(label.split(' ')[0]||label)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(label)+'</div></div>';
-      }
-      if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
-      return '<div class="summary-mobile-card">'+
-        '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'+
-        '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'+
-        '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'+
-        '<div class="summary-mobile-plans">'+planHtml+'</div>'+
-        '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'+
-      '</div>';
-    }).join('');
-  }
-  window.buildMobileOverviewCards = buildMobileOverviewCards;
-  function wrapRender(){
-    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileCardWrapped){
-      var old=window.renderCourseOverview;
-      var fn=function(){ var r=old.apply(this, arguments); setTimeout(buildMobileOverviewCards, 30); setTimeout(buildMobileOverviewCards, 180); return r; };
-      fn.__mobileCardWrapped=true;
-      window.renderCourseOverview=fn;
-    }
-  }
-  wrapRender();
-  document.addEventListener('DOMContentLoaded', function(){ wrapRender(); setTimeout(buildMobileOverviewCards,300); });
-  window.addEventListener('resize', function(){ setTimeout(buildMobileOverviewCards,80); });
-  var oldSwitch=window.switchCourseTab;
-  if(typeof oldSwitch === 'function' && !oldSwitch.__mobileOverviewFinalWrapped){
-    var sw=function(tabId){ var r=oldSwitch.apply(this, arguments); if(tabId==='overview') setTimeout(buildMobileOverviewCards,160); return r; };
-    sw.__mobileOverviewFinalWrapped=true;
-    window.switchCourseTab=sw;
-  }
-})();
-</script>
 
 
 
