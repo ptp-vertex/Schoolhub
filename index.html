@@ -15447,6 +15447,7 @@ window.requestOwnPasswordReset = function(event){
     var tbody = '<tbody>';
     var mobileHtml = '';
     students.forEach(function(st, index){
+      try {
       var isWithdrawn = (typeof window.isWithdrawnStudent === 'function') ? window.isWithdrawnStudent(st) : (window.isStudentWithdrawn && window.isStudentWithdrawn(st));
       var pr=0, la=0, ab=0;
       attDates.forEach(function(d){ var rec = (history[d] && history[d].records) || {}; var x = rec[st.id]; if(x==='present') pr++; else if(x==='late') la++; else if(x==='absent') ab++; });
@@ -15532,6 +15533,9 @@ window.requestOwnPasswordReset = function(event){
 
 
       mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-stats" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.5rem"><div class="summary-mobile-stat" style="'+__bonusCellBg+';cursor:pointer" onclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')"><b style="'+__bonusCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalBonus > 0 ? '+'+__totalBonus : '-'))+'</b>+โบนัส</div><div class="summary-mobile-stat" style="'+__starCellBg+';cursor:pointer" onclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')"><b style="'+__starCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalStars > 0 ? __totalStars+'⭐' : '-'))+'</b>ดาว</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+      } catch(__cardErr) {
+        console.error('SchoolHub: overview row render failed for student', st && st.id, __cardErr);
+      }
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -34099,5 +34103,119 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
     setTimeout(forceCardsDisplay, 150);
   }, true);
   window.addEventListener('resize', forceCardsDisplay);
+})();
+</script>
+
+<!-- Ultimate fallback: mirror the (already-working) table rows into mobile cards
+     whenever the card container stays empty on phone, even if some other script
+     in the chain fails to populate it. This guarantees the cards always show
+     something on mobile without touching/removing any existing feature. -->
+<style id="schoolhub-fallback-card-style">
+@media (max-width:767px){
+  .schoolhub-fallback-card{
+    background:#fff !important;
+    border:1px solid #e2e8f0 !important;
+    border-radius:.75rem !important;
+    padding:.75rem .9rem !important;
+    box-shadow:0 1px 2px rgba(0,0,0,.04) !important;
+  }
+  .schoolhub-fallback-card-row{
+    display:flex !important;
+    justify-content:space-between !important;
+    gap:.75rem !important;
+    padding:.3rem 0 !important;
+    border-bottom:1px dashed #eef2f7 !important;
+    font-size:12.5px !important;
+  }
+  .schoolhub-fallback-card-row:last-child{ border-bottom:none !important; }
+  .schoolhub-fallback-card-label{
+    color:#64748b !important;
+    font-weight:700 !important;
+    white-space:nowrap !important;
+    flex:0 0 auto !important;
+  }
+  .schoolhub-fallback-card-value{
+    text-align:right !important;
+    font-weight:600 !important;
+    color:#1e293b !important;
+    overflow-wrap:anywhere !important;
+  }
+}
+</style>
+<script id="schoolhub-fallback-mobile-cards-from-table">
+(function(){
+  if (window.__schoolhubFallbackMobileCardsInstalled) return;
+  window.__schoolhubFallbackMobileCardsInstalled = true;
+
+  function isMobile(){
+    return window.matchMedia ? window.matchMedia('(max-width:767px)').matches : window.innerWidth <= 767;
+  }
+
+  function buildFallbackCardsFromTable(){
+    try {
+      if (!isMobile()) return;
+      var box = document.getElementById('course-summary-mobile-cards');
+      var table = document.getElementById('course-summary-table');
+      if (!box || !table) return;
+      // If a real card renderer already populated it, don't touch it.
+      if (box.children.length > 0) return;
+      var theadRow = table.querySelector('thead tr:last-child') || table.querySelector('thead tr');
+      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+      if (!theadRow || !rows.length) return;
+      var headers = Array.prototype.slice.call(theadRow.children).map(function(th){
+        return (th.textContent || '').replace(/\s+/g,' ').trim();
+      });
+      var html = '';
+      rows.forEach(function(row){
+        var cells = Array.prototype.slice.call(row.children);
+        var rowHtml = '';
+        cells.forEach(function(td, i){
+          var label = headers[i] || '';
+          if (!label) return;
+          var valueHtml = td.innerHTML.trim();
+          if (!valueHtml) return;
+          rowHtml += '<div class="schoolhub-fallback-card-row"><span class="schoolhub-fallback-card-label">'+label+'</span><span class="schoolhub-fallback-card-value">'+valueHtml+'</span></div>';
+        });
+        html += '<div class="summary-mobile-card schoolhub-fallback-card">'+rowHtml+'</div>';
+      });
+      if (html) {
+        box.innerHTML = html;
+        box.style.setProperty('display', 'grid', 'important');
+        box.style.setProperty('grid-template-columns', '1fr', 'important');
+        box.style.setProperty('gap', '.85rem', 'important');
+        box.style.setProperty('padding', '1rem', 'important');
+        box.style.setProperty('background', '#f8fafc', 'important');
+      }
+    } catch(e) {
+      console.error('SchoolHub fallback mobile cards error', e);
+    }
+  }
+
+  function schedule(){
+    setTimeout(buildFallbackCardsFromTable, 60);
+    setTimeout(buildFallbackCardsFromTable, 250);
+    setTimeout(buildFallbackCardsFromTable, 600);
+    setTimeout(buildFallbackCardsFromTable, 1200);
+  }
+
+  document.addEventListener('DOMContentLoaded', schedule);
+  document.addEventListener('click', function(){ schedule(); }, true);
+  window.addEventListener('resize', buildFallbackCardsFromTable);
+
+  var table = document.getElementById('course-summary-table');
+  if (table && window.MutationObserver) {
+    var mo = new MutationObserver(function(){ schedule(); });
+    mo.observe(table, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      var t = document.getElementById('course-summary-table');
+      if (t && window.MutationObserver) {
+        var mo2 = new MutationObserver(function(){ schedule(); });
+        mo2.observe(t, { childList: true, subtree: true });
+      }
+    });
+  }
+
+  schedule();
 })();
 </script>
