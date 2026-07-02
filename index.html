@@ -3602,6 +3602,9 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                                 </div>
                             </div>
                         </div>
+                        <!-- Mobile score cards: outside .table-container so overflow:hidden cannot clip them.
+                             ensureMobileContainer() finds this div first via getElementById and populates it. -->
+                        <div id="course-summary-mobile-cards"></div>
                     </div>
 
                     <!-- Sub-view: Attendance -->
@@ -33954,16 +33957,10 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
 <!-- Mobile fix: ensure overview score cards are visible on phone -->
 <style id="schoolhub-mobile-overview-cards-final-fix">
 @media (max-width:767px){
-  /* Allow the table-container to grow past its border-radius clip
-     so the dynamically-inserted #course-summary-mobile-cards is not hidden */
-  #course-tab-overview .table-container{
-    overflow:visible !important;
-  }
-  /* The inner scroll wrapper must also be visible so it sizes to card content */
-  #course-tab-overview .overflow-x-auto{
-    overflow:visible !important;
-  }
-  /* Make sure the mobile cards container is always shown as a grid on phone */
+  /* ── Mobile score cards ──────────────────────────────────────────
+     The static #course-summary-mobile-cards div is now placed outside
+     .table-container in the HTML, so overflow:hidden cannot clip it.
+     These rules just ensure the grid layout is applied correctly. */
   #course-summary-mobile-cards{
     display:grid !important;
     grid-template-columns:1fr !important;
@@ -33971,9 +33968,65 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
     padding:1rem !important;
     background:#f8fafc !important;
   }
-  /* Override the :empty rule so a briefly-empty box doesn't flicker to none */
   #course-summary-mobile-cards:empty{
     display:none !important;
+  }
+
+  /* ── Bonus score modal: no horizontal scrollbar on mobile ────────
+     Fix: constrain the modal box and its table to the viewport width */
+  .sh-modal-box{
+    overflow-x:hidden !important;
+    max-width:calc(100vw - 2rem) !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+  }
+  .sh-modal-body{
+    overflow-x:hidden !important;
+    padding:14px 14px !important;
+    box-sizing:border-box !important;
+  }
+  /* Week-row: long helper text drops to its own line */
+  .sh-week-row{
+    flex-wrap:wrap !important;
+    gap:8px !important;
+  }
+  .sh-week-row span{
+    flex:0 0 100% !important;
+    width:100% !important;
+    font-size:11px !important;
+    color:#94a3b8 !important;
+  }
+  /* Bonus/star table: fixed layout prevents blowout */
+  .sh-bonus-table{
+    table-layout:fixed !important;
+    width:100% !important;
+    font-size:12px !important;
+  }
+  .sh-bonus-table th,
+  .sh-bonus-table td{
+    padding:6px 6px !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+  /* # column narrow, name column fills space, input column fixed */
+  .sh-bonus-table colgroup,
+  .sh-bonus-table th:first-child,
+  .sh-bonus-table td:first-child{ width:28px !important; }
+  .sh-bonus-table th:last-child,
+  .sh-bonus-table td:last-child{ width:88px !important; }
+  /* Score input fits its cell */
+  .sh-bonus-input{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    font-size:13px !important;
+    padding:4px 6px !important;
+  }
+  /* Modal footer buttons stay side-by-side */
+  .sh-modal-footer{
+    padding:10px 14px !important;
+    gap:8px !important;
   }
 }
 </style>
