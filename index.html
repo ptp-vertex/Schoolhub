@@ -6,6 +6,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3491,6 +3492,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                         <h4 class="text-lg font-bold text-slate-600 mb-1">ยังไม่มีรายวิชา</h4>
                         <p class="text-sm mb-4">เริ่มต้นสร้างห้องเรียนของคุณเพื่อจัดการข้อมูล</p>
                         <button onclick="openCourseModal()" class="text-primary font-medium bg-indigo-50 px-4 py-2 rounded-lg">สร้างวิชาแรกเลย</button>
+                        <p class="mt-3 text-sm text-slate-400"><i class="fas fa-circle-info mr-1"></i>มีข้อมูลเก่า? ไปที่ <span class="font-bold text-amber-600">ตั้งค่า &rsaquo; กู้ข้อมูล</span> เพื่อกู้คืนจาก Backup</p>
                     </div>
                 </div>
 
@@ -4130,6 +4132,7 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                                 <button type="button" data-settings-tab="plans" onclick="schoolhubOpenSettingsTab('plans')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-layer-group mr-2"></i><span data-i18n="plans">แผนการใช้งาน</span></button>
                                 <button type="button" data-settings-tab="language" onclick="schoolhubOpenSettingsTab('language')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-language mr-2"></i><span data-i18n="language">ภาษา</span></button>
                                 <button type="button" data-settings-tab="contact-admin" onclick="schoolhubOpenSettingsTab('contact-admin')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-headset mr-2"></i><span data-i18n="contactAdmin">ติดต่อผู้ดูแลระบบ</span></button>
+                                <button type="button" data-settings-tab="backup-restore" onclick="schoolhubOpenSettingsTab('backup-restore')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab"><i class="fas fa-clock-rotate-left mr-2 text-amber-500"></i><span>กู้ข้อมูล</span></button>
                                 <button type="button" id="schoolhub-settings-admin-system-tab" data-settings-tab="admin-system" onclick="schoolhubOpenSettingsTab('admin-system')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab hidden"><i class="fas fa-sliders mr-2"></i><span data-i18n="systemSettings">ตั้งค่าระบบ</span></button>
                                 <button type="button" id="schoolhub-settings-admin-messages-tab" data-settings-tab="contact-messages" onclick="schoolhubOpenSettingsTab('contact-messages')" data-schoolhub-always-allowed="1" class="settings-tab schoolhub-settings-tab hidden"><i class="fas fa-inbox mr-2"></i><span data-i18n="userMessages">ข้อความจากผู้ใช้</span><span class="admin-message-badge hidden" data-admin-message-badge="settings-tab">0</span></button>
                             </div>
@@ -4171,6 +4174,24 @@ body.schoolhub-settings-modal-open { overflow: hidden !important; }
                                             <p class="text-sm text-slate-500 leading-7 mt-2" data-i18n="notificationsDescription">ใช้การแจ้งเตือนเดิมของระบบและแสดงผลในหน้าต่างเดียวกัน</p>
                                         </div>
                                     </div>
+                                </div>
+                            </section>
+
+                            <section id="schoolhub-settings-panel-backup-restore" class="schoolhub-settings-panel hidden space-y-5">
+                                <div class="rounded-3xl border border-amber-100 bg-amber-50/50 p-5">
+                                    <h4 class="text-lg font-black text-slate-900"><i class="fas fa-clock-rotate-left text-amber-500 mr-2"></i>กู้คืนข้อมูลจาก Backup</h4>
+                                    <p class="text-sm text-slate-600 leading-7 mt-2">ระบบจะสำรองข้อมูลอัตโนมัติก่อนบันทึกทุกครั้ง — เลือก Backup ที่ต้องการเพื่อกู้คืน ข้อมูลปัจจุบันจะถูกแทนที่</p>
+                                </div>
+                                <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+                                    <div class="flex flex-wrap gap-3">
+                                        <button type="button" onclick="schoolhubLoadBackupList()" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black px-5 py-3 rounded-2xl shadow transition-all">
+                                            <i class="fas fa-rotate"></i> โหลดรายการ Backup
+                                        </button>
+                                        <button type="button" onclick="schoolhubRestoreLatestBackup()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-3 rounded-2xl shadow transition-all">
+                                            <i class="fas fa-clock-rotate-left"></i> กู้คืนล่าสุดทั้งหมด (คลิกเดียว)
+                                        </button>
+                                    </div>
+                                    <div id="schoolhub-backup-list" class="mt-5 space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
                                 </div>
                             </section>
 
@@ -7238,12 +7259,17 @@ async function submitPlanRequest(planId){
                 bonusMergeSettings: {}
             };
             const ownCourseIds = new Set(clean.courses.map(c => String(c.id)));
+            // รายวิชาที่ "แชร์มาจากคนอื่น" เท่านั้นที่ควรถูกตัดออกจากข้อมูลของเรา
+            // ใช้ deny-list (ตัดเฉพาะที่รู้แน่ชัดว่าเป็นของคนอื่น) แทน allow-list เดิม
+            // เพื่อป้องกันข้อมูลโบนัส/ดาวหายไปเงียบๆ เมื่อ id ของวิชาไม่ตรงกันชั่วคราว
+            // (เช่น หลังกู้คืน backup หรือระหว่างแก้ไขวิชา)
+            const sharedCourseIds = new Set((state.courses || []).filter(c => schoolhubIsSharedCourse(c)).map(c => String(c.id)));
             Object.keys(state.attendance || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.attendance[cid] = schoolhubCloneClean(state.attendance[cid]); });
             Object.keys(state.coursePlans || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.coursePlans[cid] = schoolhubCloneClean(state.coursePlans[cid]); });
             Object.keys(state.courseGrades || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.courseGrades[cid] = schoolhubCloneClean(state.courseGrades[cid]); });
-            Object.keys(state.bonusScores || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.bonusScores[cid] = schoolhubCloneClean(state.bonusScores[cid]); });
-            Object.keys(state.starGroups || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.starGroups[cid] = schoolhubCloneClean(state.starGroups[cid]); });
-            Object.keys(state.bonusMergeSettings || {}).forEach(cid => { if(ownCourseIds.has(String(cid))) clean.bonusMergeSettings[cid] = schoolhubCloneClean(state.bonusMergeSettings[cid]); });
+            Object.keys(state.bonusScores || {}).forEach(cid => { if(!sharedCourseIds.has(String(cid))) clean.bonusScores[cid] = schoolhubCloneClean(state.bonusScores[cid]); });
+            Object.keys(state.starGroups || {}).forEach(cid => { if(!sharedCourseIds.has(String(cid))) clean.starGroups[cid] = schoolhubCloneClean(state.starGroups[cid]); });
+            Object.keys(state.bonusMergeSettings || {}).forEach(cid => { if(!sharedCourseIds.has(String(cid))) clean.bonusMergeSettings[cid] = schoolhubCloneClean(state.bonusMergeSettings[cid]); });
             return clean;
         }
         function schoolhubRemoveSharedMergedData(){
@@ -7723,6 +7749,67 @@ async function submitPlanRequest(planId){
 
         window.loadStateFromDB = loadStateFromDB;
 
+        // ===== ระบบกู้ข้อมูลจาก Backup =====
+        async function schoolhubListBackups() {
+            if (!currentUser) throw new Error('กรุณาเข้าสู่ระบบก่อน');
+            const userKey = getUserKey(currentUser);
+            const col = collection(db, 'users', userKey, 'school_data_backups');
+            const snap = await withTimeout(getDocs(col), 12000, 'listBackups');
+            const docs = [];
+            snap.forEach(d => { docs.push({ id: d.id, data: d.data() }); });
+            docs.sort((a, b) => Number(b.id) - Number(a.id)); // newest first
+            return docs;
+        }
+
+        async function schoolhubRestoreFromBackup(backupId) {
+            if (!currentUser) throw new Error('กรุณาเข้าสู่ระบบก่อน');
+            const userKey = getUserKey(currentUser);
+            const backupRef = doc(db, 'users', userKey, 'school_data_backups', String(backupId));
+            const snap = await withTimeout(getDoc(backupRef), 10000, 'restoreBackup');
+            if (!snap.exists()) throw new Error('ไม่พบข้อมูล Backup นี้');
+            const data = snap.data();
+            // อัปเดต state ในหน่วยความจำก่อน เพื่อให้ UI ใช้ข้อมูลที่กู้คืนได้ทันที
+            state.courses = data.courses || [];
+            state.students = data.students || [];
+            state.scores = data.scores || [];
+            state.attendance = data.attendance || {};
+            state.coursePlans = data.coursePlans || {};
+            state.courseGrades = data.courseGrades || {};
+            state.bonusScores = data.bonusScores || {};
+            state.starGroups = data.starGroups || {};
+            state.bonusMergeSettings = data.bonusMergeSettings || {};
+            try { hydrateGradeCriteriaAfterLoad(); } catch(e) {}
+            window.state = state;
+
+            // เขียนข้อมูลจาก Backup กลับลง Firestore "ตรงๆ" แทนที่จะพึ่ง saveStateToDB()
+            // (ซึ่งจะกรองข้อมูลผ่าน schoolhubOwnStateOnly() อีกรอบ) เพื่อป้องกันความเสี่ยง
+            // ที่ข้อมูลโบนัส/ดาวในไฟล์ Backup จะถูกกรองทิ้งซ้ำหากรหัสวิชาไม่ตรงกันชั่วคราว
+            // เนื่องจากข้อมูลใน Backup เป็นข้อมูล "ของเราเอง" ที่ผ่านการกรองไว้แล้วตั้งแต่ตอนสำรอง
+            const restorePayload = {
+                courses: data.courses || [],
+                students: data.students || [],
+                scores: data.scores || [],
+                attendance: data.attendance || {},
+                coursePlans: data.coursePlans || {},
+                courseGrades: data.courseGrades || {},
+                bonusScores: data.bonusScores || {},
+                starGroups: data.starGroups || {},
+                bonusMergeSettings: data.bonusMergeSettings || {}
+            };
+            assertSafeState(restorePayload);
+            const ownerUserKey = getUserKey(currentUser);
+            const stateRef = doc(db, getPrivatePath(ownerUserKey), 'state');
+            await schoolhubBackupStateBeforeSave(stateRef, restorePayload, ownerUserKey);
+            await withTimeout(setDoc(stateRef, restorePayload), 8000, 'restoreState');
+
+            updateGlobalViews();
+            try { if (typeof window.renderCourseOverview === 'function') window.renderCourseOverview(); } catch(e) {}
+        }
+
+        window.schoolhubListBackups = schoolhubListBackups;
+        window.schoolhubRestoreFromBackup = schoolhubRestoreFromBackup;
+        // ===== สิ้นสุดระบบกู้ข้อมูล =====
+
         async function addUserToDirectory(user, name, role = 'user') {
             const userKey = getUserKey(user);
             const email = userKey;
@@ -7842,6 +7929,10 @@ async function submitPlanRequest(planId){
                         localStorage.removeItem('schoolhub_admin_bypass');
 
                         await enterAdminMode();
+                        // Auto-mark admin email as verified in Firestore to prevent false verification prompts
+                        if (adminEmail) {
+                            setDoc(doc(db, 'users_status', adminEmail), { emailVerified: true, status: 'active', updatedAt: Date.now() }, { merge: true }).catch(() => {});
+                        }
 
                         const isDefaultAdmin =
                             loginValue === 'Admin' &&
@@ -7887,7 +7978,10 @@ async function submitPlanRequest(planId){
                 if (isFirebaseVerified && !isSchoolHubVerified) {
                     try { await setDoc(doc(db, `users_status`, email), { emailVerified: true, verifiedAt: Date.now(), status: 'active' }, { merge: true }); } catch(syncErr) { console.warn('auto-sync emailVerified failed:', syncErr); }
                 }
-                if (!isSchoolHubVerified && !isFirebaseVerified) {
+                // Skip email verification check for admin logins
+                const __cachedAdminEmail = (localStorage.getItem('schoolhub_admin_email') || '').toLowerCase();
+                const __isAdminLogin = rawLoginValue.toLowerCase() === 'admin' || (__cachedAdminEmail && authEmail === __cachedAdminEmail);
+                if (!isSchoolHubVerified && !isFirebaseVerified && !__isAdminLogin) {
                     await signOut(auth);
                     toggleLoader(false);
                     window.showCustomConfirm(
@@ -7896,21 +7990,12 @@ async function submitPlanRequest(planId){
                         async () => {
                             toggleLoader(true);
                             try {
-                                const token = makeToken();
-                                const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
-                                await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
-                                await sendMailViaWebApp({
-                                    to: email,
-                                    type: 'verify',
-                                    subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
-                                    name: email,
-                                    message: `สวัสดี ${email}\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n${verifyLink}\n\n— SchoolHub`,
-                                    extra: { link: verifyLink }
-                                });
-                                showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน จากนั้นค่อยเข้าสู่ระบบอีกครั้ง");
-                                await forceSchoolHubLogout({ delay: 600 });
+                                const tempCred = await signInWithEmailAndPassword(auth, email, pass);
+                                await sendEmailVerification(tempCred.user);
+                                await signOut(auth);
+                                showCustomAlert("ส่งลิงก์ยืนยันแล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน จากนั้นค่อยเข้าสู่ระบบอีกครั้ง");
                             } catch(e2) {
-                                await forceSchoolHubLogout({ redirect: false });
+                                await signOut(auth).catch(()=>{});
                                 showCustomAlert("ส่งไม่ได้", e2.message || String(e2), true);
                             }
                             toggleLoader(false);
@@ -7947,26 +8032,9 @@ async function submitPlanRequest(planId){
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', emailVerified: false, deletedAt: null }, { merge: true });
-                // ส่ง email verification
-                try {
-                    const actionCodeSettings = {
-                        url: window.location.href,
-                        handleCodeInApp: false
-                    };
-                    await sendEmailVerification(userCred.user, actionCodeSettings);
-                    await sendMailViaWebApp({
-                        to: email,
-                        name: name,
-                        type: 'verify',
-                        subject: 'ยืนยันการสมัครสมาชิก SchoolHub',
-                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณาตรวจสอบอีเมลจาก Firebase และกดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
-                        extra: { link: window.location.href }
-                    });
-                } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
-                // ออกจากระบบจริงและล้าง session ทั้งหมด เพื่อบังคับให้ยืนยันอีเมลก่อนเข้าสู่ระบบ
+                // แสดง popup ยืนยันอีเมล (ผู้ใช้ยังคง signed-in อยู่เพื่อให้ส่ง verification ได้)
                 toggleLoader(false);
-                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ");
-                await forceSchoolHubLogout({ delay: 700 });
+                showSchoolHubEmailVerifyPopup(email, userCred.user);
             } catch (error) {
                 if(error.code === 'auth/email-already-in-use') {
                     toggleLoader(false); showCustomAlert("สมัครไม่ได้", "อีเมลนี้มีผู้ใช้งานในระบบแล้ว", true);
@@ -7989,6 +8057,79 @@ async function submitPlanRequest(planId){
         }
         window.setGoogleLoginButtonLoading = setGoogleLoginButtonLoading;
 
+        // ---- Email Verification Popup Logic ----
+        window.shCloseVerifyPopup = function(){
+            const p = document.getElementById('sh-email-verify-popup');
+            if(p) p.classList.remove('sh-show');
+            window.__shVerifyEmail = null;
+            window.__shPendingVerifyUser = null;
+        };
+        function showSchoolHubEmailVerifyPopup(email, user){
+            window.__shVerifyEmail = email;
+            window.__shPendingVerifyUser = user || null;
+            const emailEl = document.getElementById('sh-verify-popup-email');
+            if(emailEl) emailEl.textContent = email;
+            const btn = document.getElementById('sh-verify-popup-btn');
+            if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล'; }
+            const p = document.getElementById('sh-email-verify-popup');
+            if(p) p.classList.add('sh-show');
+        }
+        window.shSendVerifyEmail = async function(){
+            const btn = document.getElementById('sh-verify-popup-btn');
+            const email = window.__shVerifyEmail || (document.getElementById('sh-verify-popup-email')?.textContent||'').trim();
+            if(!email){ showCustomAlert('ไม่พบอีเมล','กรุณากรอกอีเมลในแบบฟอร์มก่อน',true); return; }
+            if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:.5rem"></i>กำลังส่ง...'; }
+            try{
+                const u = auth.currentUser || window.__shPendingVerifyUser;
+                if(u && (u.email||'').toLowerCase() === email.toLowerCase()){
+                    // ผู้ใช้ลงชื่อเข้าอยู่แล้ว (หลังสมัคร) — ใช้ Firebase sendEmailVerification
+                    await sendEmailVerification(u);
+                    if(u === auth.currentUser) await forceSchoolHubLogout({ delay: 300 });
+                } else {
+                    // ยังไม่ได้ลงชื่อเข้า (ตรวจก่อน login) — ใช้ custom token + Apps Script
+                    const token = makeToken();
+                    const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
+                    await setDoc(doc(db, 'users_status', email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
+                    await sendMailViaWebApp({ to: email, type: 'verify', subject: 'SchoolHub - ยืนยันอีเมลของคุณ', name: email, message: 'สวัสดี ' + email + '\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n' + verifyLink + '\n\n— SchoolHub', extra: { link: verifyLink } });
+                }
+                window.shCloseVerifyPopup();
+                showCustomAlert('ส่งลิงก์ยืนยันแล้ว', 'ตรวจสอบกล่องจดหมาย ' + email + ' และกดลิงก์เพื่อเข้าสู่ระบบ');
+            } catch(err){
+                if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล'; }
+                showCustomAlert('ส่งไม่ได้', err.message || String(err), true);
+            }
+        };
+        // ---- Attach blur listener to email inputs (check verification on blur) ----
+        async function shCheckEmailOnBlur(emailValue){
+            const email = (typeof normalizeSchoolHubEmail === 'function') ? normalizeSchoolHubEmail(emailValue) : emailValue.trim().toLowerCase();
+            if(!email || !email.includes('@')) return;
+            // Skip for admin
+            const cachedAdminEmail = (localStorage.getItem('schoolhub_admin_email')||'').toLowerCase();
+            if(email === 'admin' || (cachedAdminEmail && email === cachedAdminEmail)) return;
+            if(localStorage.getItem('schoolhub_admin_bypass') === 'true') return;
+            try{
+                const snap = await getDoc(doc(db, 'users_status', email));
+                if(snap.exists() && snap.data().emailVerified === false){
+                    showSchoolHubEmailVerifyPopup(email, null);
+                }
+            } catch(e){ /* ไม่ block UI ถ้า Firestore ตอบช้า */ }
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            const attachBlur = function(){
+                const loginEl = document.getElementById('login-email');
+                const regEl = document.getElementById('reg-email');
+                if(loginEl && !loginEl.__shBlurAttached){
+                    loginEl.__shBlurAttached = true;
+                    loginEl.addEventListener('blur', function(){ shCheckEmailOnBlur(loginEl.value); });
+                }
+                if(regEl && !regEl.__shBlurAttached){
+                    regEl.__shBlurAttached = true;
+                    regEl.addEventListener('blur', function(){ shCheckEmailOnBlur(regEl.value); });
+                }
+            };
+            attachBlur();
+            setTimeout(attachBlur, 1000);
+        });
         window.handleSocialLogin = async (providerType) => {
             if (location.protocol === 'file:') {
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
@@ -10531,62 +10672,6 @@ async function submitPlanRequest(planId){
       if(cfg && cfg.password){ localStorage.setItem('schoolhub_admin_password', cfg.password); localStorage.setItem('schoolhub_admin_default_disabled','true'); }
     }catch(e){}
     return __oldEnterAdminModeGlobal();
-  };
-
-  const __oldHandleLoginGlobalAdmin = window.handleLogin;
-  window.handleLogin = async function(e){
-    if(e) e.preventDefault();
-    const email = (document.getElementById('login-email')?.value || '').trim();
-    const pass = document.getElementById('login-pass')?.value || '';
-    if(email.toLowerCase() === 'admin'){
-      toggleLoader(true);
-      try{
-        const cfg = await getSystemAdminConfig_();
-        const hasConfigured = !!(cfg && cfg.defaultDisabled && cfg.password);
-        if(hasConfigured){
-          if(pass !== cfg.password){ toggleLoader(false); return showCustomAlert('รหัสผ่าน Admin ไม่ถูกต้อง','รหัสเริ่มต้น Admin123 ถูกปิดแล้ว ต้องใช้รหัสผ่าน Admin ที่ตั้งไว้ในระบบเท่านั้น',true); }
-          localStorage.setItem('schoolhub_admin_bypass','true');
-          localStorage.setItem('schoolhub_admin_name', cfg.name || 'Administrator');
-          localStorage.setItem('schoolhub_admin_password', cfg.password);
-          localStorage.setItem('schoolhub_admin_default_disabled','true');
-          await enterAdminMode();
-          toggleLoader(false);
-          return;
-        }
-        if(pass !== 'Admin123'){ toggleLoader(false); return showCustomAlert('รหัสผ่าน Admin ไม่ถูกต้อง','ครั้งแรกเท่านั้นให้ใช้ Admin / Admin123 หลังตั้งค่าแล้วรหัสนี้จะใช้ไม่ได้ทุกเครื่อง',true); }
-        localStorage.setItem('schoolhub_admin_bypass','true');
-        await enterAdminMode();
-        toggleLoader(false);
-        setTimeout(()=>openAdminFirstSetupModal(), 250);
-        return;
-      }catch(err){ toggleLoader(false); return showCustomAlert('เข้าสู่ระบบ Admin ไม่สำเร็จ', getFirebaseErrorText(err), true); }
-    }
-    return __oldHandleLoginGlobalAdmin(e || {preventDefault(){}});
-  };
-
-  window.saveAdminFirstSetup = async function(){
-    const name = (document.getElementById('admin-setup-name')?.value || '').trim();
-    const pass = document.getElementById('admin-setup-password')?.value || '';
-    if (!name) return showCustomAlert('กรุณากรอกชื่อแอดมิน', 'ชื่อแอดมินห้ามว่าง', true);
-    if (!pass || pass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
-    if (pass === 'Admin123') return showCustomAlert('ห้ามใช้รหัสเริ่มต้น', 'เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ที่ไม่ใช่ Admin123', true);
-    toggleLoader(true);
-    try{
-      await setSystemAdminConfig_({name, password:pass, defaultDisabled:true});
-      localStorage.setItem('schoolhub_admin_name', name);
-      /* disabled: admin password saved to Firebase only */
-      localStorage.removeItem('schoolhub_admin_default_disabled');
-      if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
-      const nameEl = document.getElementById('user-display-name');
-      const emailEl = document.getElementById('user-display-email');
-      const avatarEl = document.getElementById('user-avatar-initial');
-      if (nameEl) nameEl.textContent = name;
-      if (emailEl) emailEl.textContent = 'Admin';
-      if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
-      closeModal('admin-first-setup-modal');
-      showCustomAlert('ตั้งค่า Admin สำเร็จ', 'รหัส Admin / Admin123 ถูกปิดถาวรแล้ว ทุกเครื่องต้องใช้รหัสที่ตั้งใหม่นี้เท่านั้น');
-    }catch(e){ showCustomAlert('บันทึก Admin ไม่สำเร็จ', getFirebaseErrorText(e), true); }
-    toggleLoader(false);
   };
 
   const __oldSaveUserProfileGlobalAdmin = window.saveUserProfileChanges;
@@ -15307,7 +15392,7 @@ window.requestOwnPasswordReset = function(event){
   .summary-mobile-card-code summary { cursor: pointer; list-style: none; color: #4f46e5; font-size: .75rem; font-weight: 800; }
   .summary-mobile-card-code summary::-webkit-details-marker { display: none; }
   .summary-mobile-card-code div { margin-top: .4rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: .85rem; padding: .55rem .7rem; font-size: .78rem; }
-  .summary-mobile-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .45rem; margin-top: .8rem; }
+  .summary-mobile-stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .45rem; margin-top: .8rem; }
   .summary-mobile-stat { border-radius: .9rem; padding: .58rem .35rem; text-align: center; font-size: .72rem; font-weight: 800; background: #f8fafc; }
   .summary-mobile-stat b { display: block; font-size: 1rem; line-height: 1; margin-bottom: .18rem; }
   .summary-mobile-plans { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .45rem; margin-top: .75rem; }
@@ -15442,15 +15527,14 @@ window.requestOwnPasswordReset = function(event){
       var subtitle = isChecklist ? 'เช็คงาน' : 'เต็ม '+window.formatScoreDisplay(p.maxScore,2);
       thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>';
     });
-    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-emerald-600 text-white font-bold sh-bonus-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="คะแนนโบนัส — คลิกที่ช่องของนักเรียนเพื่อดูรายละเอียด, ดับเบิลคลิกที่หัวข้อนี้เพื่อตั้งค่าการรวมกับคะแนนรวม" ondblclick="shOvOpenBonusMergeSettings(\''+cid+'\')">+โบนัส</th><th class="text-center bg-amber-500 text-white font-bold sh-star-col" style="font-size:10px;padding:2px 1px;white-space:nowrap" title="ดาวกลุ่มสะสม (คลิกเพื่อดูรายละเอียด)">⭐ดาว</th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+window.formatScoreDisplay(totalMax,2)+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
 
     var tbody = '<tbody>';
     var mobileHtml = '';
     students.forEach(function(st, index){
-      try {
       var isWithdrawn = (typeof window.isWithdrawnStudent === 'function') ? window.isWithdrawnStudent(st) : (window.isStudentWithdrawn && window.isStudentWithdrawn(st));
-      var pr=0, la=0, ab=0;
-      attDates.forEach(function(d){ var rec = (history[d] && history[d].records) || {}; var x = rec[st.id]; if(x==='present') pr++; else if(x==='late') la++; else if(x==='absent') ab++; });
+      var pr=0, la=0, ab=0, lv=0;
+      attDates.forEach(function(d){ var rec = (history[d] && history[d].records) || {}; var x = rec[st.id]; if(x==='present') pr++; else if(x==='late') la++; else if(x==='absent') ab++; else if(x==='leave') lv++; });
       var total = 0;
       var planCells = '';
       var planCards = '';
@@ -15482,60 +15566,17 @@ window.requestOwnPasswordReset = function(event){
         }
       });
       total = isWithdrawn ? 0 : window.normalizeScoreNumber(total, 2);
-      var __bonusByCid = (state.bonusScores && state.bonusScores[cid]) || {};
-      var __totalBonus = 0;
-      var __bonusDetail = [];
-      Object.keys(__bonusByCid).forEach(function(wk){
-        var wVal = __bonusByCid[wk] && __bonusByCid[wk][st.id];
-        if (wVal !== undefined && wVal !== '' && !isNaN(Number(wVal)) && Number(wVal) !== 0) {
-          __totalBonus += Number(wVal);
-          __bonusDetail.push({ week: wk.replace('w',''), val: Number(wVal) });
-        }
-      });
-      var __bonusDetailJson = encodeURIComponent(JSON.stringify(__bonusDetail));
-      var __bonusCellColor = __totalBonus > 0 ? 'color:#065f46;font-weight:800' : 'color:#94a3b8';
-      var __bonusCellBg = __totalBonus > 0 ? 'background:#d1fae5' : '';
-      var __starCourseData = (state.starGroups && state.starGroups[cid]) || {};
-      var __starGroups = __starCourseData.groups || [];
-      var __weekStars = __starCourseData.weekStars || {};
-      var __totalStars = 0;
-      var __starDetail = [];
-      var __studentGroups = __starGroups.filter(function(g){ return (g.members||[]).includes(st.id); });
-      Object.keys(__weekStars).forEach(function(wk){
-        var weekData = __weekStars[wk] || {};
-        var weekStarSum = 0;
-        __studentGroups.forEach(function(g){ weekStarSum += weekData[g.id] || 0; });
-        if (weekStarSum > 0) {
-          __totalStars += weekStarSum;
-          __starDetail.push({ week: wk.replace('w',''), stars: weekStarSum });
-        }
-      });
-      var __starDetailJson = encodeURIComponent(JSON.stringify(__starDetail));
-      var __starCellColor = __totalStars > 0 ? 'color:#92400e;font-weight:800' : 'color:#94a3b8';
-      var __starCellBg = __totalStars > 0 ? 'background:#fef3c7' : '';
-      var __bmSettings = (state.bonusMergeSettings && state.bonusMergeSettings[cid]) || null;
-      var __bonusMerged = 0;
-      if (__bmSettings && __bmSettings.enabled && !isWithdrawn) {
-        var __included = __bmSettings.mode === 'selected' ? (__bmSettings.selected||[]).includes(st.id) : true;
-        if (__included && __totalBonus) {
-          __bonusMerged = __totalBonus * ((Number(__bmSettings.percent)||0) / 100);
-          total = window.addScoreToTotal(total, __bonusMerged, 2);
-        }
-      }
-      var __safeName = String(st.name||st.id||'').replace(/'/g, "\\'");
       var gg = scoreAndGrade(st, total, totalMax, gradeCriteria, cid);
-      var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col" style="position:relative">'+window.formatScoreDisplay(total,2)+(__bonusMerged ? '<span style="position:absolute;top:2px;right:4px;font-size:9px;font-weight:800;color:#059669;line-height:1">+'+window.formatScoreDisplay(__bonusMerged,2)+'</span>' : '')+'</td>';
-      var bonusCell = isWithdrawn ? '<td class="text-center sh-bonus-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center sh-bonus-col" style="'+__bonusCellBg+';cursor:pointer" title="โบนัสรวม: '+__totalBonus+' คะแนน — คลิกเพื่อดูรายละเอียด" onclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')" ondblclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')"><span style="'+__bonusCellColor+'">'+(__totalBonus > 0 ? '+'+__totalBonus : '-')+'</span></td>';
-      var starCell = isWithdrawn ? '<td class="text-center sh-star-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center sh-star-col" style="'+__starCellBg+';cursor:pointer" title="ดาวรวม: '+__totalStars+' — คลิกเพื่อดูรายละเอียด" onclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')" ondblclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')"><span style="'+__starCellColor+'">'+(__totalStars > 0 ? __totalStars+'⭐' : '-')+'</span></td>';
+      var totalCell = isWithdrawn ? '<td class="text-center font-bold bg-slate-50 border-r summary-total-col withdrawn">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+window.formatScoreDisplay(total,2)+'</td>';
       var gradeCell = isWithdrawn ? '<td class="text-center font-bold bg-amber-50/30 summary-grade-col withdrawn">'+(window.renderWithdrawnGradeCell ? window.renderWithdrawnGradeCell() : '<span class="withdrawn-grade withdrawn-grade-cell">ลาออก</span>')+'</td>' : '<td class="text-center font-bold '+gg.color+' bg-amber-50/30 summary-grade-col">'+(gg.html || esc(gg.grade))+'</td>';
-      var attendanceCell = isWithdrawn ? '<td class="text-center font-bold summary-att-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
-      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td>'+attendanceCell+planCells+totalCell+bonusCell+starCell+gradeCell+'</tr>';
+      var attendanceCell = isWithdrawn ? '<td class="text-center font-bold summary-att-col withdrawn-score-cell">ลาออก</td>' : '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span>/<span style="color:#7c3aed">'+lv+'</span></td>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td>'+attendanceCell+planCells+totalCell+gradeCell+'</tr>';
 
-
-      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-stats" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:.5rem"><div class="summary-mobile-stat" style="'+__bonusCellBg+';cursor:pointer" onclick="shOvShowBonusDetail(\''+st.id+'\',\''+__safeName+'\',\''+__bonusDetailJson+'\',\''+cid+'\')"><b style="'+__bonusCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalBonus > 0 ? '+'+__totalBonus : '-'))+'</b>+โบนัส</div><div class="summary-mobile-stat" style="'+__starCellBg+';cursor:pointer" onclick="shOvShowStarDetail(\''+st.id+'\',\''+__safeName+'\',\''+__starDetailJson+'\',\''+cid+'\')"><b style="'+__starCellColor+'">'+(isWithdrawn ? 'ลาออก' : (__totalStars > 0 ? __totalStars+'⭐' : '-'))+'</b>ดาว</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
-      } catch(__cardErr) {
-        console.error('SchoolHub: overview row render failed for student', st && st.id, __cardErr);
-      }
+      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div><div class="summary-mobile-stat" style="color:#7c3aed"><b>'+lv+'</b>ลา</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-bonus-star">'+
+        '<div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)" data-student-id="'+esc(st.id||'')+'" data-course-id="'+esc(cid)+'" data-student-name="'+esc(st.name||'')+'"><span>+โบนัส</span><b>'+(function(){ var b=(typeof window.shOvGetBonusScore==='function')?window.shOvGetBonusScore(cid,st.id):null; return (b!==null&&b!==undefined)?esc(window.formatScoreDisplay(b,2)):'-'; })()+'</b></div>'+
+        '<div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+(function(){ var s=(typeof window.shOvGetStarTotal==='function')?window.shOvGetStarTotal(cid,st.id):0; return (s&&s>0)?esc(String(s)):'-'; })()+'</b></div>'+
+        '</div>'+
+        '<div class="summary-mobile-total"><span>รวม '+(isWithdrawn ? 'ลาออก' : window.formatScoreDisplay(total,2)+'/'+window.formatScoreDisplay(totalMax,2))+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -15573,7 +15614,7 @@ window.requestOwnPasswordReset = function(event){
   .summary-mobile-card-code summary{ cursor:pointer !important; list-style:none !important; color:#4f46e5 !important; font-size:.76rem !important; font-weight:900 !important; }
   .summary-mobile-card-code summary::-webkit-details-marker{ display:none !important; }
   .summary-mobile-card-code div{ margin-top:.4rem !important; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace !important; color:#64748b !important; background:#f8fafc !important; border:1px dashed #cbd5e1 !important; border-radius:.85rem !important; padding:.55rem .7rem !important; font-size:.78rem !important; }
-  .summary-mobile-stats{ display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.8rem !important; }
+  .summary-mobile-stats{ display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.8rem !important; }
   .summary-mobile-stat{ border-radius:.9rem !important; padding:.58rem .35rem !important; text-align:center !important; font-size:.72rem !important; font-weight:900 !important; background:#f8fafc !important; }
   .summary-mobile-stat b{ display:block !important; font-size:1rem !important; line-height:1 !important; margin-bottom:.18rem !important; }
   .summary-mobile-plans{ display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.75rem !important; }
@@ -15581,9 +15622,102 @@ window.requestOwnPasswordReset = function(event){
   .summary-mobile-plan-top{ display:flex !important; justify-content:space-between !important; gap:.5rem !important; align-items:center !important; font-size:.72rem !important; font-weight:900 !important; }
   .summary-mobile-plan-title{ font-size:.68rem !important; color:#64748b !important; margin-top:.22rem !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
   .summary-mobile-total{ margin-top:.8rem !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:.75rem !important; border-radius:1rem !important; background:#0f172a !important; color:white !important; padding:.75rem .85rem !important; font-weight:900 !important; }
+  .summary-mobile-bonus-star{ display:flex !important; gap:.45rem !important; margin-top:.75rem !important; }
+  .summary-mobile-bonus-cell{ flex:1 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; background:#ecfdf5 !important; border:1px solid #6ee7b7 !important; border-radius:.9rem !important; padding:.5rem .75rem !important; font-size:.72rem !important; font-weight:900 !important; color:#059669 !important; cursor:pointer !important; }
+  .summary-mobile-bonus-cell b{ font-size:1rem !important; }
+  .summary-mobile-star-cell{ flex:1 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; background:#fffbeb !important; border:1px solid #fcd34d !important; border-radius:.9rem !important; padding:.5rem .75rem !important; font-size:.72rem !important; font-weight:900 !important; color:#d97706 !important; }
+  .summary-mobile-star-cell b{ font-size:1rem !important; }
 }
 @media (min-width:768px){ #course-summary-mobile-cards{ display:none !important; } }
 </style>
+<script>
+(function(){
+  if(window.__schoolhubFinalMobileOverviewCardsFix) return;
+  window.__schoolhubFinalMobileOverviewCardsFix = true;
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function text(el){ return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim(); }
+  function ensureBox(){
+    var table=document.getElementById('course-summary-table');
+    if(!table) return null;
+    var box=document.getElementById('course-summary-mobile-cards');
+    if(!box){
+      box=document.createElement('div');
+      box.id='course-summary-mobile-cards';
+      var wrap=table.closest('.overflow-x-auto') || table.parentNode;
+      if(wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
+      else table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+  function splitAttendance(v){
+    var m=String(v||'').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)(?:\s*\/\s*(\d+))?/);
+    return m ? [m[1],m[2],m[3],m[4]||'0'] : ['0','0','0','0'];
+  }
+  function buildMobileOverviewCards(){
+    if(!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+    var table=document.getElementById('course-summary-table');
+    var box=ensureBox();
+    if(!table || !box) return;
+    var rows=[].slice.call(table.querySelectorAll('tbody tr'));
+    if(!rows.length){ box.innerHTML=''; return; }
+    var headerEls=[].slice.call(table.querySelectorAll('thead th'));
+    function findColIdx(cls,fb){ for(var i=0;i<headerEls.length;i++){ if(headerEls[i].className.indexOf(cls)>=0) return i; } return fb; }
+    var totalColIdx=findColIdx('summary-total-col',headerEls.length-2);
+    var gradeColIdx=findColIdx('summary-grade-col',headerEls.length-1);
+    var bonusColIdx=findColIdx('sh-bonus-col',-1);
+    var starColIdx=findColIdx('sh-star-col',-1);
+    box.innerHTML=rows.map(function(row, idx){
+      var cells=[].slice.call(row.children);
+      var no=text(cells[0]) || String(idx+1);
+      var code=text(cells[1]) || '-';
+      var name=text(cells[2]) || '-';
+      var room=text(cells[3]) || '-';
+      var att=splitAttendance(text(cells[4]));
+      var total=cells[totalColIdx] ? text(cells[totalColIdx]) : '0';
+      var grade=cells[gradeColIdx] ? text(cells[gradeColIdx]) : '-';
+      var bonus=bonusColIdx>=0&&cells[bonusColIdx] ? text(cells[bonusColIdx]) : '-';
+      var stars=starColIdx>=0&&cells[starColIdx] ? text(cells[starColIdx]).replace(/[^\d]/g,'') : '-'; if(stars===''||stars==='0') stars='-';
+      var planHtml='';
+      for(var i=5;i<totalColIdx;i++){
+        if(i===bonusColIdx||i===starColIdx) continue;
+        var hdr=headerEls[i];
+        var titleAttr=(hdr&&hdr.getAttribute&&hdr.getAttribute('title'))||'';
+        var label=titleAttr ? titleAttr.replace(/^คลิกเพื่อดูรายละเอียด[: ]*/,'').split('|').map(function(x){return x.trim();}).join(' ') : (text(hdr)||('งาน '+(i-4)));
+        var value=text(cells[i]) || '-';
+        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(label.split(' ')[0]||label)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(label)+'</div></div>';
+      }
+      if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+      var bonusStarHtml='<div class="summary-mobile-bonus-star"><div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)"><span>+โบนัส</span><b>'+esc(bonus)+'</b></div><div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+esc(stars)+'</b></div></div>';
+      return '<div class="summary-mobile-card">'+
+        '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'+
+        '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'+
+        '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div><div class="summary-mobile-stat" style="color:#7c3aed"><b>'+esc(att[3]||0)+'</b>ลา</div></div>'+
+        '<div class="summary-mobile-plans">'+planHtml+'</div>'+
+        bonusStarHtml+
+        '<div class="summary-mobile-total"><span>รวม '+(function(){var _p=String(total).split('+');return esc(_p[0])+(_p.length>1?'<sup style="font-size:.6em;color:#4ade80;font-weight:900;vertical-align:super;line-height:1">+'+esc(_p[1])+'</sup>':'')})()+'</span><span>เกรด '+esc(grade)+'</span></div>'+
+      '</div>';
+    }).join('');
+  }
+  window.buildMobileOverviewCards = buildMobileOverviewCards;
+  function wrapRender(){
+    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileCardWrapped){
+      var old=window.renderCourseOverview;
+      var fn=function(){ var r=old.apply(this, arguments); setTimeout(buildMobileOverviewCards, 30); setTimeout(buildMobileOverviewCards, 180); return r; };
+      fn.__mobileCardWrapped=true;
+      window.renderCourseOverview=fn;
+    }
+  }
+  wrapRender();
+  document.addEventListener('DOMContentLoaded', function(){ wrapRender(); setTimeout(buildMobileOverviewCards,300); });
+  window.addEventListener('resize', function(){ setTimeout(buildMobileOverviewCards,80); });
+  var oldSwitch=window.switchCourseTab;
+  if(typeof oldSwitch === 'function' && !oldSwitch.__mobileOverviewFinalWrapped){
+    var sw=function(tabId){ var r=oldSwitch.apply(this, arguments); if(tabId==='overview') setTimeout(buildMobileOverviewCards,160); return r; };
+    sw.__mobileOverviewFinalWrapped=true;
+    window.switchCourseTab=sw;
+  }
+})();
+</script>
 
 
 
@@ -15612,8 +15746,8 @@ window.requestOwnPasswordReset = function(event){
     return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim();
   }
   function splitAttendance(v){
-    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
-    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
+    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)(?:\s*\/\s*(\d+))?/);
+    return m ? [m[1],m[2],m[3],m[4]||'0'] : ['0','0','0','0'];
   }
   function ensureBox(){
     var table = document.getElementById('course-summary-table');
@@ -15647,10 +15781,6 @@ window.requestOwnPasswordReset = function(event){
   }
 
   function buildFixedMobileOverviewCards(){
-    // ปิดการทำงาน: การ์ดมือถือฉบับนี้อ่านข้อมูลจากตาราง (DOM) โดยเดาตำแหน่งคอลัมน์
-    // ทำให้เพี้ยนเมื่อจำนวนคอลัมน์เปลี่ยน (เช่น มีคอลัมน์โบนัส/ดาว) จนคะแนนรวม/เกรดหาย
-    // และมีการ์ดปลอมโผล่มาแทรก ตอนนี้ใช้การ์ดที่สร้างจากข้อมูลจริงใน renderCourseOverview() แทน
-    return;
     if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
     var table = document.getElementById('course-summary-table');
     var box = ensureBox();
@@ -15668,19 +15798,28 @@ window.requestOwnPasswordReset = function(event){
 
       /* ตารางบางเวอร์ชันมีคอลัมน์ ชั้น/ห้อง ก่อนคอลัมน์เช็คชื่อ และบางเวอร์ชันไม่มี
          จึงหาเซลล์เช็คชื่อจากรูปแบบ มา/สาย/ขาด โดยตรง เพื่อให้ช่องสีเขียว/ส้ม/แดงตรงเสมอ */
-      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t); });
+      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+/.test(t); });
       if (attIndex < 0) attIndex = 3;
       var att = splitAttendance(texts[attIndex]);
       var room = '-';
       if (attIndex > 3) room = texts[3] || '-';
 
-      var totalIndex = Math.max(cells.length - 2, 0);
-      var gradeIndex = Math.max(cells.length - 1, 0);
-      var total = texts[totalIndex] || '0';
-      var grade = texts[gradeIndex] || '-';
+      var bonusColIdx2=-1,starColIdx2=-1,totalIdx2=cells.length-2,gradeIdx2=cells.length-1;
+      for(var ci=0;ci<headers.length;ci++){
+        var hcls=headers[ci].className||'';
+        if(hcls.indexOf('summary-total-col')>=0) totalIdx2=ci;
+        else if(hcls.indexOf('summary-grade-col')>=0) gradeIdx2=ci;
+        else if(hcls.indexOf('sh-bonus-col')>=0) bonusColIdx2=ci;
+        else if(hcls.indexOf('sh-star-col')>=0) starColIdx2=ci;
+      }
+      var total = cells[totalIdx2] ? cleanText(cells[totalIdx2]) : '0';
+      var grade = cells[gradeIdx2] ? cleanText(cells[gradeIdx2]) : '-';
+      var bonus2 = bonusColIdx2>=0&&cells[bonusColIdx2] ? cleanText(cells[bonusColIdx2]) : '-';
+      var stars2 = starColIdx2>=0&&cells[starColIdx2] ? cleanText(cells[starColIdx2]).replace(/[^\d]/g,'') : '-'; if(stars2===''||stars2==='0') stars2='-';
 
       var planHtml = '';
-      for (var i = attIndex + 1; i < totalIndex; i++) {
+      for (var i = attIndex + 1; i < totalIdx2; i++) {
+        if(i===bonusColIdx2||i===starColIdx2) continue;
         var h = parseHeader(headers[i], i - attIndex - 1);
         var value = texts[i] || '-';
         var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
@@ -15691,13 +15830,15 @@ window.requestOwnPasswordReset = function(event){
           + '</div>';
       }
       if (!planHtml) planHtml = '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+      var bonusStarHtml2='<div class="summary-mobile-bonus-star"><div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)"><span>+โบนัส</span><b>'+esc(bonus2)+'</b></div><div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+esc(stars2)+'</b></div></div>';
 
       return '<div class="summary-mobile-card">'
         + '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'
         + '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'
-        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'
+        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div><div class="summary-mobile-stat" style="color:#7c3aed"><b>'+esc(att[3]||0)+'</b>ลา</div></div>'
         + '<div class="summary-mobile-plans">'+planHtml+'</div>'
-        + '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'
+        + bonusStarHtml2
+        + '<div class="summary-mobile-total"><span>รวม '+(function(){var _p=String(total).split('+');return esc(_p[0])+(_p.length>1?'<sup style="font-size:.6em;color:#4ade80;font-weight:900;vertical-align:super;line-height:1">+'+esc(_p[1])+'</sup>':'')})()+'</span><span>เกรด '+esc(grade)+'</span></div>'
         + '</div>';
     }).join('');
   }
@@ -15722,6 +15863,478 @@ window.requestOwnPasswordReset = function(event){
   document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(buildFixedMobileOverviewCards, 120); });
 })();
 </script>
+
+
+
+<!-- SchoolHub Mobile-only two point fix: attendance radio center + hide global stats while scoring -->
+<style id="schoolhub-mobile-att-score-two-point-fix">
+@media (max-width: 767px) {
+    /* จุดที่ 1: radio fix ย้ายไปอยู่ใน schoolhub-mobile-3pages-card-only-fix แล้ว */
+
+    /* จุดที่ 2: กันสถิติรวมทั้งระบบแทรกเข้าหน้าบันทึกคะแนน เฉพาะมือถือและเฉพาะตอนอยู่หน้า scores */
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel {
+        display: none !important;
+    }
+}
+</style>
+<script id="schoolhub-mobile-score-stats-guard-fix">
+(function(){
+    function syncMobileScoreGuard(){
+        try{
+            var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            var courseView = document.getElementById('view-course-detail');
+            var scoreTab = document.getElementById('course-tab-scores');
+            var scoreWeek = document.getElementById('score-week');
+            var inCourse = !!courseView && !courseView.classList.contains('hidden');
+            var inScore = !!scoreTab && !scoreTab.classList.contains('hidden');
+            var hasWeek = !!(scoreWeek && scoreWeek.value);
+            document.body.classList.toggle('schoolhub-mobile-score-card-active', !!(isMobile && inCourse && inScore && hasWeek));
+        }catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', syncMobileScoreGuard);
+    window.addEventListener('resize', syncMobileScoreGuard);
+    document.addEventListener('change', function(e){
+        if(e && e.target && e.target.id === 'score-week') setTimeout(syncMobileScoreGuard, 0);
+    }, true);
+    document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(syncMobileScoreGuard, 80); }, true);
+
+    var originalSwitchCourseTab = window.switchCourseTab;
+    if (typeof originalSwitchCourseTab === 'function' && !originalSwitchCourseTab.__schoolhubMobileScoreGuardWrapped) {
+        var wrappedSwitchCourseTab = function(){
+            var result = originalSwitchCourseTab.apply(this, arguments);
+            setTimeout(syncMobileScoreGuard, 0);
+            return result;
+        };
+        wrappedSwitchCourseTab.__schoolhubMobileScoreGuardWrapped = true;
+        window.switchCourseTab = wrappedSwitchCourseTab;
+    }
+
+    var originalRenderScoreList = window.renderScoreList;
+    if (typeof originalRenderScoreList === 'function' && !originalRenderScoreList.__schoolhubMobileScoreGuardWrapped) {
+        var wrappedRenderScoreList = function(){
+            var result = originalRenderScoreList.apply(this, arguments);
+            setTimeout(syncMobileScoreGuard, 0);
+            return result;
+        };
+        wrappedRenderScoreList.__schoolhubMobileScoreGuardWrapped = true;
+        window.renderScoreList = wrappedRenderScoreList;
+    }
+
+    // Performance: removed polling; updates run on render/tab/change/resize instead.
+})();
+</script>
+
+
+<!-- SchoolHub Mobile-only score blank space final fix -->
+<style id="schoolhub-mobile-score-blank-final-fix">
+@media (max-width: 767px) {
+    /* เฉพาะมือถือ + เฉพาะหน้าบันทึกคะแนนที่เลือกสัปดาห์แล้ว: ยุบพื้นที่ว่างของสถิติรวมทั้งระบบให้หมด */
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel,
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel *,
+    body.schoolhub-mobile-score-card-active .schoolhub-mobile-score-hidden-stats,
+    body.schoolhub-mobile-score-card-active .schoolhub-mobile-score-hidden-stats * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+    }
+
+    body.schoolhub-mobile-score-card-active #admin-global-stats-panel {
+        position: static !important;
+        pointer-events: none !important;
+    }
+}
+</style>
+<script id="schoolhub-mobile-score-blank-final-fix-script">
+(function(){
+    function isMobileScoreActive(){
+        try{
+            var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+            var courseView = document.getElementById('view-course-detail');
+            var scoreTab = document.getElementById('course-tab-scores');
+            var scoreWeek = document.getElementById('score-week');
+            var scoreArea = document.getElementById('score-area');
+            return !!(isMobile && courseView && !courseView.classList.contains('hidden') && scoreTab && !scoreTab.classList.contains('hidden') && scoreWeek && scoreWeek.value && scoreArea && !scoreArea.classList.contains('hidden'));
+        }catch(e){ return false; }
+    }
+
+    function collapseScoreBlankStats(){
+        try{
+            var active = isMobileScoreActive();
+            document.body.classList.toggle('schoolhub-mobile-score-card-active', active);
+            var panel = document.getElementById('admin-global-stats-panel');
+            if(!panel) return;
+            panel.classList.toggle('schoolhub-mobile-score-hidden-stats', active);
+            if(active){
+                panel.setAttribute('aria-hidden','true');
+                panel.style.setProperty('display','none','important');
+                panel.style.setProperty('height','0','important');
+                panel.style.setProperty('min-height','0','important');
+                panel.style.setProperty('max-height','0','important');
+                panel.style.setProperty('margin','0','important');
+                panel.style.setProperty('padding','0','important');
+                panel.style.setProperty('border','0','important');
+                panel.style.setProperty('overflow','hidden','important');
+            }else{
+                panel.removeAttribute('aria-hidden');
+                panel.classList.remove('schoolhub-mobile-score-hidden-stats');
+                ['display','height','min-height','max-height','margin','padding','border','overflow'].forEach(function(k){ panel.style.removeProperty(k); });
+            }
+        }catch(e){}
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(collapseScoreBlankStats, 80); setTimeout(collapseScoreBlankStats, 350); });
+    window.addEventListener('resize', function(){ setTimeout(collapseScoreBlankStats, 80); });
+    document.addEventListener('change', function(e){ if(e && e.target && e.target.id === 'score-week') { setTimeout(collapseScoreBlankStats, 0); setTimeout(collapseScoreBlankStats, 180); } }, true);
+    document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(collapseScoreBlankStats, 100); }, true);
+
+    var oldRenderScoreList = window.renderScoreList;
+    if(typeof oldRenderScoreList === 'function' && !oldRenderScoreList.__schoolhubMobileScoreBlankFinalWrapped){
+        var wrapped = function(){
+            var r = oldRenderScoreList.apply(this, arguments);
+            setTimeout(collapseScoreBlankStats, 0);
+            setTimeout(collapseScoreBlankStats, 160);
+            return r;
+        };
+        wrapped.__schoolhubMobileScoreBlankFinalWrapped = true;
+        window.renderScoreList = wrapped;
+    }
+
+    var oldSwitchCourseTab = window.switchCourseTab;
+    if(typeof oldSwitchCourseTab === 'function' && !oldSwitchCourseTab.__schoolhubMobileScoreBlankFinalWrapped){
+        var wrappedTab = function(){
+            var r = oldSwitchCourseTab.apply(this, arguments);
+            setTimeout(collapseScoreBlankStats, 0);
+            setTimeout(collapseScoreBlankStats, 160);
+            return r;
+        };
+        wrappedTab.__schoolhubMobileScoreBlankFinalWrapped = true;
+        window.switchCourseTab = wrappedTab;
+    }
+
+    // Performance: removed polling; updates run on render/tab/change/resize instead.
+})();
+</script>
+
+
+<style id="schoolhub-seq-text-only-fix">
+.schoolhub-seq-text{
+  color:#2563eb!important;
+  font-weight:800!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  display:block!important;
+  line-height:1.25!important;
+}
+#course-summary-mobile-cards .summary-mobile-card-no,
+#course-summary-mobile-cards .summary-mobile-seq-text{
+  color:#2563eb!important;
+  font-weight:800!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  display:block!important;
+  line-height:1.25!important;
+}
+#course-summary-mobile-cards .summary-mobile-card-code{display:none!important;}
+</style>
+<style id="schoolhub-mobile-att-no-circle-color-only-final">
+/* Mobile View เท่านั้น: หน้าเช็คชื่อ ใช้สีของกล่องแทนวงกลม radio */
+@media (max-width: 767px) {
+    #attendance-list .schoolhub-mobile-att-btn > input[type="radio"] {
+        position: absolute !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        outline: 0 !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        pointer-events: none !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present,
+    #attendance-list .schoolhub-mobile-att-btn.late,
+    #attendance-list .schoolhub-mobile-att-btn.absent {
+        background: #f8fafc !important;
+        border-color: #e5e7eb !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present span {
+        color: #059669 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late span {
+        color: #d97706 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent span {
+        color: #e11d48 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.present:has(input[type="radio"]:checked) {
+        background: #d1fae5 !important;
+        border-color: #10b981 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.late:has(input[type="radio"]:checked) {
+        background: #fef3c7 !important;
+        border-color: #f59e0b !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent.is-active,
+    #attendance-list .schoolhub-mobile-att-btn.absent:has(input[type="radio"]:checked) {
+        background: #ffe4e6 !important;
+        border-color: #f43f5e !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.present.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.present:has(input[type="radio"]:checked) span {
+        color: #047857 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.late.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.late:has(input[type="radio"]:checked) span {
+        color: #b45309 !important;
+    }
+
+    #attendance-list .schoolhub-mobile-att-btn.absent.is-active span,
+    #attendance-list .schoolhub-mobile-att-btn.absent:has(input[type="radio"]:checked) span {
+        color: #be123c !important;
+    }
+}
+</style>
+
+<!-- Patch: Mobile overview show no + student code under name only. Do not affect desktop. -->
+<style id="schoolhub-mobile-overview-no-code-fold-idline-fix">
+@media (max-width:767px){
+  .summary-mobile-card-code{display:none!important;}
+  .summary-mobile-card-no{display:block!important;}
+  .summary-mobile-card-idline{
+    margin-top:.28rem!important;
+    display:block!important;
+    font-size:.74rem!important;
+    font-weight:900!important;
+    color:#64748b!important;
+    line-height:1.25!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+  }
+  .summary-mobile-card-idline .summary-mobile-id-symbol{
+    color:#cbd5e1!important;
+    font-weight:900!important;
+  }
+  .summary-mobile-card-room{margin-top:.2rem!important;}
+}
+</style>
+<script id="schoolhub-mobile-overview-no-code-fold-idline-fix-script">
+(function(){
+  if (window.__schoolhubMobileOverviewNoCodeFoldIdlineFix) return;
+  window.__schoolhubMobileOverviewNoCodeFoldIdlineFix = true;
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+  function cleanText(el){
+    return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim();
+  }
+  function splitAttendance(v){
+    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)(?:\s*\/\s*(\d+))?/);
+    return m ? [m[1],m[2],m[3],m[4]||'0'] : ['0','0','0','0'];
+  }
+  function ensureBox(){
+    var table = document.getElementById('course-summary-table');
+    if (!table) return null;
+    var box = document.getElementById('course-summary-mobile-cards');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'course-summary-mobile-cards';
+      var wrap = table.closest('.overflow-x-auto') || table.parentNode;
+      if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
+      else table.parentNode.insertBefore(box, table.nextSibling);
+    }
+    return box;
+  }
+  function parseHeader(th, fallbackIndex){
+    var titleAttr = (th && th.getAttribute && th.getAttribute('title')) || '';
+    var week = '';
+    var title = '';
+    if (titleAttr) {
+      var parts = titleAttr.replace(/^คลิกเพื่อดูรายละเอียด:\s*/,'').split('|').map(function(x){ return x.trim(); });
+      week = (parts[0] || '').replace(/^สัปดาห์\s*/,'').trim();
+      title = parts[1] || '';
+    }
+    if (!week) {
+      var t = cleanText(th);
+      var wm = t.match(/\d+/);
+      week = wm ? wm[0] : String(fallbackIndex + 1);
+    }
+    if (!title) title = cleanText(th).replace(/^สัปดาห์\s*/,'').trim() || 'งาน';
+    return { week: week, title: title };
+  }
+
+  function buildOverviewCardsNoFoldCode(){
+    if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+    var table = document.getElementById('course-summary-table');
+    var box = ensureBox();
+    if (!table || !box) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    if (!rows.length) { box.innerHTML = ''; return; }
+    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+
+    box.innerHTML = rows.map(function(row, idx){
+      var cells = Array.prototype.slice.call(row.children);
+      var texts = cells.map(cleanText);
+      var no = texts[0] || String(idx + 1);
+      var code = texts[1] || '-';
+      var name = texts[2] || '-';
+      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+/.test(t); });
+      if (attIndex < 0) attIndex = 3;
+      var att = splitAttendance(texts[attIndex]);
+      var room = '-';
+      if (attIndex > 3) room = texts[3] || '-';
+      var bonusColIdx3=-1,starColIdx3=-1,totalIdx3=cells.length-2,gradeIdx3=cells.length-1;
+      for(var ci=0;ci<headers.length;ci++){
+        var hcls=headers[ci].className||'';
+        if(hcls.indexOf('summary-total-col')>=0) totalIdx3=ci;
+        else if(hcls.indexOf('summary-grade-col')>=0) gradeIdx3=ci;
+        else if(hcls.indexOf('sh-bonus-col')>=0) bonusColIdx3=ci;
+        else if(hcls.indexOf('sh-star-col')>=0) starColIdx3=ci;
+      }
+      var total = cells[totalIdx3] ? cleanText(cells[totalIdx3]) : '0';
+      var grade = cells[gradeIdx3] ? cleanText(cells[gradeIdx3]) : '-';
+      var bonus3 = bonusColIdx3>=0&&cells[bonusColIdx3] ? cleanText(cells[bonusColIdx3]) : '-';
+      var stars3 = starColIdx3>=0&&cells[starColIdx3] ? cleanText(cells[starColIdx3]).replace(/[^\d]/g,'') : '-'; if(stars3===''||stars3==='0') stars3='-';
+      var planHtml = '';
+      for (var i = attIndex + 1; i < totalIdx3; i++) {
+        if(i===bonusColIdx3||i===starColIdx3) continue;
+        var h = parseHeader(headers[i], i - attIndex - 1);
+        var value = texts[i] || '-';
+        var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
+        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
+        planHtml += '<div class="summary-mobile-plan">'
+          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
+          + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
+          + '</div>';
+      }
+      if (!planHtml) planHtml = '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+      var bonusStarHtml3='<div class="summary-mobile-bonus-star"><div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)"><span>+โบนัส</span><b>'+esc(bonus3)+'</b></div><div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+esc(stars3)+'</b></div></div>';
+      return '<div class="summary-mobile-card">'
+        + '<div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(name)+'</div><div class="summary-mobile-card-room">'+esc(room)+'</div></div><div class="summary-mobile-card-no">#'+esc(String(no).replace(/^#/,''))+'</div></div>'
+        + '<details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(code)+'</div></details>'
+        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div><div class="summary-mobile-stat" style="color:#7c3aed"><b>'+esc(att[3]||0)+'</b>ลา</div></div>'
+        + '<div class="summary-mobile-plans">'+planHtml+'</div>'
+        + bonusStarHtml3
+        + '<div class="summary-mobile-total"><span>รวม '+(function(){var _p=String(total).split('+');return esc(_p[0])+(_p.length>1?'<sup style="font-size:.6em;color:#4ade80;font-weight:900;vertical-align:super;line-height:1">+'+esc(_p[1])+'</sup>':'')})()+'</span><span>เกรด '+esc(grade)+'</span></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.buildMobileOverviewCards = buildOverviewCardsNoFoldCode;
+  function hookRender(){
+    if (typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileNoFoldCodeIdlineWrapped) {
+      var old = window.renderCourseOverview;
+      var fn = function(){
+        var r = old.apply(this, arguments);
+        setTimeout(buildOverviewCardsNoFoldCode, 50);
+        setTimeout(buildOverviewCardsNoFoldCode, 200);
+        return r;
+      };
+      fn.__mobileNoFoldCodeIdlineWrapped = true;
+      window.renderCourseOverview = fn;
+    }
+  }
+  hookRender();
+  document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildOverviewCardsNoFoldCode, 300); });
+  window.addEventListener('resize', function(){ setTimeout(buildOverviewCardsNoFoldCode, 100); });
+  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(buildOverviewCardsNoFoldCode, 140); });
+})();
+</script>
+
+
+
+<!-- Final Fix: Mobile Course Overview Cards Renderer (table hidden on phone, cards shown) -->
+<style>
+@media (max-width: 767px){
+  #course-tab-overview .overflow-x-auto{ overflow: visible !important; }
+  #course-summary-table{ display:none !important; }
+  #course-summary-mobile-cards{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:.85rem !important;
+    padding:1rem !important;
+    background:#f8fafc !important;
+  }
+  #course-summary-mobile-cards:empty{ display:none !important; }
+  .summary-mobile-card{
+    background:rgba(255,255,255,.98) !important;
+    border:1px solid #e2e8f0 !important;
+    border-radius:1.25rem !important;
+    padding:.95rem !important;
+    box-shadow:0 8px 24px rgba(15,23,42,.055) !important;
+  }
+  .summary-mobile-card-name{ font-size:.98rem !important; font-weight:900 !important; color:#0f172a !important; line-height:1.35 !important; }
+  .summary-mobile-card-room{ font-size:.76rem !important; font-weight:800 !important; color:#64748b !important; margin-top:.2rem !important; }
+  .summary-mobile-card-no{ font-size:.72rem !important; font-weight:900 !important; color:#4f46e5 !important; background:#eef2ff !important; border-radius:999px !important; padding:.25rem .65rem !important; white-space:nowrap !important; }
+  .summary-mobile-card-code{ margin-top:.5rem !important; }
+  .summary-mobile-card-code summary{ cursor:pointer !important; list-style:none !important; color:#4f46e5 !important; font-size:.76rem !important; font-weight:900 !important; }
+  .summary-mobile-card-code summary::-webkit-details-marker{ display:none !important; }
+  .summary-mobile-card-code div{ margin-top:.4rem !important; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace !important; color:#64748b !important; background:#f8fafc !important; border:1px dashed #cbd5e1 !important; border-radius:.85rem !important; padding:.55rem .7rem !important; font-size:.78rem !important; }
+  .summary-mobile-stats{ display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.8rem !important; }
+  .summary-mobile-stat{ border-radius:.9rem !important; padding:.58rem .35rem !important; text-align:center !important; font-size:.72rem !important; font-weight:900 !important; background:#f8fafc !important; }
+  .summary-mobile-stat b{ display:block !important; font-size:1rem !important; line-height:1 !important; margin-bottom:.18rem !important; }
+  .summary-mobile-plans{ display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:.45rem !important; margin-top:.75rem !important; }
+  .summary-mobile-plan{ border:1px solid #e0e7ff !important; background:#eef2ff !important; color:#3730a3 !important; border-radius:.9rem !important; padding:.55rem .6rem !important; min-width:0 !important; }
+  .summary-mobile-plan-top{ display:flex !important; justify-content:space-between !important; gap:.5rem !important; align-items:center !important; font-size:.72rem !important; font-weight:900 !important; }
+  .summary-mobile-plan-title{ font-size:.68rem !important; color:#64748b !important; margin-top:.22rem !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+  .summary-mobile-total{ margin-top:.8rem !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:.75rem !important; border-radius:1rem !important; background:#0f172a !important; color:white !important; padding:.75rem .85rem !important; font-weight:900 !important; }
+  .summary-mobile-bonus-star{ display:flex !important; gap:.45rem !important; margin-top:.75rem !important; }
+  .summary-mobile-bonus-cell{ flex:1 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; background:#ecfdf5 !important; border:1px solid #6ee7b7 !important; border-radius:.9rem !important; padding:.5rem .75rem !important; font-size:.72rem !important; font-weight:900 !important; color:#059669 !important; cursor:pointer !important; }
+  .summary-mobile-bonus-cell b{ font-size:1rem !important; }
+  .summary-mobile-star-cell{ flex:1 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; background:#fffbeb !important; border:1px solid #fcd34d !important; border-radius:.9rem !important; padding:.5rem .75rem !important; font-size:.72rem !important; font-weight:900 !important; color:#d97706 !important; }
+  .summary-mobile-star-cell b{ font-size:1rem !important; }
+}
+@media (min-width:768px){ #course-summary-mobile-cards{ display:none !important; } }
+</style>
+
+
+
+<!-- Patch: Mobile overview card values only (attendance + task title). Do not affect desktop. -->
+<style id="mobile-overview-card-attendance-title-only-fix">
+@media (max-width:767px){
+  .summary-mobile-plan-title{
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    line-height:1.25 !important;
+  }
+}
+</style>
 
 
 
@@ -15986,148 +16599,6 @@ window.requestOwnPasswordReset = function(event){
 }
 </style>
 
-<!-- Patch: Mobile overview show no + student code under name only. Do not affect desktop. -->
-<style id="schoolhub-mobile-overview-no-code-fold-idline-fix">
-@media (max-width:767px){
-  .summary-mobile-card-code{display:none!important;}
-  .summary-mobile-card-no{display:block!important;}
-  .summary-mobile-card-idline{
-    margin-top:.28rem!important;
-    display:block!important;
-    font-size:.74rem!important;
-    font-weight:900!important;
-    color:#64748b!important;
-    line-height:1.25!important;
-    background:transparent!important;
-    border:0!important;
-    box-shadow:none!important;
-    padding:0!important;
-  }
-  .summary-mobile-card-idline .summary-mobile-id-symbol{
-    color:#cbd5e1!important;
-    font-weight:900!important;
-  }
-  .summary-mobile-card-room{margin-top:.2rem!important;}
-}
-</style>
-<script id="schoolhub-mobile-overview-no-code-fold-idline-fix-script">
-(function(){
-  if (window.__schoolhubMobileOverviewNoCodeFoldIdlineFix) return;
-  window.__schoolhubMobileOverviewNoCodeFoldIdlineFix = true;
-
-  function esc(v){
-    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-    });
-  }
-  function cleanText(el){
-    return (el && (el.innerText || el.textContent) || '').replace(/\s+/g,' ').trim();
-  }
-  function splitAttendance(v){
-    var m = String(v || '').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
-    return m ? [m[1],m[2],m[3]] : ['0','0','0'];
-  }
-  function ensureBox(){
-    var table = document.getElementById('course-summary-table');
-    if (!table) return null;
-    var box = document.getElementById('course-summary-mobile-cards');
-    if (!box) {
-      box = document.createElement('div');
-      box.id = 'course-summary-mobile-cards';
-      var wrap = table.closest('.overflow-x-auto') || table.parentNode;
-      if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(box, wrap.nextSibling);
-      else table.parentNode.insertBefore(box, table.nextSibling);
-    }
-    return box;
-  }
-  function parseHeader(th, fallbackIndex){
-    var titleAttr = (th && th.getAttribute && th.getAttribute('title')) || '';
-    var week = '';
-    var title = '';
-    if (titleAttr) {
-      var parts = titleAttr.replace(/^คลิกเพื่อดูรายละเอียด:\s*/,'').split('|').map(function(x){ return x.trim(); });
-      week = (parts[0] || '').replace(/^สัปดาห์\s*/,'').trim();
-      title = parts[1] || '';
-    }
-    if (!week) {
-      var t = cleanText(th);
-      var wm = t.match(/\d+/);
-      week = wm ? wm[0] : String(fallbackIndex + 1);
-    }
-    if (!title) title = cleanText(th).replace(/^สัปดาห์\s*/,'').trim() || 'งาน';
-    return { week: week, title: title };
-  }
-
-  function buildOverviewCardsNoFoldCode(){
-    // ปิดการทำงาน (เหมือนกับ buildFixedMobileOverviewCards ด้านบน): อ่าน DOM ตาราง
-    // แล้วเดาตำแหน่งคอลัมน์รวม/เกรด ซึ่งเพี้ยนเมื่อคอลัมน์เปลี่ยน ทำให้ข้อมูลการ์ดมือถือผิดเพี้ยน
-    return;
-    if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
-    var table = document.getElementById('course-summary-table');
-    var box = ensureBox();
-    if (!table || !box) return;
-    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-    if (!rows.length) { box.innerHTML = ''; return; }
-    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
-
-    box.innerHTML = rows.map(function(row, idx){
-      var cells = Array.prototype.slice.call(row.children);
-      var texts = cells.map(cleanText);
-      var no = texts[0] || String(idx + 1);
-      var code = texts[1] || '-';
-      var name = texts[2] || '-';
-      var attIndex = texts.findIndex(function(t){ return /^\d+\s*\/\s*\d+\s*\/\s*\d+$/.test(t); });
-      if (attIndex < 0) attIndex = 3;
-      var att = splitAttendance(texts[attIndex]);
-      var room = '-';
-      if (attIndex > 3) room = texts[3] || '-';
-      var totalIndex = Math.max(cells.length - 2, 0);
-      var gradeIndex = Math.max(cells.length - 1, 0);
-      var total = texts[totalIndex] || '0';
-      var grade = texts[gradeIndex] || '-';
-      var planHtml = '';
-      for (var i = attIndex + 1; i < totalIndex; i++) {
-        var h = parseHeader(headers[i], i - attIndex - 1);
-        var value = texts[i] || '-';
-        var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
-        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
-        planHtml += '<div class="summary-mobile-plan">'
-          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
-          + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
-          + '</div>';
-      }
-      if (!planHtml) planHtml = '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
-      return '<div class="summary-mobile-card">'
-        + '<div class="summary-mobile-seq-text">#'+esc(String(no).replace(/^#/,''))+'</div>'
-        + '<div class="summary-mobile-card-name">'+esc(name)+'</div>'
-        + '<div class="summary-mobile-card-idline"><span>'+esc(code)+'</span></div>'
-        + '<div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div></div>'
-        + '<div class="summary-mobile-plans">'+planHtml+'</div>'
-        + '<div class="summary-mobile-total"><span>รวม '+esc(total)+'</span><span>เกรด '+esc(grade)+'</span></div>'
-        + '</div>';
-    }).join('');
-  }
-
-  window.buildMobileOverviewCards = buildOverviewCardsNoFoldCode;
-  function hookRender(){
-    if (typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__mobileNoFoldCodeIdlineWrapped) {
-      var old = window.renderCourseOverview;
-      var fn = function(){
-        var r = old.apply(this, arguments);
-        setTimeout(buildOverviewCardsNoFoldCode, 50);
-        setTimeout(buildOverviewCardsNoFoldCode, 200);
-        return r;
-      };
-      fn.__mobileNoFoldCodeIdlineWrapped = true;
-      window.renderCourseOverview = fn;
-    }
-  }
-  hookRender();
-  document.addEventListener('DOMContentLoaded', function(){ hookRender(); setTimeout(buildOverviewCardsNoFoldCode, 300); });
-  window.addEventListener('resize', function(){ setTimeout(buildOverviewCardsNoFoldCode, 100); });
-  document.addEventListener('click', function(e){ if(window.isDropdownRelatedElement && window.isDropdownRelatedElement(e.target)) return; setTimeout(buildOverviewCardsNoFoldCode, 140); });
-})();
-</script>
 
 <style id="schoolhub-mobile-overview-hide-room-red-dash-fix">
 @media (max-width: 767px){
@@ -23045,11 +23516,12 @@ select{touch-action:manipulation !important;-webkit-tap-highlight-color:transpar
     pointer-events:auto !important;
     touch-action:manipulation !important;
     position:relative !important;
-    z-index:2147483001 !important;
+    z-index:1 !important;
     /* อย่าฝืนสี/opacity ตรงนี้ เพราะสิทธิ์ planScores ต้องทำให้ปุ่มเทาได้จริง */
+    /* z-index ต่ำมาก เพื่อไม่ให้ปุ่มลอยทับป็อปอัพโบนัส/ดาว (.sh-overlay) เวลาเปิดอยู่ */
   }
   #plan-modal{
-    z-index:2147483647 !important;
+    z-index:2147482000 !important;
     pointer-events:auto !important;
   }
   #plan-modal:not(.hidden){
@@ -32460,6 +32932,134 @@ W.switchView=function(){
 
 })(window);
 </script>
+
+<!-- ===== SCHOOLHUB RESTORE BACKUP (settings-only) ===== -->
+<style>
+.sh-backup-item{
+    border:1.5px solid #e2e8f0;border-radius:1rem;padding:.85rem 1rem;
+    display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    transition:background .15s;
+}
+.sh-backup-item:hover{background:#fafafa;}
+.sh-backup-item-info{flex:1;min-width:0;}
+.sh-backup-item-time{font-weight:900;color:#1e293b;font-size:.9rem;}
+.sh-backup-item-detail{font-size:.75rem;color:#64748b;margin-top:.2rem;}
+.sh-backup-restore-btn{
+    background:#f59e0b;color:#fff;border:none;border-radius:.75rem;
+    padding:.5rem 1rem;font-weight:900;font-size:.8rem;cursor:pointer;
+    white-space:nowrap;transition:background .15s;display:flex;align-items:center;gap:.4rem;
+}
+.sh-backup-restore-btn:hover{background:#d97706;}
+.sh-backup-restore-btn:disabled{background:#d1d5db;cursor:not-allowed;}
+</style>
+
+<script>
+(function(){
+    function fmt2(ts){
+        try{
+            const d=new Date(Number(ts));
+            if(isNaN(d)) return ts;
+            return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        }catch(e){return ts;}
+    }
+    function summaryText2(data){
+        const courses=(data.courses||[]).length;
+        const students=(data.students||[]).length;
+        const scores=(data.scores||[]).length;
+        const bonusWeeks=Object.keys((data.bonusScores||{})).reduce(function(acc,cid){ return acc+Object.keys(data.bonusScores[cid]||{}).length; },0);
+        const starGroupCount=Object.keys((data.starGroups||{})).reduce(function(acc,cid){ return acc+((data.starGroups[cid]&&data.starGroups[cid].groups)||[]).length; },0);
+        return courses+' วิชา • '+students+' นักเรียน • '+scores+' คะแนน • โบนัส '+bonusWeeks+' สัปดาห์ • กลุ่มดาว '+starGroupCount;
+    }
+
+    window.schoolhubConfirmRestore = async function(backupId){
+        const ok=confirm('กู้คืนข้อมูล Backup นี้?\n\nข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่ด้วย Backup นี้ (รวมคะแนนโบนัสและดาว)\nดำเนินการต่อ?');
+        if(!ok) return;
+        const list=document.getElementById('schoolhub-backup-list');
+        const btns=document.querySelectorAll('.sh-backup-restore-btn');
+        btns.forEach(function(b){b.disabled=true;});
+        if(list) list.style.opacity='.4';
+        try{
+            await window.schoolhubRestoreFromBackup(backupId);
+            if(typeof window.showCustomAlert==='function') window.showCustomAlert('กู้คืนสำเร็จ','กู้คืนข้อมูลเรียบร้อยแล้ว กำลังรีเฟรชหน้า...');
+            setTimeout(function(){ location.reload(); },1200);
+        }catch(err){
+            if(list) list.style.opacity='1';
+            btns.forEach(function(b){b.disabled=false;});
+            const msg='กู้คืนไม่ได้: '+(err&&err.message||String(err));
+            if(typeof window.showCustomAlert==='function') window.showCustomAlert('ผิดพลาด',msg,true); else alert(msg);
+        }
+    };
+
+    // กู้คืน Backup ล่าสุดทั้งหมดด้วยคลิกเดียว (ปุ่มในหน้าตั้งค่า)
+    window.schoolhubRestoreLatestBackup = async function(){
+        const list=document.getElementById('schoolhub-backup-list');
+        try{
+            const backups=await window.schoolhubListBackups();
+            if(!backups||!backups.length){
+                if(typeof window.showCustomAlert==='function') window.showCustomAlert('ไม่พบ Backup','ยังไม่มีข้อมูล Backup ให้กู้คืน',true); else alert('ยังไม่มีข้อมูล Backup ให้กู้คืน');
+                return;
+            }
+            const latest=backups[0];
+            const ok=confirm('กู้คืน Backup ล่าสุดทั้งหมด ('+fmt2(latest.id)+')?\n\nข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่ (รวมคะแนนโบนัสและดาว)\nดำเนินการต่อ?');
+            if(!ok) return;
+            if(list){ list.style.opacity='.4'; }
+            await window.schoolhubRestoreFromBackup(latest.id);
+            if(typeof window.showCustomAlert==='function') window.showCustomAlert('กู้คืนสำเร็จ','กู้คืนข้อมูลทั้งหมดจาก Backup ล่าสุดเรียบร้อยแล้ว กำลังรีเฟรชหน้า...');
+            setTimeout(function(){ location.reload(); },1200);
+        }catch(err){
+            if(list) list.style.opacity='1';
+            const msg='กู้คืนไม่ได้: '+(err&&err.message||String(err));
+            if(typeof window.showCustomAlert==='function') window.showCustomAlert('ผิดพลาด',msg,true); else alert(msg);
+        }
+    };
+
+    // schoolhubLoadBackupList = สำหรับ settings panel (แหล่งเดียวที่แสดงปุ่มกู้คืน)
+    window.schoolhubLoadBackupList = async function(){
+        const list=document.getElementById('schoolhub-backup-list');
+        if(!list) return;
+        list.innerHTML='<div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลด...</div>';
+        try{
+            const backups=await window.schoolhubListBackups();
+            if(!backups||!backups.length){
+                list.innerHTML='<div class="text-center text-slate-400 py-6"><i class="fas fa-inbox mr-2"></i>ไม่พบข้อมูล Backup</div>';
+                return;
+            }
+            list.innerHTML=backups.map(function(b){
+                return '<div class="sh-backup-item">'
+                    +'<div class="sh-backup-item-info">'
+                    +'<div class="sh-backup-item-time"><i class="fas fa-database text-amber-400 mr-1"></i>'+fmt2(b.id)+'</div>'
+                    +'<div class="sh-backup-item-detail">'+summaryText2(b.data)+'</div>'
+                    +'</div>'
+                    +'<button class="sh-backup-restore-btn" onclick="schoolhubConfirmRestore(\''+b.id+'\')">'
+                    +'<i class="fas fa-rotate-left"></i> กู้คืนรายการนี้'
+                    +'</button>'
+                    +'</div>';
+            }).join('');
+        }catch(err){
+            list.innerHTML='<div class="text-center text-rose-500 py-4"><i class="fas fa-exclamation-triangle mr-2"></i>'+((err&&err.message)||String(err))+'</div>';
+        }
+    };
+})();
+</script>
+
+<!-- SchoolHub Email Verification Popup -->
+<style>#sh-email-verify-popup{display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.65);align-items:center;justify-content:center;padding:1rem}#sh-email-verify-popup.sh-show{display:flex}</style>
+<div id="sh-email-verify-popup">
+  <div style="background:#fff;border-radius:1.75rem;box-shadow:0 24px 64px rgba(79,70,229,.18);padding:2.5rem 2rem;max-width:360px;width:100%;text-align:center">
+    <div style="width:4rem;height:4rem;background:#eef2ff;border-radius:9999px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem">
+      <i class="fas fa-envelope" style="font-size:1.75rem;color:#4f46e5"></i>
+    </div>
+    <h2 style="font-size:1.25rem;font-weight:900;color:#0f172a;margin-bottom:.5rem">ยืนยันอีเมลของคุณ</h2>
+    <p style="color:#64748b;font-size:.85rem;margin-bottom:.4rem">อีเมลนี้ยังไม่ได้ยืนยัน</p>
+    <p id="sh-verify-popup-email" style="font-weight:800;color:#4f46e5;font-size:.9rem;margin-bottom:1.25rem;word-break:break-all">-</p>
+    <p style="color:#64748b;font-size:.82rem;margin-bottom:1.5rem;line-height:1.6">กดปุ่มด้านล่างเพื่อรับลิงก์ยืนยันในอีเมล<br>จากนั้นกดลิงก์ในอีเมลเพื่อเข้าใช้งาน</p>
+    <button id="sh-verify-popup-btn" onclick="window.shSendVerifyEmail()" style="width:100%;background:#4f46e5;color:#fff;font-weight:900;padding:.9rem 1rem;border-radius:1.15rem;border:none;cursor:pointer;font-size:1rem;margin-bottom:.75rem;transition:.2s">
+      <i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล
+    </button>
+    <button onclick="window.shCloseVerifyPopup()" style="background:none;border:none;color:#94a3b8;font-size:.82rem;cursor:pointer;padding:.25rem">ปิด</button>
+  </div>
+</div>
+
 </body>
 </html>
 
@@ -34106,116 +34706,3 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
 })();
 </script>
 
-<!-- Ultimate fallback: mirror the (already-working) table rows into mobile cards
-     whenever the card container stays empty on phone, even if some other script
-     in the chain fails to populate it. This guarantees the cards always show
-     something on mobile without touching/removing any existing feature. -->
-<style id="schoolhub-fallback-card-style">
-@media (max-width:767px){
-  .schoolhub-fallback-card{
-    background:#fff !important;
-    border:1px solid #e2e8f0 !important;
-    border-radius:.75rem !important;
-    padding:.75rem .9rem !important;
-    box-shadow:0 1px 2px rgba(0,0,0,.04) !important;
-  }
-  .schoolhub-fallback-card-row{
-    display:flex !important;
-    justify-content:space-between !important;
-    gap:.75rem !important;
-    padding:.3rem 0 !important;
-    border-bottom:1px dashed #eef2f7 !important;
-    font-size:12.5px !important;
-  }
-  .schoolhub-fallback-card-row:last-child{ border-bottom:none !important; }
-  .schoolhub-fallback-card-label{
-    color:#64748b !important;
-    font-weight:700 !important;
-    white-space:nowrap !important;
-    flex:0 0 auto !important;
-  }
-  .schoolhub-fallback-card-value{
-    text-align:right !important;
-    font-weight:600 !important;
-    color:#1e293b !important;
-    overflow-wrap:anywhere !important;
-  }
-}
-</style>
-<script id="schoolhub-fallback-mobile-cards-from-table">
-(function(){
-  if (window.__schoolhubFallbackMobileCardsInstalled) return;
-  window.__schoolhubFallbackMobileCardsInstalled = true;
-
-  function isMobile(){
-    return window.matchMedia ? window.matchMedia('(max-width:767px)').matches : window.innerWidth <= 767;
-  }
-
-  function buildFallbackCardsFromTable(){
-    try {
-      if (!isMobile()) return;
-      var box = document.getElementById('course-summary-mobile-cards');
-      var table = document.getElementById('course-summary-table');
-      if (!box || !table) return;
-      // If a real card renderer already populated it, don't touch it.
-      if (box.children.length > 0) return;
-      var theadRow = table.querySelector('thead tr:last-child') || table.querySelector('thead tr');
-      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-      if (!theadRow || !rows.length) return;
-      var headers = Array.prototype.slice.call(theadRow.children).map(function(th){
-        return (th.textContent || '').replace(/\s+/g,' ').trim();
-      });
-      var html = '';
-      rows.forEach(function(row){
-        var cells = Array.prototype.slice.call(row.children);
-        var rowHtml = '';
-        cells.forEach(function(td, i){
-          var label = headers[i] || '';
-          if (!label) return;
-          var valueHtml = td.innerHTML.trim();
-          if (!valueHtml) return;
-          rowHtml += '<div class="schoolhub-fallback-card-row"><span class="schoolhub-fallback-card-label">'+label+'</span><span class="schoolhub-fallback-card-value">'+valueHtml+'</span></div>';
-        });
-        html += '<div class="summary-mobile-card schoolhub-fallback-card">'+rowHtml+'</div>';
-      });
-      if (html) {
-        box.innerHTML = html;
-        box.style.setProperty('display', 'grid', 'important');
-        box.style.setProperty('grid-template-columns', '1fr', 'important');
-        box.style.setProperty('gap', '.85rem', 'important');
-        box.style.setProperty('padding', '1rem', 'important');
-        box.style.setProperty('background', '#f8fafc', 'important');
-      }
-    } catch(e) {
-      console.error('SchoolHub fallback mobile cards error', e);
-    }
-  }
-
-  function schedule(){
-    setTimeout(buildFallbackCardsFromTable, 60);
-    setTimeout(buildFallbackCardsFromTable, 250);
-    setTimeout(buildFallbackCardsFromTable, 600);
-    setTimeout(buildFallbackCardsFromTable, 1200);
-  }
-
-  document.addEventListener('DOMContentLoaded', schedule);
-  document.addEventListener('click', function(){ schedule(); }, true);
-  window.addEventListener('resize', buildFallbackCardsFromTable);
-
-  var table = document.getElementById('course-summary-table');
-  if (table && window.MutationObserver) {
-    var mo = new MutationObserver(function(){ schedule(); });
-    mo.observe(table, { childList: true, subtree: true });
-  } else {
-    document.addEventListener('DOMContentLoaded', function(){
-      var t = document.getElementById('course-summary-table');
-      if (t && window.MutationObserver) {
-        var mo2 = new MutationObserver(function(){ schedule(); });
-        mo2.observe(t, { childList: true, subtree: true });
-      }
-    });
-  }
-
-  schedule();
-})();
-</script>
