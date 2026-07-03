@@ -34814,3 +34814,175 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
   }
 })();
 </script>
+
+<!-- ===== PATCH v11: Withdrawn student mobile card – fade + number above name + ลาออก banner ===== -->
+<style id="schoolhub-withdrawn-v11-css">
+@media (max-width: 767px) {
+  /* 1. Fade the whole card */
+  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row {
+    opacity: 0.48 !important;
+  }
+  /* 2. Hide plan cells and bonus/star strip */
+  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-plans,
+  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-bonus-star {
+    display: none !important;
+  }
+  /* 3. Number-above-name line (injected by JS) */
+  .sh-withdrawn-num-line {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: .3rem !important;
+  }
+  .sh-withdrawn-num-line .schoolhub-seq-text,
+  .sh-withdrawn-num-line .summary-mobile-card-no {
+    font-size: .72rem !important;
+    font-weight: 900 !important;
+    color: #4f46e5 !important;
+    background: #eef2ff !important;
+    border-radius: 999px !important;
+    padding: .25rem .65rem !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;        /* don't inherit strikethrough */
+    -webkit-text-decoration: none !important;
+  }
+  /* Hide the original right-side number after JS move */
+  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .sh-num-hidden {
+    display: none !important;
+  }
+  /* 4. ลาออก banner */
+  .sh-withdrawn-banner {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-radius: .9rem !important;
+    font-size: .88rem !important;
+    font-weight: 900 !important;
+    letter-spacing: .08em !important;
+    padding: .6rem .85rem !important;
+    margin-top: .75rem !important;
+  }
+  /* 5. Centre the total/grade bar */
+  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-total {
+    justify-content: center !important;
+    gap: 1.5rem !important;
+  }
+}
+</style>
+<script id="schoolhub-withdrawn-v11-js">
+(function () {
+  if (window.__shWithdrawnCardPatchV11) return;
+  window.__shWithdrawnCardPatchV11 = true;
+
+  function patchCard(card) {
+    /* Re-entrant guard — cleared on full re-render (new DOM nodes) */
+    if (card.dataset.shwPatched) return;
+    card.dataset.shwPatched = '1';
+
+    /* ── 1. Move sequence number above the name line ── */
+    /* The header row is the first .flex child of the card */
+    var headerRow = card.querySelector('.flex.items-start');
+    if (headerRow && !card.querySelector('.sh-withdrawn-num-line')) {
+      /* Number sits as a direct child of the flex row (last child) */
+      var numEl = null;
+      var children = headerRow.children;
+      for (var i = children.length - 1; i >= 0; i--) {
+        var ch = children[i];
+        if (ch.classList.contains('schoolhub-seq-text') ||
+            ch.classList.contains('summary-mobile-card-no') ||
+            ch.querySelector('.schoolhub-seq-text')) {
+          numEl = ch; break;
+        }
+      }
+      if (numEl) {
+        var numLine = document.createElement('div');
+        numLine.className = 'sh-withdrawn-num-line';
+        numLine.appendChild(numEl.cloneNode(true));
+        /* Hide the original in-flex copy */
+        numEl.classList.add('sh-num-hidden');
+        /* Insert the new line before the header flex row */
+        card.insertBefore(numLine, headerRow);
+      }
+    }
+
+    /* ── 2. Inject ลาออก banner (plans & bonus hidden by CSS) ── */
+    if (card.querySelector('.sh-withdrawn-banner')) return;
+    var plansDiv  = card.querySelector('.summary-mobile-plans');
+    var bonusStar = card.querySelector('.summary-mobile-bonus-star');
+    var banner = document.createElement('div');
+    banner.className = 'sh-withdrawn-banner';
+    banner.textContent = 'ลาออก';
+    var anchor = plansDiv || bonusStar;
+    if (anchor) {
+      anchor.parentNode.insertBefore(banner, anchor);
+    } else {
+      var total = card.querySelector('.summary-mobile-total');
+      if (total) total.parentNode.insertBefore(banner, total);
+      else card.appendChild(banner);
+    }
+  }
+
+  function patchBox(box) {
+    if (!box) return;
+    box.querySelectorAll('.summary-mobile-card.schoolhub-withdrawn-row').forEach(patchCard);
+  }
+
+  function startObserver() {
+    var box = document.getElementById('course-summary-mobile-cards');
+    if (!box) return false;
+    var obs = new MutationObserver(function (mutations) {
+      var need = false;
+      for (var i = 0; i < mutations.length; i++) {
+        var m = mutations[i];
+        if (m.type === 'childList') { need = true; break; }
+        if (m.type === 'attributes' && m.target && m.target.classList &&
+            m.target.classList.contains('schoolhub-withdrawn-row')) { need = true; break; }
+      }
+      if (need) patchBox(box);
+    });
+    obs.observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    patchBox(box);
+    return true;
+  }
+
+  var tries = 0;
+  function init() {
+    patchBox(document.getElementById('course-summary-mobile-cards'));
+    if (!startObserver() && ++tries < 40) setTimeout(init, 300);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+<!-- ===== END PATCH v11 ===== -->
+
+<!-- ===== PATCH v11b: CSS-only number-above-name for withdrawn mobile cards ===== -->
+<style id="schoolhub-withdrawn-num-top-css">
+@media (max-width: 767px) {
+  /* Stack the header flex column so #N (last child) can be ordered first */
+  #course-summary-mobile-cards
+    .summary-mobile-card.schoolhub-withdrawn-row
+    .flex.items-start.justify-between {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: .2rem !important;
+  }
+  /* Push the number badge to the very top with order:-1 */
+  #course-summary-mobile-cards
+    .summary-mobile-card.schoolhub-withdrawn-row
+    .flex.items-start.justify-between
+    > .schoolhub-seq-text,
+  #course-summary-mobile-cards
+    .summary-mobile-card.schoolhub-withdrawn-row
+    .flex.items-start.justify-between
+    > .summary-mobile-card-no {
+      order: -1 !important;
+      align-self: flex-start !important;
+      display: inline-flex !important;
+      margin-bottom: .15rem !important;
+  }
+}
+</style>
+<!-- ===== END PATCH v11b ===== -->
