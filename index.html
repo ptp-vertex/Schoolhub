@@ -7982,25 +7982,10 @@ async function submitPlanRequest(planId){
                 const __cachedAdminEmail = (localStorage.getItem('schoolhub_admin_email') || '').toLowerCase();
                 const __isAdminLogin = rawLoginValue.toLowerCase() === 'admin' || (__cachedAdminEmail && authEmail === __cachedAdminEmail);
                 if (!isSchoolHubVerified && !isFirebaseVerified && !__isAdminLogin) {
+                    // Sign out, show popup — Apps Script resend does not need Firebase auth
                     await signOut(auth);
                     toggleLoader(false);
-                    window.showCustomConfirm(
-                        "ยังไม่ได้ยืนยันอีเมล",
-                        "กรุณากดลิงก์ยืนยันในอีเมลของคุณก่อนเข้าสู่ระบบ\n\nต้องการส่งลิงก์ยืนยันใหม่หรือไม่?",
-                        async () => {
-                            toggleLoader(true);
-                            try {
-                                const tempCred = await signInWithEmailAndPassword(auth, email, pass);
-                                await sendEmailVerification(tempCred.user);
-                                await signOut(auth);
-                                showCustomAlert("ส่งลิงก์ยืนยันแล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน จากนั้นค่อยเข้าสู่ระบบอีกครั้ง");
-                            } catch(e2) {
-                                await signOut(auth).catch(()=>{});
-                                showCustomAlert("ส่งไม่ได้", e2.message || String(e2), true);
-                            }
-                            toggleLoader(false);
-                        }
-                    );
+                    showSchoolHubEmailVerifyPopup(email);
                     return;
                 }
             }
@@ -8032,9 +8017,12 @@ async function submitPlanRequest(planId){
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', emailVerified: false, deletedAt: null }, { merge: true });
-                // แสดง popup ยืนยันอีเมล (ผู้ใช้ยังคง signed-in อยู่เพื่อให้ส่ง verification ได้)
+                // Send verification via Apps Script (custom token) — no Firebase auth needed for link
+                await signOut(auth).catch(()=>{});
                 toggleLoader(false);
-                showSchoolHubEmailVerifyPopup(email, userCred.user);
+                showSchoolHubEmailVerifyPopup(email);
+                // Auto-send first verification email in background
+                shSendVerifyEmailViaAppsScript(email).catch(e => console.warn('auto-send on register failed:', e));
             } catch (error) {
                 if(error.code === 'auth/email-already-in-use') {
                     toggleLoader(false); showCustomAlert("สมัครไม่ได้", "อีเมลนี้มีผู้ใช้งานในระบบแล้ว", true);
@@ -8058,78 +8046,49 @@ async function submitPlanRequest(planId){
         window.setGoogleLoginButtonLoading = setGoogleLoginButtonLoading;
 
         // ---- Email Verification Popup Logic ----
-        window.shCloseVerifyPopup = function(){
-            const p = document.getElementById('sh-email-verify-popup');
-            if(p) p.classList.remove('sh-show');
-            window.__shVerifyEmail = null;
-            window.__shPendingVerifyUser = null;
-        };
-        function showSchoolHubEmailVerifyPopup(email, user){
+        function showSchoolHubEmailVerifyPopup(email){
             window.__shVerifyEmail = email;
-            window.__shPendingVerifyUser = user || null;
             const emailEl = document.getElementById('sh-verify-popup-email');
             if(emailEl) emailEl.textContent = email;
             const btn = document.getElementById('sh-verify-popup-btn');
-            if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล'; }
+            if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งอีกครั้ง'; }
             const p = document.getElementById('sh-email-verify-popup');
             if(p) p.classList.add('sh-show');
         }
+        // ส่งลิงก์ยืนยันผ่าน Apps Script (custom token) — ไม่ต้อง sign-in Firebase
+        async function shSendVerifyEmailViaAppsScript(email){
+            const token = makeToken();
+            const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
+            await setDoc(doc(db, 'users_status', email), {
+                emailVerified: false,
+                verifyToken: token,
+                verifyTokenCreatedAt: Date.now(),
+                status: 'active'
+            }, { merge: true });
+            await sendMailViaWebApp({
+                to: email,
+                type: 'verify',
+                subject: 'SchoolHub — ยืนยันอีเมลของคุณ',
+                name: email,
+                message: 'สวัสดี\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมลและเข้าสู่ระบบ SchoolHub:\n\n' + verifyLink + '\n\nลิงก์นี้ใช้ได้ครั้งเดียว หากไม่ได้ร้องขอ กรุณาละเว้น\n\n— SchoolHub',
+                extra: { link: verifyLink }
+            });
+        }
+        // ปุ่ม "ส่งอีกครั้ง" — ใช้ custom token + Apps Script (ไม่ต้อง Firebase auth)
         window.shSendVerifyEmail = async function(){
             const btn = document.getElementById('sh-verify-popup-btn');
-            const email = window.__shVerifyEmail || (document.getElementById('sh-verify-popup-email')?.textContent||'').trim();
-            if(!email){ showCustomAlert('ไม่พบอีเมล','กรุณากรอกอีเมลในแบบฟอร์มก่อน',true); return; }
+            const email = window.__shVerifyEmail || '';
+            if(!email){ showCustomAlert('ไม่พบอีเมล','ลองเข้าสู่ระบบใหม่อีกครั้ง',true); return; }
             if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:.5rem"></i>กำลังส่ง...'; }
             try{
-                const u = auth.currentUser || window.__shPendingVerifyUser;
-                if(u && (u.email||'').toLowerCase() === email.toLowerCase()){
-                    // ผู้ใช้ลงชื่อเข้าอยู่แล้ว (หลังสมัคร) — ใช้ Firebase sendEmailVerification
-                    await sendEmailVerification(u);
-                    if(u === auth.currentUser) await forceSchoolHubLogout({ delay: 300 });
-                } else {
-                    // ยังไม่ได้ลงชื่อเข้า (ตรวจก่อน login) — ใช้ custom token + Apps Script
-                    const token = makeToken();
-                    const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
-                    await setDoc(doc(db, 'users_status', email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
-                    await sendMailViaWebApp({ to: email, type: 'verify', subject: 'SchoolHub - ยืนยันอีเมลของคุณ', name: email, message: 'สวัสดี ' + email + '\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n' + verifyLink + '\n\n— SchoolHub', extra: { link: verifyLink } });
-                }
-                window.shCloseVerifyPopup();
-                showCustomAlert('ส่งลิงก์ยืนยันแล้ว', 'ตรวจสอบกล่องจดหมาย ' + email + ' และกดลิงก์เพื่อเข้าสู่ระบบ');
+                await shSendVerifyEmailViaAppsScript(email);
+                if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งอีกครั้ง'; }
+                showCustomAlert('ส่งลิงก์ยืนยันแล้ว', 'ตรวจสอบกล่องจดหมาย ' + email + ' แล้วกดลิงก์ยืนยัน\n\n⚠️ ถ้าไม่เห็นอีเมล ให้ตรวจสอบในกล่อง Spam / Junk ด้วย');
             } catch(err){
-                if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล'; }
+                if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งอีกครั้ง'; }
                 showCustomAlert('ส่งไม่ได้', err.message || String(err), true);
             }
         };
-        // ---- Attach blur listener to email inputs (check verification on blur) ----
-        async function shCheckEmailOnBlur(emailValue){
-            const email = (typeof normalizeSchoolHubEmail === 'function') ? normalizeSchoolHubEmail(emailValue) : emailValue.trim().toLowerCase();
-            if(!email || !email.includes('@')) return;
-            // Skip for admin
-            const cachedAdminEmail = (localStorage.getItem('schoolhub_admin_email')||'').toLowerCase();
-            if(email === 'admin' || (cachedAdminEmail && email === cachedAdminEmail)) return;
-            if(localStorage.getItem('schoolhub_admin_bypass') === 'true') return;
-            try{
-                const snap = await getDoc(doc(db, 'users_status', email));
-                if(snap.exists() && snap.data().emailVerified === false){
-                    showSchoolHubEmailVerifyPopup(email, null);
-                }
-            } catch(e){ /* ไม่ block UI ถ้า Firestore ตอบช้า */ }
-        }
-        document.addEventListener('DOMContentLoaded', function(){
-            const attachBlur = function(){
-                const loginEl = document.getElementById('login-email');
-                const regEl = document.getElementById('reg-email');
-                if(loginEl && !loginEl.__shBlurAttached){
-                    loginEl.__shBlurAttached = true;
-                    loginEl.addEventListener('blur', function(){ shCheckEmailOnBlur(loginEl.value); });
-                }
-                if(regEl && !regEl.__shBlurAttached){
-                    regEl.__shBlurAttached = true;
-                    regEl.addEventListener('blur', function(){ shCheckEmailOnBlur(regEl.value); });
-                }
-            };
-            attachBlur();
-            setTimeout(attachBlur, 1000);
-        });
         window.handleSocialLogin = async (providerType) => {
             if (location.protocol === 'file:') {
                 return showCustomAlert('Google Login ใช้ไม่ได้เมื่อเปิดจากไฟล์', 'ให้เปิดผ่านเว็บโฮสต์ หรือรันด้วย localhost เช่น VS Code Live Server / Firebase Hosting แล้วเพิ่มโดเมนใน Firebase Authentication', true);
@@ -33050,13 +33009,13 @@ W.switchView=function(){
       <i class="fas fa-envelope" style="font-size:1.75rem;color:#4f46e5"></i>
     </div>
     <h2 style="font-size:1.25rem;font-weight:900;color:#0f172a;margin-bottom:.5rem">ยืนยันอีเมลของคุณ</h2>
-    <p style="color:#64748b;font-size:.85rem;margin-bottom:.4rem">อีเมลนี้ยังไม่ได้ยืนยัน</p>
+    <p style="color:#64748b;font-size:.85rem;margin-bottom:.4rem">กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ</p>
     <p id="sh-verify-popup-email" style="font-weight:800;color:#4f46e5;font-size:.9rem;margin-bottom:1.25rem;word-break:break-all">-</p>
-    <p style="color:#64748b;font-size:.82rem;margin-bottom:1.5rem;line-height:1.6">กดปุ่มด้านล่างเพื่อรับลิงก์ยืนยันในอีเมล<br>จากนั้นกดลิงก์ในอีเมลเพื่อเข้าใช้งาน</p>
+    <p style="color:#64748b;font-size:.82rem;margin-bottom:.75rem;line-height:1.6">กดปุ่มด้านล่างเพื่อรับลิงก์ยืนยันในอีเมล<br>จากนั้นกดลิงก์ในอีเมลเพื่อเข้าใช้งาน</p>
+    <p style="color:#f59e0b;font-size:.78rem;margin-bottom:1.2rem;background:#fffbeb;border:1px solid #fde68a;border-radius:.75rem;padding:.5rem .75rem;line-height:1.5"><i class="fas fa-triangle-exclamation" style="margin-right:.3rem"></i>ถ้าไม่ได้รับอีเมล ให้ตรวจสอบในกล่อง <b>Spam / Junk</b> ด้วย</p>
     <button id="sh-verify-popup-btn" onclick="window.shSendVerifyEmail()" style="width:100%;background:#4f46e5;color:#fff;font-weight:900;padding:.9rem 1rem;border-radius:1.15rem;border:none;cursor:pointer;font-size:1rem;margin-bottom:.75rem;transition:.2s">
-      <i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งลิงก์ยืนยันอีเมล
+      <i class="fas fa-paper-plane" style="margin-right:.5rem"></i>ส่งอีกครั้ง
     </button>
-    <button onclick="window.shCloseVerifyPopup()" style="background:none;border:none;color:#94a3b8;font-size:.82rem;cursor:pointer;padding:.25rem">ปิด</button>
   </div>
 </div>
 
