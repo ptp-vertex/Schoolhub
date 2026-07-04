@@ -1,3 +1,12 @@
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -15356,6 +15365,23 @@ window.requestOwnPasswordReset = function(event){
   #course-summary-mobile-cards { display: none !important; }
 }
 </style>
+<!-- ===== PATCH: Disable old duplicate mobile-card renderers (fix flicker/bounce) =====
+     ปัญหาเดิม: การ์ดสรุปนักเรียน (มือถือ) ถูกวาดโดยโค้ดหลายเวอร์ชันซ้อนกัน (ของเก่าที่แสดงแค่ชื่อ+ลำดับ
+     กับของใหม่ที่แสดงครบ ลำดับ/ชื่อ/รหัสนักเรียน/ชั้นปี/สถิติ) แต่ละเวอร์ชันตั้งเวลาวาดของตัวเองไม่ตรงกัน
+     ทำให้การ์ดสลับไปมาระหว่าง 2 รูปแบบ (เห็นเป็นอาการเด้ง/กระพริบ)
+     วิธีแก้: ปิดโค้ดวาดการ์ดเวอร์ชันเก่าทั้งหมดไว้ตั้งแต่ต้น เหลือให้ใช้แค่เวอร์ชันล่าสุด (FINAL PATCH v3)
+     เวอร์ชันเดียว การ์ดจะแสดงรูปแบบเดียวคงที่เสมอ ไม่มีการสลับกันอีก ===== -->
+<script id="schoolhub-disable-old-mobile-card-renderers">
+(function(){
+  window.__schoolhubOverviewCardRequiredPatch = true;      // ปิดการ์ดเวอร์ชันเก่า #1
+  window.__schoolhubFinalMobileOverviewCardsFix = true;    // ปิดการ์ดเวอร์ชันเก่า #2
+  window.__schoolhubMobileOverviewAttTitleOnlyFix = true;  // ปิดการ์ดเวอร์ชันเก่า #3
+  window.__schoolhubMobileOverviewNoCodeFoldIdlineFix = true; // ปิดการ์ดเวอร์ชันเก่า #4 (แบบพับรหัสนักเรียน)
+  window.__shMobileCardOverride = true;                    // ปิด PATCH v11-final (ซ้ำกับ v3)
+  window.__shFinalV2Loaded = true;                         // ปิด FINAL PATCH v2 (ซ้ำกับ v3)
+})();
+</script>
+<!-- ===== END PATCH: Disable old duplicate mobile-card renderers ===== -->
 <script>
 (function(){
   if (window.__schoolhubOverviewCardRequiredPatch) return;
@@ -15491,7 +15517,7 @@ window.requestOwnPasswordReset = function(event){
       plans.forEach(function(p){
         if (isWithdrawn) {
           planCells += '<td class="text-center font-mono summary-score-col withdrawn"><span class="summary-score-cell-content">'+(window.renderWithdrawnScoreCell ? window.renderWithdrawnScoreCell() : '<span class="withdrawn-score-cell">ลาออก</span>')+'</span></td>';
-          planCards += '<div class="summary-mobile-plan withdrawn"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>ลาออก</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
+          planCards += '<div class="summary-mobile-plan withdrawn"><div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(p.week)+'</span><span>ลาออก</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
           return;
         }
         var task = courseScores.find(function(ts){ return ts.week == p.week && ts.title === p.title; });
@@ -15500,7 +15526,7 @@ window.requestOwnPasswordReset = function(event){
         if (isChecklist) {
           var label = raw === 1 ? '<span class="text-emerald-500"><i class="fas fa-check"></i></span>' : (raw === 0 ? '<span class="text-rose-400"><i class="fas fa-times"></i></span>' : '<span class="text-slate-300">-</span>');
           planCells += '<td class="text-center summary-score-col"><span class="summary-score-cell-content">'+label+'</span></td>';
-          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+label+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'เช็คงาน')+'</div></div>';
+          planCards += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(p.week)+'</span><span>'+label+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'เช็คงาน')+'</div></div>';
         } else {
           total = window.addScoreToTotal(total, raw, 2);
           var missingScore = !!task && (window.isMissingScoreValue ? window.isMissingScoreValue(raw) : raw === '');
@@ -15512,7 +15538,7 @@ window.requestOwnPasswordReset = function(event){
             : '';
           var valueHtml = missingScore ? '<span class="schoolhub-mobile-missing-score schoolhub-missing-score-clickable"'+scoreDataAttrs+'>X</span>' : esc(display);
           planCells += '<td class="text-center font-mono summary-score-col" data-score-cell="1" data-course-id="'+esc(cid)+'" data-student-id="'+esc(st.id || '')+'" data-week="'+esc(p.week || '')+'" data-title="'+esc(p.title || '')+'"><span class="summary-score-cell-content '+cellClass+'"'+scoreDataAttrs+'>'+(missingScore ? 'X' : esc(display))+'</span></td>';
-          planCards += '<div class="summary-mobile-plan" data-course-id="'+esc(cid)+'" data-student-id="'+esc(st.id || '')+'" data-week="'+esc(p.week || '')+'" data-title="'+esc(p.title || '')+'"><div class="summary-mobile-plan-top"><span>สัปดาห์ '+esc(p.week)+'</span><span>'+(missingScore ? valueHtml : esc(display)+'/'+esc(maxText))+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
+          planCards += '<div class="summary-mobile-plan" data-course-id="'+esc(cid)+'" data-student-id="'+esc(st.id || '')+'" data-week="'+esc(p.week || '')+'" data-title="'+esc(p.title || '')+'"><div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(p.week)+'</span><span>'+(missingScore ? valueHtml : esc(display)+'/'+esc(maxText))+'</span></div><div class="summary-mobile-plan-title">'+esc(p.title || 'งาน')+'</div></div>';
         }
       });
       total = isWithdrawn ? 0 : window.normalizeScoreNumber(total, 2);
@@ -15634,7 +15660,10 @@ window.requestOwnPasswordReset = function(event){
         var titleAttr=(hdr&&hdr.getAttribute&&hdr.getAttribute('title'))||'';
         var label=titleAttr ? titleAttr.replace(/^คลิกเพื่อดูรายละเอียด[: ]*/,'').split('|').map(function(x){return x.trim();}).join(' ') : (text(hdr)||('งาน '+(i-4)));
         var value=text(cells[i]) || '-';
-        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(label.split(' ')[0]||label)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(label)+'</div></div>';
+        var weekNum=(label.match(/\d+/)||[''])[0];
+        var weekLabel=weekNum?('สัปดาห์ที่ '+weekNum):(label.split(' ')[0]||label);
+        var titleLabel=label.replace(/^สัปดาห์(ที่)?\s*\d+\s*/,'').trim()||label;
+        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(weekLabel)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(titleLabel)+'</div></div>';
       }
       if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
       var bonusStarHtml='<div class="summary-mobile-bonus-star"><div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)"><span>+โบนัส</span><b>'+esc(bonus)+'</b></div><div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+esc(stars)+'</b></div></div>';
@@ -15773,9 +15802,9 @@ window.requestOwnPasswordReset = function(event){
         var h = parseHeader(headers[i], i - attIndex - 1);
         var value = texts[i] || '-';
         var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
-        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
+        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score schoolhub-missing-score-clickable">X</span>' : esc(value);
         planHtml += '<div class="summary-mobile-plan">'
-          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
+          + '<div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
           + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
           + '</div>';
       }
@@ -16186,9 +16215,9 @@ window.requestOwnPasswordReset = function(event){
         var h = parseHeader(headers[i], i - attIndex - 1);
         var value = texts[i] || '-';
         var isMissingSavedScore = value === '-' && !!(cells[i] && cells[i].querySelector && cells[i].querySelector('.text-rose-500, .text-rose-600'));
-        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score">X</span>' : esc(value);
+        var valueHtml = (isMissingSavedScore || String(value).trim().toUpperCase() === 'X') ? '<span class="schoolhub-mobile-missing-score schoolhub-missing-score-clickable">X</span>' : esc(value);
         planHtml += '<div class="summary-mobile-plan">'
-          + '<div class="summary-mobile-plan-top"><span>'+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
+          + '<div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(h.week)+'</span><span>'+valueHtml+'</span></div>'
           + '<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
           + '</div>';
       }
@@ -34806,174 +34835,478 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.
 })();
 </script>
 
-<!-- ===== PATCH v11: Withdrawn student mobile card – fade + number above name + ลาออก banner ===== -->
-<style id="schoolhub-withdrawn-v11-css">
-@media (max-width: 767px) {
-  /* 1. Fade the whole card */
-  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row {
-    opacity: 0.48 !important;
-  }
-  /* 2. Hide plan cells and bonus/star strip */
-  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-plans,
-  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-bonus-star {
-    display: none !important;
-  }
-  /* 3. Number-above-name line (injected by JS) */
-  .sh-withdrawn-num-line {
-    display: flex !important;
-    align-items: center !important;
-    margin-bottom: .3rem !important;
-  }
-  .sh-withdrawn-num-line .schoolhub-seq-text,
-  .sh-withdrawn-num-line .summary-mobile-card-no {
-    font-size: .72rem !important;
-    font-weight: 900 !important;
-    color: #4f46e5 !important;
-    background: #eef2ff !important;
-    border-radius: 999px !important;
-    padding: .25rem .65rem !important;
-    white-space: nowrap !important;
-    text-decoration: none !important;        /* don't inherit strikethrough */
-    -webkit-text-decoration: none !important;
-  }
-  /* Hide the original right-side number after JS move */
-  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .sh-num-hidden {
-    display: none !important;
-  }
-  /* 4. ลาออก banner */
-  .sh-withdrawn-banner {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: #0f172a !important;
-    color: #f8fafc !important;
-    border-radius: .9rem !important;
-    font-size: .88rem !important;
-    font-weight: 900 !important;
-    letter-spacing: .08em !important;
-    padding: .6rem .85rem !important;
-    margin-top: .75rem !important;
-  }
-  /* 5. Centre the total/grade bar */
-  #course-summary-mobile-cards .summary-mobile-card.schoolhub-withdrawn-row .summary-mobile-total {
-    justify-content: center !important;
-    gap: 1.5rem !important;
-  }
-}
-</style>
-<script id="schoolhub-withdrawn-v11-js">
-(function () {
-  if (window.__shWithdrawnCardPatchV11) return;
-  window.__shWithdrawnCardPatchV11 = true;
+<!-- ===== PATCH v11-final: correct card layout + block stat clicks showing popup ===== -->
+<script id="schoolhub-mobile-card-override">
+(function(){
+  if(window.__shMobileCardOverride) return;
+  window.__shMobileCardOverride = true;
 
-  function patchCard(card) {
-    /* Re-entrant guard — cleared on full re-render (new DOM nodes) */
-    if (card.dataset.shwPatched) return;
-    card.dataset.shwPatched = '1';
-
-    /* ── 1. Move sequence number above the name line ── */
-    /* The header row is the first .flex child of the card */
-    var headerRow = card.querySelector('.flex.items-start');
-    if (headerRow && !card.querySelector('.sh-withdrawn-num-line')) {
-      /* Number sits as a direct child of the flex row (last child) */
-      var numEl = null;
-      var children = headerRow.children;
-      for (var i = children.length - 1; i >= 0; i--) {
-        var ch = children[i];
-        if (ch.classList.contains('schoolhub-seq-text') ||
-            ch.classList.contains('summary-mobile-card-no') ||
-            ch.querySelector('.schoolhub-seq-text')) {
-          numEl = ch; break;
-        }
-      }
-      if (numEl) {
-        var numLine = document.createElement('div');
-        numLine.className = 'sh-withdrawn-num-line';
-        numLine.appendChild(numEl.cloneNode(true));
-        /* Hide the original in-flex copy */
-        numEl.classList.add('sh-num-hidden');
-        /* Insert the new line before the header flex row */
-        card.insertBefore(numLine, headerRow);
-      }
-    }
-
-    /* ── 2. Inject ลาออก banner (plans & bonus hidden by CSS) ── */
-    if (card.querySelector('.sh-withdrawn-banner')) return;
-    var plansDiv  = card.querySelector('.summary-mobile-plans');
-    var bonusStar = card.querySelector('.summary-mobile-bonus-star');
-    var banner = document.createElement('div');
-    banner.className = 'sh-withdrawn-banner';
-    banner.textContent = 'ลาออก';
-    var anchor = plansDiv || bonusStar;
-    if (anchor) {
-      anchor.parentNode.insertBefore(banner, anchor);
-    } else {
-      var total = card.querySelector('.summary-mobile-total');
-      if (total) total.parentNode.insertBefore(banner, total);
-      else card.appendChild(banner);
-    }
-  }
-
-  function patchBox(box) {
-    if (!box) return;
-    box.querySelectorAll('.summary-mobile-card.schoolhub-withdrawn-row').forEach(patchCard);
-  }
-
-  function startObserver() {
-    var box = document.getElementById('course-summary-mobile-cards');
-    if (!box) return false;
-    var obs = new MutationObserver(function (mutations) {
-      var need = false;
-      for (var i = 0; i < mutations.length; i++) {
-        var m = mutations[i];
-        if (m.type === 'childList') { need = true; break; }
-        if (m.type === 'attributes' && m.target && m.target.classList &&
-            m.target.classList.contains('schoolhub-withdrawn-row')) { need = true; break; }
-      }
-      if (need) patchBox(box);
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
-    obs.observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-    patchBox(box);
-    return true;
+  }
+  function txt(el){ return el?(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim():''; }
+  function splitAtt(v){
+    var m=String(v||'').match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)(?:\s*\/\s*(\d+))?/);
+    return m?[m[1],m[2],m[3],m[4]||'0']:['0','0','0','0'];
+  }
+  function parseHdr(th,fb){
+    var ta=(th&&th.getAttribute&&th.getAttribute('title'))||'';
+    var week='',title='';
+    if(ta){
+      var p=ta.replace(/^คลิกเพื่อดูรายละเอียด:\s*/,'').split('|').map(function(x){return x.trim();});
+      week=(p[0]||'').replace(/^สัปดาห์\s*/,'').trim();
+      title=p[1]||'';
+    }
+    if(!week){var t=txt(th);var wm=t.match(/\d+/);week=wm?wm[0]:String(fb+1);}
+    if(!title) title=txt(th).replace(/^สัปดาห์\s*/,'').trim()||'งาน';
+    return {week:week,title:title};
+  }
+  function ensureBox(){
+    var table=document.getElementById('course-summary-table');
+    var box=document.getElementById('course-summary-mobile-cards');
+    if(!box){
+      box=document.createElement('div');
+      box.id='course-summary-mobile-cards';
+      var wrap=table&&(table.closest('.overflow-x-auto')||table.parentNode);
+      if(wrap&&wrap.parentNode) wrap.parentNode.insertBefore(box,wrap.nextSibling);
+      else if(table) table.parentNode.insertBefore(box,table.nextSibling);
+    }
+    return box;
   }
 
-  var tries = 0;
-  function init() {
-    patchBox(document.getElementById('course-summary-mobile-cards'));
-    if (!startObserver() && ++tries < 40) setTimeout(init, 300);
+  /* stop all clicks from .summary-mobile-stats propagating to any global handler */
+  var _statsGuardSet = false;
+  function installStatsClickGuard(){
+    if(_statsGuardSet) return;
+    _statsGuardSet = true;
+    document.addEventListener('click', function(e){
+      if(e.target && e.target.closest && e.target.closest('.summary-mobile-stats')){
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      }
+    }, true); /* capture phase — fires before any delegated handler */
+  }
+  // installStatsClickGuard(); // disabled: was blocking มา/สาย/ขาด/ลา popup clicks
+
+  function buildCards(){
+    if(!window.matchMedia||!window.matchMedia('(max-width:767px)').matches) return;
+    var table=document.getElementById('course-summary-table');
+    var box=ensureBox();
+    if(!table||!box) return;
+    var rows=[].slice.call(table.querySelectorAll('tbody tr'));
+    if(!rows.length){box.innerHTML='';return;}
+    var ths=[].slice.call(table.querySelectorAll('thead th'));
+
+    var totalIdx=ths.length-2, gradeIdx=ths.length-1, bonusIdx=-1, starIdx=-1;
+    for(var ci=0;ci<ths.length;ci++){
+      var hc=ths[ci].className||'';
+      if(hc.indexOf('summary-total-col')>=0) totalIdx=ci;
+      else if(hc.indexOf('summary-grade-col')>=0) gradeIdx=ci;
+      else if(hc.indexOf('sh-bonus-col')>=0) bonusIdx=ci;
+      else if(hc.indexOf('sh-star-col')>=0) starIdx=ci;
+    }
+
+    box.innerHTML=rows.map(function(row,idx){
+      var cells=[].slice.call(row.children);
+      var texts=cells.map(txt);
+
+      var no    = texts[0]||String(idx+1);
+      var code  = texts[1]||'-';
+      var name  = texts[2]||'-';
+
+      /* find attendance column */
+      var attIdx=-1;
+      for(var ai=3;ai<texts.length;ai++){
+        if(/^\d+\s*\/\s*\d+\s*\/\s*\d+/.test(texts[ai])){attIdx=ai;break;}
+      }
+      if(attIdx<0) attIdx=4;
+      var att=splitAtt(texts[attIdx]);
+      var room=attIdx>3?texts[3]||'-':'-';
+
+      var total = cells[totalIdx]?txt(cells[totalIdx]):'0';
+      var grade = cells[gradeIdx]?txt(cells[gradeIdx]):'-';
+      var bonus = bonusIdx>=0&&cells[bonusIdx]?txt(cells[bonusIdx]):'-';
+      var stars = starIdx>=0&&cells[starIdx]?txt(cells[starIdx]).replace(/[^\d]/g,''):'-';
+      if(stars===''||stars==='0') stars='-';
+
+      var withdrawn = row.classList.contains('schoolhub-withdrawn-row')
+        || total==='ลาออก' || grade==='ลาออก';
+
+      var numStr=String(no).replace(/^#/,'');
+
+      var metaParts=[];
+      if(code&&code!=='-') metaParts.push(code);
+      if(room&&room!=='-') metaParts.push(room);
+      var metaStr=metaParts.join('  ·  ');
+
+      /* ── new header block: 4 บรรทัดแยกกันชัดเจน ── */
+      var __grade = (window.__shGetStudentGrade ? window.__shGetStudentGrade(code) : '') || '-';
+      var hdrHtml=''
+        +'<div style="margin-bottom:.5rem">'
+        +'<div style="font-size:.68rem;font-weight:800;color:#94a3b8;letter-spacing:.02em">ลำดับ #'+esc(numStr)+'</div>'
+        +'<div style="font-size:.98rem;font-weight:900;color:#0f172a;line-height:1.35;margin-top:.12rem">'+esc(name)+(withdrawn?' <span style="color:#ef4444;font-size:.68rem;font-weight:800">(ลาออก)</span>':'')+'</div>'
+        +'<div style="font-size:.76rem;font-weight:700;color:#64748b;margin-top:.28rem">รหัสนักเรียน '+esc(code&&code!=='-'?code:'-')+'</div>'
+        +'<div style="font-size:.76rem;font-weight:700;color:#64748b">ชั้นปี '+esc(__grade)+'</div>'
+        +'</div>';
+
+      /* ── stats: onclick=stopPropagation on container prevents any global popup ── */
+      var statsHtml='<div class="summary-mobile-stats" onclick="event.stopPropagation();event.preventDefault()" style="pointer-events:all">'
+        +'<div class="summary-mobile-stat text-emerald-600"><b>'+esc(att[0])+'</b>มา</div>'
+        +'<div class="summary-mobile-stat text-amber-600"><b>'+esc(att[1])+'</b>สาย</div>'
+        +'<div class="summary-mobile-stat text-rose-600"><b>'+esc(att[2])+'</b>ขาด</div>'
+        +'<div class="summary-mobile-stat" style="color:#7c3aed"><b>'+esc(att[3]||0)+'</b>ลา</div>'
+        +'</div>';
+
+      /* ── total bar ── */
+      var _p=String(total).split('+');
+      var totalHtml='<div class="summary-mobile-total"'
+        +(withdrawn?' style="justify-content:center"':'')+'>'
+        +'<span>รวม '+esc(_p[0])+(_p.length>1?'<sup style="font-size:.6em;color:#4ade80;font-weight:900;vertical-align:super;line-height:1">+'+esc(_p[1])+'</sup>':'')+'</span>'
+        +'<span>เกรด '+esc(grade)+'</span>'
+        +'</div>';
+
+      if(withdrawn){
+        return '<div class="summary-mobile-card" style="opacity:.48">'
+          +hdrHtml+statsHtml
+          +'<div style="display:flex;align-items:center;justify-content:center;background:#0f172a;color:#f8fafc;'
+          +'border-radius:.9rem;font-size:.9rem;font-weight:900;letter-spacing:.06em;'
+          +'padding:.65rem .85rem;margin-top:.75rem">ลาออก</div>'
+          +totalHtml
+          +'</div>';
+      }
+
+      /* ── plan cards ── */
+      var planHtml='';
+      for(var i=attIdx+1;i<totalIdx;i++){
+        if(i===bonusIdx||i===starIdx) continue;
+        var h=parseHdr(ths[i],i-attIdx-1);
+        var value=texts[i]||'-';
+        var isMiss=value==='-'&&!!(cells[i]&&cells[i].querySelector&&cells[i].querySelector('.text-rose-500,.text-rose-600'));
+        var valHtml=(isMiss||String(value).trim().toUpperCase()==='X')
+          ?'<span class="schoolhub-mobile-missing-score schoolhub-missing-score-clickable">X</span>':esc(value);
+        planHtml+='<div class="summary-mobile-plan">'
+          +'<div class="summary-mobile-plan-top"><span>สัปดาห์ที่ '+esc(h.week)+'</span><span>'+valHtml+'</span></div>'
+          +'<div class="summary-mobile-plan-title">'+esc(h.title)+'</div>'
+          +'</div>';
+      }
+      if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
+
+      var bonusStarHtml='<div class="summary-mobile-bonus-star">'
+        +'<div class="summary-mobile-bonus-cell" onclick="if(window.shOvShowBonusDetail)window.shOvShowBonusDetail(this)">'
+        +'<span>+โบนัส</span><b>'+esc(bonus)+'</b></div>'
+        +'<div class="summary-mobile-star-cell"><span>⭐ดาว</span><b>'+esc(stars)+'</b></div>'
+        +'</div>';
+
+      return '<div class="summary-mobile-card">'
+        +hdrHtml+statsHtml
+        +'<div class="summary-mobile-plans">'+planHtml+'</div>'
+        +bonusStarHtml+totalHtml
+        +'</div>';
+    }).join('');
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  window.buildMobileOverviewCards = buildCards;
+
+  function hookRender(){
+    if(typeof window.renderCourseOverview!=='function'||window.renderCourseOverview.__shOvFinalHooked) return;
+    var old=window.renderCourseOverview;
+    var fn=function(){
+      var r=old.apply(this,arguments);
+      setTimeout(buildCards,50);
+      setTimeout(buildCards,200);
+      return r;
+    };
+    fn.__shOvFinalHooked=true;
+    window.renderCourseOverview=fn;
+  }
+  hookRender();
+
+  if(typeof window.switchCourseTab==='function'&&!window.switchCourseTab.__shOvFinalHooked){
+    var oldSw=window.switchCourseTab;
+    var sw=function(tabId){var r=oldSw.apply(this,arguments);if(tabId==='overview')setTimeout(buildCards,160);return r;};
+    sw.__shOvFinalHooked=true;
+    window.switchCourseTab=sw;
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){ hookRender(); setTimeout(buildCards,300); });
+  window.addEventListener('resize',function(){ setTimeout(buildCards,80); });
 })();
 </script>
-<!-- ===== END PATCH v11 ===== -->
+<!-- ===== END PATCH v11-final ===== -->
 
-<!-- ===== PATCH v11b: CSS-only number-above-name for withdrawn mobile cards ===== -->
-<style id="schoolhub-withdrawn-num-top-css">
-@media (max-width: 767px) {
-  /* Stack the header flex column so #N (last child) can be ordered first */
-  #course-summary-mobile-cards
-    .summary-mobile-card.schoolhub-withdrawn-row
-    .flex.items-start.justify-between {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-      gap: .2rem !important;
+<!-- ===== PATCH: Teacher Attendance Stat Detail Modal (Draggable) ===== -->
+<!-- Modal HTML -->
+<div id="teacher-att-stat-modal"
+  style="display:none;position:fixed;z-index:2147483000;top:30%;left:50%;transform:translateX(-50%);
+         width:min(340px,92vw);background:#fff;border-radius:1.5rem;
+         box-shadow:0 20px 60px rgba(0,0,0,.22),0 4px 16px rgba(79,70,229,.12);
+         overflow:hidden;flex-direction:column;max-height:80vh;touch-action:none;user-select:none;">
+  <div id="teacher-att-stat-modal-header"
+    style="padding:1rem 1.25rem;background:#f8fafc;border-bottom:1px solid #e2e8f0;
+           display:flex;align-items:center;justify-content:space-between;cursor:grab;
+           border-radius:1.5rem 1.5rem 0 0;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <i id="teacher-att-stat-modal-icon" class="fas fa-circle-check" style="font-size:1.2rem"></i>
+      <div>
+        <div id="teacher-att-stat-modal-title" style="font-size:1rem;font-weight:900;color:#0f172a;line-height:1.2"></div>
+        <div id="teacher-att-stat-modal-sub" style="font-size:.7rem;font-weight:700;color:#94a3b8;margin-top:.15rem"></div>
+      </div>
+    </div>
+    <button onclick="window.closeTeacherAttStatModal()"
+      style="width:2rem;height:2rem;border-radius:50%;border:1px solid #e2e8f0;background:#fff;
+             color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;
+             font-size:.85rem;flex-shrink:0;transition:background .15s"
+      onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'"
+      aria-label="ปิด"><i class="fas fa-times"></i></button>
+  </div>
+  <div id="teacher-att-stat-modal-body"
+    style="padding:1rem 1.25rem;overflow-y:auto;flex:1;max-height:55vh;font-size:.85rem"></div>
+</div>
+
+<script id="schoolhub-teacher-att-stat-detail-patch">
+(function(){
+  if (window.__teacherAttStatPatchLoaded) return;
+  window.__teacherAttStatPatchLoaded = true;
+
+  /* ── Make modal draggable (mouse + touch) ── */
+  function makeDraggable(modal) {
+    var handle = document.getElementById('teacher-att-stat-modal-header');
+    if (!handle || handle.__dragBound) return;
+    handle.__dragBound = true;
+    var startX, startY, origLeft, origTop;
+
+    function getPos(e) {
+      if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    function onStart(e) {
+      if (e.target.closest('button')) return;
+      var rect = modal.getBoundingClientRect();
+      var p = getPos(e);
+      startX = p.x; startY = p.y;
+      origLeft = rect.left; origTop = rect.top;
+      modal.style.transform = 'none';
+      modal.style.left = origLeft + 'px';
+      modal.style.top = origTop + 'px';
+      handle.style.cursor = 'grabbing';
+      e.preventDefault();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+    }
+
+    function onMove(e) {
+      var p = getPos(e);
+      var dx = p.x - startX;
+      var dy = p.y - startY;
+      var newLeft = Math.max(0, Math.min(window.innerWidth - modal.offsetWidth, origLeft + dx));
+      var newTop = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, origTop + dy));
+      modal.style.left = newLeft + 'px';
+      modal.style.top = newTop + 'px';
+      e.preventDefault();
+    }
+
+    function onEnd() {
+      handle.style.cursor = 'grab';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    }
+
+    handle.addEventListener('mousedown', onStart);
+    handle.addEventListener('touchstart', onStart, { passive: false });
   }
-  /* Push the number badge to the very top with order:-1 */
-  #course-summary-mobile-cards
-    .summary-mobile-card.schoolhub-withdrawn-row
-    .flex.items-start.justify-between
-    > .schoolhub-seq-text,
-  #course-summary-mobile-cards
-    .summary-mobile-card.schoolhub-withdrawn-row
-    .flex.items-start.justify-between
-    > .summary-mobile-card-no {
-      order: -1 !important;
-      align-self: flex-start !important;
-      display: inline-flex !important;
-      margin-bottom: .15rem !important;
+
+  /* ── Format date string to Thai ── */
+  function formatDateThai(d) {
+    try {
+      var parts = d.split('-');
+      if (parts.length === 3) {
+        var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var y = parseInt(parts[0]) + 543;
+        var m = months[parseInt(parts[1]) - 1] || parts[1];
+        return parts[2] + ' ' + m + ' ' + y;
+      }
+    } catch(e) {}
+    return d;
   }
-}
-</style>
-<!-- ===== END PATCH v11b ===== -->
+
+  /* ── Find student ID from name/code + cid ── */
+  function findStudentId(name, code, cid) {
+    var lists = [];
+    try {
+      if (typeof window.getCourseStudents === 'function' && cid) lists = window.getCourseStudents(cid);
+    } catch(e) {}
+    if (!lists.length && window.state && window.state.students) lists = window.state.students;
+    for (var i = 0; i < lists.length; i++) {
+      var s = lists[i];
+      if (code && s.code && s.code === code) return s.id;
+      if (name && s.name && s.name === name) return s.id;
+    }
+    return null;
+  }
+
+  /* ── Main show function ── */
+  window.showTeacherAttStatDetail = function(studentName, studentId, cid, type) {
+    var modal = document.getElementById('teacher-att-stat-modal');
+    if (!modal) return;
+
+    var cfg = {
+      present: { label: 'มา', color: '#059669', icon: 'fa-circle-check', bg: '#ecfdf5' },
+      late:    { label: 'สาย', color: '#d97706', icon: 'fa-clock',         bg: '#fffbeb' },
+      absent:  { label: 'ขาด', color: '#e11d48', icon: 'fa-circle-xmark',  bg: '#fff1f2' },
+      leave:   { label: 'ลา',  color: '#7c3aed', icon: 'fa-user-clock',    bg: '#f5f3ff' }
+    }[type];
+    if (!cfg) return;
+
+    /* Find dates from state */
+    var history = (window.state && window.state.attendance && window.state.attendance[cid]) || {};
+    var dates = [];
+    var leaveReasons = {};
+    Object.keys(history).sort().forEach(function(d) {
+      var rec = (history[d] && history[d].records) || {};
+      if (rec[studentId] === type) {
+        dates.push(d);
+        if (type === 'leave' && history[d].leaveReasons) {
+          leaveReasons[d] = history[d].leaveReasons[studentId] || '';
+        }
+      }
+    });
+
+    /* Update modal header */
+    var icon = document.getElementById('teacher-att-stat-modal-icon');
+    var title = document.getElementById('teacher-att-stat-modal-title');
+    var sub = document.getElementById('teacher-att-stat-modal-sub');
+    icon.className = 'fas ' + cfg.icon;
+    icon.style.color = cfg.color;
+    title.textContent = cfg.label + ' — ' + (studentName || '');
+    sub.textContent = dates.length + ' ครั้ง';
+    sub.style.color = cfg.color;
+    document.getElementById('teacher-att-stat-modal-header').style.background = cfg.bg;
+
+    /* Build date list */
+    var body = document.getElementById('teacher-att-stat-modal-body');
+    if (dates.length === 0) {
+      body.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:2rem 0;font-weight:700">ไม่มีข้อมูล</div>';
+    } else {
+      body.innerHTML = dates.map(function(d, i) {
+        var reason = leaveReasons[d] ? ' <span style="color:#94a3b8;font-weight:600">— ' + leaveReasons[d] + '</span>' : '';
+        return '<div style="padding:.55rem 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:.6rem">'
+          + '<span style="background:' + cfg.bg + ';color:' + cfg.color + ';font-weight:900;font-size:.72rem;'
+          + 'border-radius:.4rem;padding:.15rem .45rem;flex-shrink:0">' + (i + 1) + '</span>'
+          + '<span style="color:#334155;font-weight:600">' + formatDateThai(d) + reason + '</span>'
+          + '</div>';
+      }).join('');
+    }
+
+    modal.style.display = 'flex';
+    makeDraggable(modal);
+
+    /* Reset position to center each time */
+    modal.style.left = '50%';
+    modal.style.top = '30%';
+    modal.style.transform = 'translateX(-50%)';
+  };
+
+  window.closeTeacherAttStatModal = function() {
+    var modal = document.getElementById('teacher-att-stat-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  /* ── Event delegation: click on any .summary-mobile-stat ── */
+  document.addEventListener('click', function(e) {
+    var stat = e.target.closest('.summary-mobile-stat');
+    if (!stat) return;
+
+    /* Determine type from text content */
+    var text = (stat.textContent || '').replace(/\s+/g,'');
+    var type = null;
+    if (/มา$/.test(text)) type = 'present';
+    else if (/สาย$/.test(text)) type = 'late';
+    else if (/ขาด$/.test(text)) type = 'absent';
+    else if (/ลา$/.test(text)) type = 'leave';
+    if (!type) return;
+
+    /* Find card */
+    var card = stat.closest('.summary-mobile-card');
+    if (!card) return;
+
+    /* Try to get student info */
+    var nameEl = card.querySelector('.summary-mobile-card-name');
+    var studentName = nameEl ? (nameEl.textContent || '').trim() : '';
+
+    /* Try student ID from data attributes (summary-mobile-plan or bonus cell) */
+    var idEl = card.querySelector('[data-student-id]');
+    var cidEl = card.querySelector('[data-course-id]');
+    var studentId = idEl ? idEl.getAttribute('data-student-id') : null;
+    var cid = cidEl ? cidEl.getAttribute('data-course-id') : null;
+
+    /* Fallback: use code text + active course */
+    if (!cid && typeof window.currentActiveCourseId !== 'undefined') {
+      cid = window.currentActiveCourseId;
+    }
+
+    /* Fallback: find student ID by name/code */
+    if (!studentId && cid) {
+      var codeEl = card.querySelector('.summary-mobile-card-code');
+      var code = codeEl ? (codeEl.textContent || '').replace(/เปิด\/ปิดรหัสนักเรียน/g,'').trim() : '';
+      studentId = findStudentId(studentName, code, cid);
+    }
+
+    if (!studentId || !cid) return;
+    window.showTeacherAttStatDetail(studentName, studentId, cid, type);
+    e.stopPropagation();
+  });
+
+  /* ── Also make stat badges look clickable (cursor pointer) ── */
+  var styleEl = document.createElement('style');
+  styleEl.textContent = '.summary-mobile-stat { cursor:pointer; transition: transform .12s, box-shadow .12s; }' +
+    '.summary-mobile-stat:hover { transform: scale(1.06); box-shadow: 0 2px 8px rgba(0,0,0,.10); }' +
+    '.summary-mobile-stat:active { transform: scale(0.97); }';
+  document.head.appendChild(styleEl);
+
+  /* Close on Escape */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') window.closeTeacherAttStatModal();
+  });
+
+})();
+</script>
+<!-- ===== END PATCH: Teacher Attendance Stat Detail Modal ===== -->
+
+<!-- ===== FINAL PATCH v2: Withdrawn layout fix + Att stat popup via share modal ===== -->
+<script id="schoolhub-final-v2-att-patch">
+(function(){
+  if(window.__shFinalV2Loaded) return;
+  window.__shFinalV2Loaded = true;
+
+  /* helpers */
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function txt(el){ return el?(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim():''; }
+  function splitAtt(s){ var p=String(s||'').split('/'); return [parseInt(p[0])||0,parseInt(p[1])||0,parseInt(p[2])||0,parseInt(p[3])||0]; }
+
+  /* ── Click handler: show stat detail using share modal ── */
+  window.teacherShowAttStat = function(e, code, type){
+    e.stopPropagation();
+    e.preventDefault();
+    var cid = window.currentActiveCourseId;
+    if(!cid) return;
+
+    /* find student ID by code */
+    var students = [];
+    try{ if(typeof window.getCourseStudents==='function') students=window.getCourseStudents(cid)||[]; }catch(err){}
+    if(!students.length && window.state && window.state.students) students=window.state.students;
+    var studentId=null, studentName='';
+    for(var i=0;i<students.length;i++){
+      if(students[i].code===code){ studentId=students[i].id; studentName=students[i].name||''; break; }
+    }
+    if(!studentId) return;
+
+    /* build attendanceDetail from state.attendance (same structure as share) */
+    var history=(window.state&&window.state.attendance&&window.state.attendance[cid])||{};
+    var detail={present
